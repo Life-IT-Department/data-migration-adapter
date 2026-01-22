@@ -6,7 +6,7 @@ import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.MainDataRepor
 import lk.avengers.datamigrationadapter.exception.ReportException;
 import lk.avengers.datamigrationadapter.repository.postgresql.reportdb.MainDataReportRepository;
 import lk.avengers.datamigrationadapter.service.BatchProcessService;
-import lk.avengers.datamigrationadapter.service.ReportUploadService;
+import lk.avengers.datamigrationadapter.service.MainDataReportUploadService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
@@ -27,7 +27,7 @@ import java.util.function.Supplier;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class ReportUploadServiceImpl implements ReportUploadService {
+public class MainDataReportUploadServiceImpl implements MainDataReportUploadService {
 
     private static final int BATCH_SIZE = 1000;
     private static final int HEADER_ROW_1 = 0;
@@ -131,7 +131,7 @@ public class ReportUploadServiceImpl implements ReportUploadService {
 
         return ResponseEntity.ok(
                 CommonResponseDTO.builder()
-                        .message("Records uploaded successfully.")
+                        .message("Main data report ecords uploaded successfully.")
                         .status(HttpStatus.OK.toString())
                         .build()
         );

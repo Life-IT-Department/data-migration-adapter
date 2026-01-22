@@ -3,6 +3,7 @@ package lk.avengers.datamigrationadapter.config;
 import jakarta.persistence.EntityManagerFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.context.annotation.Bean;
@@ -27,6 +28,12 @@ import java.util.Map;
 )
 public class ReportPersistenceConfiguration {
 
+    @Value("${spring.report-jpa.hibernate.ddl-auto}")
+    private String hbm2ddlAuto;
+
+    @Value("${spring.report-jpa.database-platform}")
+    private String dialect;
+
     /* ============================================================
        DATASOURCE
        ============================================================ */
@@ -43,14 +50,13 @@ public class ReportPersistenceConfiguration {
 
     @Bean(name = "reportEntityManagerFactory")
     public LocalContainerEntityManagerFactoryBean reportEntityManagerFactory(
-            @Qualifier("reportDataSource") DataSource dataSource
-    ) {
+            @Qualifier("reportDataSource") DataSource dataSource) {
 
         HibernateJpaVendorAdapter vendorAdapter = new HibernateJpaVendorAdapter();
 
         Map<String, Object> properties = Map.of(
-                "hibernate.hbm2ddl.auto", "update",
-                "hibernate.dialect", "org.hibernate.dialect.PostgreSQLDialect"
+                "hibernate.hbm2ddl.auto", hbm2ddlAuto,
+                "hibernate.dialect", dialect
         );
 
         LocalContainerEntityManagerFactoryBean emf =
