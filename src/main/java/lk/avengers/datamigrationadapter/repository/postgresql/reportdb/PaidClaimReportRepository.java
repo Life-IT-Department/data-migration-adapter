@@ -1,6 +1,6 @@
 package lk.avengers.datamigrationadapter.repository.postgresql.reportdb;
 
-import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.PhPinEntity;
+import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.PaidClaimEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -8,10 +8,11 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 @Repository
-public interface PayMeReportRepository extends JpaRepository<PhPinEntity, Integer> {
+public interface PaidClaimReportRepository extends JpaRepository<PaidClaimEntity, Long> {
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Transactional
-    @Query(value = "TRUNCATE TABLE contact_detail RESTART IDENTITY", nativeQuery = true)
+    @Query(value = "TRUNCATE TABLE paid_claim RESTART IDENTITY", nativeQuery = true)
     void truncate();
+
 }

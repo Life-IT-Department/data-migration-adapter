@@ -3,6 +3,7 @@ package lk.avengers.datamigrationadapter.config;
 import jakarta.persistence.EntityManagerFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.boot.persistence.autoconfigure.EntityScan;
@@ -54,7 +55,7 @@ public class MariaDBPersistenceConfiguration {
 
         var properties = Map.<String, Object>of(
                 "hibernate.hbm2ddl.auto",
-                env.getProperty("hibernate.hbm2ddl.auto", "none"),
+                env.getProperty("spring.mariadb-jpa.hibernate.ddl-auto", "none"),
 
                 "hibernate.dialect",
                 "org.hibernate.dialect.MySQLDialect"
