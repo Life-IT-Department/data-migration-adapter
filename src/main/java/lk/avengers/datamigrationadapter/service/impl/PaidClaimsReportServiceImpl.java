@@ -29,7 +29,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class PaidClaimsReportServiceImpl implements PaidClaimsReportService {
 
-    @Value("claim.paid.file.source")
+    @Value("paidClaimReport.file")
     String paidClaimReportFilePath;
 
     private final PaidClaimReportRepository paidClaimReportRepository;

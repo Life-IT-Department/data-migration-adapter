@@ -1,6 +1,7 @@
 package lk.avengers.datamigrationadapter.controller;
 
 import lk.avengers.datamigrationadapter.dto.CommonResponseDTO;
+import lk.avengers.datamigrationadapter.repository.postgresql.reportdb.PaidClaimReportRepository;
 import lk.avengers.datamigrationadapter.service.CashFlowReportUploadService;
 import lk.avengers.datamigrationadapter.service.ContactDetailReportService;
 import lk.avengers.datamigrationadapter.service.MainDataReportUploadService;
@@ -20,6 +21,7 @@ public class ReportUploadController {
     private final MainDataReportUploadService mainDataReportUploadService;
     private final CashFlowReportUploadService cashFlowReportUploadService;
     private final ContactDetailReportService contactDetailReportService;
+    private final PaidClaimReportRepository paidClaimReportRepository;
 
     @GetMapping("/cash-flow-report")
     public ResponseEntity<CommonResponseDTO> uploadCashFlow() {
@@ -30,6 +32,12 @@ public class ReportUploadController {
     @GetMapping("/contact-detail-report")
     public ResponseEntity<CommonResponseDTO> uploadContactDetail() {
         log.info("CONTACT_DETAIL_REPORT_UPLOAD API METHOD ACCESSED.");
+        return contactDetailReportService.processExcel();
+    }
+
+    @GetMapping("/paid-claim-report")
+    public ResponseEntity<CommonResponseDTO> updatePaidClaimReport() {
+        log.info("PAID_CLAIM_REPORT_UPLOAD API METHOD ACCESSED.");
         return contactDetailReportService.processExcel();
     }
 
