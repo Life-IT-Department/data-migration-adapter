@@ -1,17 +1,21 @@
-package lk.avengers.datamigrationadapter.entity.softlogicdb;
+package lk.avengers.datamigrationadapter.entity.postgresql.reportdb;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
+import org.springframework.beans.BeanUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "acp_policy")
+@Setter
+@Getter
 @NoArgsConstructor
 @AllArgsConstructor
+@Table(name = "acp_policy")
 public class ACPPolicyEntity {
 
     @Id
@@ -33,7 +37,7 @@ public class ACPPolicyEntity {
     private String premiumPaymentTerm;
     private String status;
     private LocalDate date;
-    private LocalDateTime operationDate;
+    private LocalDate operationDate;
     private String reason;
 
     // --- Sales & Branch Info ---
@@ -53,7 +57,7 @@ public class ACPPolicyEntity {
     private BigDecimal insuredModalPremium;
     private BigDecimal companyModalPremium;
     private String frequency;
-    private BigDecimal nextPremium;
+    private LocalDate nextPremium;
     private String employerName;
     private String insuranceCategory;
     private BigDecimal minContributionPerc;
@@ -160,4 +164,10 @@ public class ACPPolicyEntity {
     private BigDecimal pacInsuredShare;
     private LocalDate lastPaymentDate;
     private LocalDate lastPremiumDueDate;
+
+    public <E> E mapData(Class<E> receiverClass) {
+        E receiver = BeanUtils.instantiateClass(receiverClass);
+        BeanUtils.copyProperties(this, receiver);
+        return receiver;
+    }
 }

@@ -3,6 +3,8 @@ package lk.avengers.datamigrationadapter.service.impl;
 import lk.avengers.datamigrationadapter.dto.excel.ExcelDataResponseDTO;
 import lk.avengers.datamigrationadapter.dto.excel.ExcelExtractorRequestDTO;
 import lk.avengers.datamigrationadapter.dto.request.ACPPolicyRequestDTO;
+import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.ACPPolicyEntity;
+import lk.avengers.datamigrationadapter.repository.postgresql.reportdb.ACPPolicyRepository;
 import lk.avengers.datamigrationadapter.service.DataIngestorService;
 import lk.avengers.datamigrationadapter.service.ExcelDataExtractorService;
 import lombok.RequiredArgsConstructor;
@@ -15,9 +17,10 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -25,196 +28,268 @@ import java.util.Map;
 public class DataIngestorServiceImpl implements DataIngestorService {
 
     private final ExcelDataExtractorService excelDataExtractorService;
+    private final ACPPolicyRepository acpPolicyRepository;
+
+    // Constants for date patterns
+    private static final String YYYYMMDD_PATTERN = "\\d{8}";
+    private static final DateTimeFormatter[] DATE_FORMATTERS = {
+            DateTimeFormatter.ofPattern("yyyy-MM-dd"),
+            DateTimeFormatter.ofPattern("MM/dd/yyyy"),
+            DateTimeFormatter.ofPattern("dd/MM/yyyy"),
+            DateTimeFormatter.ofPattern("dd-MM-yyyy"),
+            DateTimeFormatter.ofPattern("yyyy/MM/dd")
+    };
+    private static final DateTimeFormatter[] DATETIME_FORMATTERS = {
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"),
+            DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"),
+            DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm:ss"),
+            DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss")
+    };
 
     @Override
-    public void ProcessACPData(String uuid, MultipartFile excelFile){
-        log.info("UUID: {} PROCESS_ACP_DATA (STRING, MULTIPART_FILE) METHOD ACCESSED.", uuid);
-
-        ExcelExtractorRequestDTO excelData = ExcelExtractorRequestDTO.builder()
-                .file(excelFile).sheetIndex(0)
-                .headerRow(0).dataRow(1).build();
-
-        ExcelDataResponseDTO extractedExcelFile = excelDataExtractorService.extractExcelFile(excelData);
-        List<String> nonEmptyHeaders = extractedExcelFile.getHeaders().stream()
-                .filter(header -> header != null && !header.trim().isEmpty())
-                .toList();
-        System.out.print(nonEmptyHeaders);
-
-        List<ACPPolicyRequestDTO> acpPolicyRequestDTOS= new ArrayList<>();
-
-        // Process each row of data
-        List<Map<String, Object>> extractedData = extractedExcelFile.getExtractedData();
-
-        for (Map<String, Object> rowData : extractedData) {
-            ACPPolicyRequestDTO acpPolicyDTO = mapToACPPolicyRequestDTO(rowData, nonEmptyHeaders);
-            acpPolicyRequestDTOS.add(acpPolicyDTO);
-            // Process the mapped DTO (save to a database, validate, etc.)
-            log.info("Mapped ACP Policy DTO: {}", acpPolicyDTO);
-        }
-        System.out.println("sds");
-
-    }
-
-    private ACPPolicyRequestDTO mapToACPPolicyRequestDTO(Map<String, Object> extractedData, List<String> nonEmptyHeaders) {
-        ACPPolicyRequestDTO dto = new ACPPolicyRequestDTO();
+    public void ProcessACPData(String uuid, MultipartFile excelFile) {
+        log.info("UUID: {} - Starting ACP data processing", uuid);
 
         try {
-            // --- Identification & Policy Metadata ---
-            dto.setMasterPolicyNo(getStringValue(extractedData, "Master Policy No"));
-            dto.setPolicyNo(getStringValue(extractedData, "Policy No"));
-            dto.setCertificateNo(getStringValue(extractedData, "Certificate No"));
-            dto.setProposalNo(getStringValue(extractedData, "Proposal No"));
-            dto.setProductCode(getStringValue(extractedData, "Product Code"));
-            dto.setPlanNo(getStringValue(extractedData, "Plan No"));
-            dto.setInception(getLocalDateValue(extractedData, "Inception"));
-            dto.setExpiry(getLocalDateValue(extractedData, "Expiry"));
-            dto.setIssueDate(getLocalDateValue(extractedData, "Issue Date"));
-            dto.setTerm(getIntegerValue(extractedData, "Term"));
-            dto.setCy(getStringValue(extractedData, "C/Y"));
-            dto.setPremiumPaymentTerm(getStringValue(extractedData, "Premium Payment Term"));
-            dto.setStatus(getStringValue(extractedData, "Status"));
-            dto.setDate(getLocalDateValue(extractedData, "Date"));
-            dto.setOperationDate(getLocalDateTimeValue(extractedData, "Operation Date"));
-            dto.setReason(getStringValue(extractedData, "Reason"));
+            ExcelExtractorRequestDTO excelData = ExcelExtractorRequestDTO.builder()
+                    .file(excelFile)
+                    .sheetIndex(0)
+                    .headerRow(0)
+                    .dataRow(1)
+                    .build();
 
-            // --- Sales & Branch Info ---
-            dto.setSalesBranchCode(getStringValue(extractedData, "Sales Branch Code"));
-            dto.setSalesBranchName(getStringValue(extractedData, "Sales Branch Name"));
-            dto.setCompanyBranchCode(getStringValue(extractedData, "Company Branch Code"));
-            dto.setCompanyBranchName(getStringValue(extractedData, "Company Branch Name"));
-            dto.setPolicyBranchCode(getStringValue(extractedData, "Policy Branch Code"));
-            dto.setPolicyBranchName(getStringValue(extractedData, "Policy Branch Name"));
-            dto.setAgentCode(getStringValue(extractedData, "Agent Code"));
-            dto.setIntroducer(getStringValue(extractedData, "Introducer"));
-            dto.setSupervisor(getStringValue(extractedData, "Supervisor"));
-            dto.setRiPercentage(getBigDecimalValue(extractedData, "RI %"));
+            ExcelDataResponseDTO extractedExcelFile = excelDataExtractorService.extractExcelFile(excelData);
 
-            // --- Contribution & Premium Details ---
-            dto.setInsuredContributionType(getStringValue(extractedData, "Insured Contribution Type"));
-            dto.setInsuredModalPremium(getBigDecimalValue(extractedData, "Insured Modal Premium"));
-            dto.setCompanyModalPremium(getBigDecimalValue(extractedData, "Company Modal Premium"));
-            dto.setFrequency(getStringValue(extractedData, "Frequency"));
-            dto.setNextPremium(getBigDecimalValue(extractedData, "Next Premium"));
-            dto.setEmployerName(getStringValue(extractedData, "Employer Name"));
-            dto.setInsuranceCategory(getStringValue(extractedData, "Insurance Category"));
-            dto.setMinContributionPerc(getBigDecimalValue(extractedData, "Min Contribution %"));
-            dto.setMaxContributionPerc(getBigDecimalValue(extractedData, "Max Contribution %"));
-            dto.setInsuredPremiumInflation(getBigDecimalValue(extractedData, "Insured Premium Inflation"));
+            if (extractedExcelFile == null || extractedExcelFile.getExtractedData().isEmpty()) {
+                log.warn("UUID: {} - No data extracted from Excel file", uuid);
+                return;
+            }
 
-            // --- Personal Details ---
-            dto.setPin(getStringValue(extractedData, "PIN"));
-            dto.setMasterPin(getStringValue(extractedData, "Master PIN"));
-            dto.setTitle(getStringValue(extractedData, "Title"));
-            dto.setFullName(getStringValue(extractedData, "Full Name"));
-            dto.setGender(getStringValue(extractedData, "Gender"));
-            dto.setDob(getLocalDateValue(extractedData, "DOB"));
-            dto.setAae(getIntegerValue(extractedData, "AAE"));
-            dto.setSarChoice(getStringValue(extractedData, "SAR Choice"));
-            dto.setNumberOfRidersTaken(getIntegerValue(extractedData, "Number of Riders Taken"));
+            // Filter out empty headers to avoid processing empty columns
+            List<String> validHeaders = extractedExcelFile.getHeaders().stream()
+                    .filter(header -> header != null && !header.trim().isEmpty())
+                    .collect(Collectors.toList());
 
-            // --- Death (DTH) Rider Details ---
-            dto.setDthSar(getBigDecimalValue(extractedData, "DTH SAR"));
-            dto.setSubDth(getStringValue(extractedData, "Sub DTH"));
-            dto.setSubRateMilDth(getBigDecimalValue(extractedData, "Sub Rate Mil DTH"));
-            dto.setDthOccupationalLoadingPerc(getBigDecimalValue(extractedData, "DTH Occupational Loading %"));
-            dto.setDthOccupationClass(getStringValue(extractedData, "DTH Occupation Class"));
-            dto.setDthInsuredCoiShare(getBigDecimalValue(extractedData, "DTH Insured COI Share"));
+            log.info("UUID: {} - Found {} valid headers out of {} total columns",
+                    uuid, validHeaders.size(), extractedExcelFile.getHeaders().size());
 
-            // --- Accidental Death (ACCD) Rider Details ---
-            dto.setAccdSa(getBigDecimalValue(extractedData, "ACCD SA"));
-            dto.setSubAccd(getStringValue(extractedData, "Sub ACCD"));
-            dto.setSubRateMilAccd(getBigDecimalValue(extractedData, "Sub Rate Mil ACCD"));
-            dto.setAccdOccupationalLoadingPerc(getBigDecimalValue(extractedData, "ACCD Occupational Loading %"));
-            dto.setAccdOccupationClass(getStringValue(extractedData, "ACCD Occupation Class"));
-            dto.setAccdInsuredCoiShare(getBigDecimalValue(extractedData, "ACCD Insured COI Share"));
+            // Clean the extracted data by removing empty header columns
+            List<Map<String, Object>> cleanedData = extractedExcelFile.getExtractedData().stream()
+                    .map(rowData -> filterValidColumns(rowData, validHeaders))
+                    .toList();
 
-            // --- Accidental Permanent (ACCP) Rider Details ---
-            dto.setAccpSa(getBigDecimalValue(extractedData, "ACCP SA"));
-            dto.setSubAccp(getStringValue(extractedData, "Sub ACCP"));
-            dto.setSubRateMilAccp(getBigDecimalValue(extractedData, "Sub Rate Mil ACCP"));
-            dto.setAccpOccupationalLoadingPerc(getBigDecimalValue(extractedData, "ACCP Occupational Loading %"));
-            dto.setAccpOccupationClass(getStringValue(extractedData, "ACCP Occupation Class"));
-            dto.setAccpInsuredCoiShare(getBigDecimalValue(extractedData, "ACCP Insured COI Share"));
+            // Map to DTOs
+            List<ACPPolicyRequestDTO> acpPolicyRequestDTOS = cleanedData.stream()
+                    .map(rowData -> mapToACPPolicyRequestDTO(rowData, uuid))
+                    .toList();
 
-            // --- Accidental Total (ACCT) Rider Details ---
-            dto.setAcctSa(getBigDecimalValue(extractedData, "ACCT SA"));
-            dto.setSubAcct(getStringValue(extractedData, "Sub ACCT"));
-            dto.setSubRateMilAcct(getBigDecimalValue(extractedData, "Sub Rate Mil ACCT"));
-            dto.setAcctOccupationalLoadingPerc(getBigDecimalValue(extractedData, "ACCT Occupational Loading %"));
-            dto.setAcctOccupationClass(getStringValue(extractedData, "ACCT Occupation Class"));
-            dto.setAcctInsuredCoiShare(getBigDecimalValue(extractedData, "ACCT Insured COI Share"));
+            // Map DTO's to Entities
+            List<ACPPolicyEntity> acpPolicyEntities = acpPolicyRequestDTOS.stream()
+                    .map(dto -> dto.mapData(ACPPolicyEntity.class))
+                    .toList();
 
-            // --- Critical Illness (CILX) Rider Details ---
-            dto.setCilxSa(getBigDecimalValue(extractedData, "CILX SA"));
-            dto.setSubCilx(getStringValue(extractedData, "Sub CILX"));
-            dto.setSubRateMilCilx(getBigDecimalValue(extractedData, "Sub Rate Mil CILX"));
-            dto.setCilxOccupationalLoadingPerc(getBigDecimalValue(extractedData, "CILX Occupational Loading %"));
-            dto.setCilxOccupationClass(getStringValue(extractedData, "CILX Occupation Class"));
-            dto.setCilxInsuredCoiShare(getBigDecimalValue(extractedData, "CILX Insured COI Share"));
-
-            // --- Permanent Total Disability (PTD) Rider Details ---
-            dto.setPtdSa(getBigDecimalValue(extractedData, "PTD SA"));
-            dto.setSubPtd(getStringValue(extractedData, "Sub PTD"));
-            dto.setSubRateMilPtd(getBigDecimalValue(extractedData, "Sub Rate Mil PTD"));
-            dto.setPtdOccupationalLoadingPerc(getBigDecimalValue(extractedData, "PTD Occupational Loading %"));
-            dto.setPtdOccupationClass(getStringValue(extractedData, "PTD Occupation Class"));
-            dto.setPtdInsuredCoiShare(getBigDecimalValue(extractedData, "PTD Insured COI Share"));
-
-            // --- Basic Sums & Values ---
-            dto.setBasicSumInsuredFormula(getStringValue(extractedData, "Basic Sum Insured Formula"));
-            dto.setBasicSumAssured(getBigDecimalValue(extractedData, "Basic Sum Assured"));
-            dto.setBasicSumAssuredInflation(getBigDecimalValue(extractedData, "Basic Sum Assured Inflation"));
-            dto.setInsuredValueToday(getBigDecimalValue(extractedData, "Insured Value Today"));
-            dto.setUnvestedPremiumValueToday(getBigDecimalValue(extractedData, "Unvested Premium Value Today"));
-            dto.setVestedPremiumValueToday(getBigDecimalValue(extractedData, "Vested Premium Value Today"));
-            dto.setInsuredTopupValueToday(getBigDecimalValue(extractedData, "Insured Topup Value Today"));
-            dto.setUnvestedTopupValueToday(getBigDecimalValue(extractedData, "Unvested Topup Value Today"));
-            dto.setVestedTopupValueToday(getBigDecimalValue(extractedData, "Vested Topup Value Today"));
-
-            // --- Transaction Amounts ---
-            dto.setInsuredTransactionAmount(getBigDecimalValue(extractedData, "Insured Transaction Amount"));
-            dto.setUnvestedPremiumTransactionAmount(getBigDecimalValue(extractedData, "Unvested Premium Transaction Amount"));
-            dto.setVestedPremiumTransactionAmount(getBigDecimalValue(extractedData, "Vested Premium Transaction Amount"));
-            dto.setInsuredTopupTransactionAmount(getBigDecimalValue(extractedData, "Insured Topup Transaction Amount"));
-            dto.setUnvestedTopupTransactionAmount(getBigDecimalValue(extractedData, "Unvested Topup Transaction Amount"));
-            dto.setVestedTopupTransactionAmount(getBigDecimalValue(extractedData, "Vested Topup Transaction Amount"));
-
-            // --- Interest Credited ---
-            dto.setInsuredInterestCredited(getBigDecimalValue(extractedData, "Insured Interest Credited"));
-            dto.setUnvestedPremiumInterestCredited(getBigDecimalValue(extractedData, "Unvested Premium Interest Credited"));
-            dto.setVestedPremiumInterestCredited(getBigDecimalValue(extractedData, "Vested Premium Interest Credited"));
-            dto.setInsuredTopupInterestCredited(getBigDecimalValue(extractedData, "Insured Topup Interest Credited"));
-            dto.setUnvestedTopupInterestCredited(getBigDecimalValue(extractedData, "Unvested Topup Interest Credited"));
-            dto.setVestedTopupInterestCredited(getBigDecimalValue(extractedData, "Vested Topup Interest Credited"));
-
-            // --- Surrender Values ---
-            dto.setInsuredSurrenderValue(getBigDecimalValue(extractedData, "Insured Surrender Value"));
-            dto.setUnvestedPremiumSurrenderValue(getBigDecimalValue(extractedData, "Unvested Premium Surrender Value"));
-            dto.setVestedPremiumSurrenderValue(getBigDecimalValue(extractedData, "Vested Premium Surrender Value"));
-            dto.setInsuredTopupSurrenderValue(getBigDecimalValue(extractedData, "Insured Topup Surrender Value"));
-            dto.setUnvestedTopupSurrenderValue(getBigDecimalValue(extractedData, "Unvested Topup Surrender Value"));
-            dto.setVestedTopupSurrenderValue(getBigDecimalValue(extractedData, "Vested Topup Surrender Value"));
-
-            // --- Final Policy Attributes ---
-            dto.setInsuranceCoveragePeriod(getStringValue(extractedData, "Insurance Coverage Period"));
-            dto.setPacInsuredShare(getBigDecimalValue(extractedData, "PAC Insured Share"));
-            dto.setLastPaymentDate(getLocalDateValue(extractedData, "Last Payment Date"));
-            dto.setLastPremiumDueDate(getLocalDateValue(extractedData, "Last Premium Due Date"));
+            acpPolicyRepository.saveAll(acpPolicyEntities);
+            log.info("UUID: {} - Successfully saved {} ACP policies", uuid, acpPolicyEntities.size());
 
         } catch (Exception e) {
-            log.error("Error mapping row data to ACPPolicyRequestDTO: {}", e.getMessage(), e);
-            throw new RuntimeException("Failed to map Excel data to ACP Policy DTO", e);
+            log.error("UUID: {} - Error processing ACP data: {}", uuid, e.getMessage(), e);
+            throw new RuntimeException("Failed to process ACP data", e);
         }
-
-        return dto;
     }
 
-    private String getStringValue(Map<String, Object> data, String key) {
+    /**
+     * Filter row data to only include valid (non-empty) column headers
+     */
+    private Map<String, Object> filterValidColumns(Map<String, Object> rowData, List<String> validHeaders) {
+        Map<String, Object> cleanedRow = new LinkedHashMap<>();
+        for (String header : validHeaders) {
+            if (rowData.containsKey(header)) {
+                cleanedRow.put(header, rowData.get(header));
+            }
+        }
+        return cleanedRow;
+    }
+
+    private ACPPolicyRequestDTO mapToACPPolicyRequestDTO(Map<String, Object> data, String uuid) {
+        try {
+            ACPPolicyRequestDTO dto = new ACPPolicyRequestDTO();
+
+            // Identification & Policy Metadata
+            dto.setMasterPolicyNo(getString(data, "MASTER POLICY NO"));
+            dto.setPolicyNo(getString(data, "POLICY NO"));
+            dto.setCertificateNo(getString(data, "CERTIFICATE NO"));
+            dto.setProposalNo(getString(data, "PROPOSAL NO"));
+            dto.setProductCode(getString(data, "Product Code"));
+            dto.setPlanNo(getString(data, "PLAN NO"));
+            dto.setInception(getDateFromInteger(data, "INCEPTION"));
+            dto.setExpiry(getDateFromInteger(data, "EXPIRY"));
+            dto.setIssueDate(getDateFromInteger(data, "Issue Date"));
+            dto.setTerm(getInteger(data, "TERM"));
+            dto.setCy(getString(data, "C/Y"));
+            dto.setPremiumPaymentTerm(getString(data, "Premium Payment Term"));
+            dto.setStatus(getString(data, "STATUS"));
+            dto.setDate(getDateFromInteger(data, "DATE"));
+            dto.setOperationDate(getDateFromInteger(data, "Operation Date"));
+            dto.setReason(getString(data, "Reason"));
+
+            // Sales & Branch Info
+            dto.setSalesBranchCode(getString(data, "Sales Branch Code"));
+            dto.setSalesBranchName(getString(data, "Sales Branch Name"));
+            dto.setCompanyBranchCode(getString(data, "Company Branch Code"));
+            dto.setCompanyBranchName(getString(data, "Company Branch Name"));
+            dto.setPolicyBranchCode(getString(data, "Policy Branch Code"));
+            dto.setPolicyBranchName(getString(data, "Policy Branch Name"));
+            dto.setAgentCode(getString(data, "AGENT CODE"));
+            dto.setIntroducer(getString(data, "Introducer"));
+            dto.setSupervisor(getString(data, "Supervisor"));
+            dto.setRiPercentage(getBigDecimal(data, "RI %"));
+
+            // Contribution & Premium Details
+            dto.setInsuredContributionType(getString(data, "INSURED CONTRIBUTION TYPE"));
+            dto.setInsuredModalPremium(getBigDecimal(data, "INSURED MODAL PREMIUM"));
+            dto.setCompanyModalPremium(getBigDecimal(data, "COMPANY MODAL PREMIUM"));
+            dto.setFrequency(getString(data, "FREQUENCY"));
+            dto.setNextPremium(getDateFromInteger(data, "NEXT PREMIUM"));
+            dto.setEmployerName(getString(data, "EMPLOYER NAME"));
+            dto.setInsuranceCategory(getString(data, "INSURANCE CATEGORY"));
+            dto.setMinContributionPerc(getBigDecimal(data, "MIN CONTRIBUTION PERC"));
+            dto.setMaxContributionPerc(getBigDecimal(data, "MAX CONTRIBUTION PERC"));
+            dto.setInsuredPremiumInflation(getBigDecimal(data, "INSURED PREMIUM INFLATION"));
+
+            // Personal Details
+            dto.setPin(getString(data, "PIN"));
+            dto.setMasterPin(getString(data, "MASTER PIN"));
+            dto.setTitle(getString(data, "TITLE"));
+            dto.setFullName(getString(data, "FULL NAME"));
+            dto.setGender(getString(data, "GENDER"));
+            dto.setDob(getDateFromInteger(data, "DOB"));
+            dto.setAae(getInteger(data, "AAE"));
+            dto.setSarChoice(getString(data, "SAR CHOICE"));
+            dto.setNumberOfRidersTaken(getInteger(data, "Number of Riders Taken"));
+
+            // Rider Details - Using helper method to reduce repetition
+            mapRiderDetails(dto, data);
+
+            // Basic Sums & Values
+            dto.setBasicSumInsuredFormula(getString(data, "Basic Sum Insured Formula"));
+            dto.setBasicSumAssured(getBigDecimal(data, "Basic Sum Assured"));
+            dto.setBasicSumAssuredInflation(getBigDecimal(data, "Basic Sum Assured Inflation"));
+
+            // Value Groups - Using helper methods
+            mapValueToday(dto, data);
+            mapTransactionAmounts(dto, data);
+            mapInterestCredited(dto, data);
+            mapSurrenderValues(dto, data);
+
+            // Final Policy Attributes
+            dto.setInsuranceCoveragePeriod(getString(data, "Insurance Coverage Period"));
+            dto.setPacInsuredShare(getBigDecimal(data, "PAC INSURED SHARE"));
+            dto.setLastPaymentDate(getDateFromInteger(data, "Last Payment Date"));
+            dto.setLastPremiumDueDate(getDateFromInteger(data, "Last Premium Due Date"));
+
+            return dto;
+
+        } catch (Exception e) {
+            log.error("UUID: {} - Error mapping row data: {}", uuid, e.getMessage(), e);
+            throw new RuntimeException("Failed to map Excel data to ACP Policy DTO", e);
+        }
+    }
+
+    // Helper method to map all rider details
+    private void mapRiderDetails(ACPPolicyRequestDTO dto, Map<String, Object> data) {
+        // DTH Rider
+        dto.setDthSar(getBigDecimal(data, "DTH SAR"));
+        dto.setSubDth(getString(data, "SUB-DTH"));
+        dto.setSubRateMilDth(getBigDecimal(data, "SUB Rate/Mil-DTH"));
+        dto.setDthOccupationalLoadingPerc(getBigDecimal(data, "DTH Occupational Loading %"));
+        dto.setDthOccupationClass(getString(data, "DTH Occupation Class"));
+        dto.setDthInsuredCoiShare(getBigDecimal(data, "DTH INSURED COI SHARE"));
+
+        // ACCD Rider
+        dto.setAccdSa(getBigDecimal(data, "ACCD SA"));
+        dto.setSubAccd(getString(data, "SUB-ACCD"));
+        dto.setSubRateMilAccd(getBigDecimal(data, "SUB Rate/Mil-ACCD"));
+        dto.setAccdOccupationalLoadingPerc(getBigDecimal(data, "ACCD Occupational Loading %"));
+        dto.setAccdOccupationClass(getString(data, "ACCD Occupation Class"));
+        dto.setAccdInsuredCoiShare(getBigDecimal(data, "ACCD INSURED COI SHARE"));
+
+        // ACCP Rider
+        dto.setAccpSa(getBigDecimal(data, "ACCP SA"));
+        dto.setSubAccp(getString(data, "SUB-ACCP"));
+        dto.setSubRateMilAccp(getBigDecimal(data, "SUB Rate/Mil-ACCP"));
+        dto.setAccpOccupationalLoadingPerc(getBigDecimal(data, "ACCP Occupational Loading %"));
+        dto.setAccpOccupationClass(getString(data, "ACCP Occupation Class"));
+        dto.setAccpInsuredCoiShare(getBigDecimal(data, "ACCP INSURED COI SHARE"));
+
+        // ACCT Rider
+        dto.setAcctSa(getBigDecimal(data, "ACCT SA"));
+        dto.setSubAcct(getString(data, "SUB-ACCT"));
+        dto.setSubRateMilAcct(getBigDecimal(data, "SUB Rate/Mil-ACCT"));
+        dto.setAcctOccupationalLoadingPerc(getBigDecimal(data, "ACCT Occupational Loading %"));
+        dto.setAcctOccupationClass(getString(data, "ACCT Occupation Class"));
+        dto.setAcctInsuredCoiShare(getBigDecimal(data, "ACCT INSURED COI SHARE"));
+
+        // CILX Rider
+        dto.setCilxSa(getBigDecimal(data, "CILX SA"));
+        dto.setSubCilx(getString(data, "SUB-CILX"));
+        dto.setSubRateMilCilx(getBigDecimal(data, "SUB Rate/Mil-CILX"));
+        dto.setCilxOccupationalLoadingPerc(getBigDecimal(data, "CILX Occupational Loading %"));
+        dto.setCilxOccupationClass(getString(data, "CILX Occupation Class"));
+        dto.setCilxInsuredCoiShare(getBigDecimal(data, "CILX INSURED COI SHARE"));
+
+        // PTD Rider
+        dto.setPtdSa(getBigDecimal(data, "PTD SA"));
+        dto.setSubPtd(getString(data, "SUB-PTD"));
+        dto.setSubRateMilPtd(getBigDecimal(data, "SUB Rate/Mil-PTD"));
+        dto.setPtdOccupationalLoadingPerc(getBigDecimal(data, "PTD Occupational Loading %"));
+        dto.setPtdOccupationClass(getString(data, "PTD Occupation Class"));
+        dto.setPtdInsuredCoiShare(getBigDecimal(data, "PTD INSURED COI SHARE"));
+    }
+
+    private void mapValueToday(ACPPolicyRequestDTO dto, Map<String, Object> data) {
+        dto.setInsuredValueToday(getBigDecimal(data, "INSURED VALUE TODAY"));
+        dto.setUnvestedPremiumValueToday(getBigDecimal(data, "UNVESTED PREMIUM VALUE TODAY"));
+        dto.setVestedPremiumValueToday(getBigDecimal(data, "VESTED PREMIUM VALUE TODAY"));
+        dto.setInsuredTopupValueToday(getBigDecimal(data, "INSURED TOPUP VALUE TODAY"));
+        dto.setUnvestedTopupValueToday(getBigDecimal(data, "UNVESTED TOPUP VALUE TODAY"));
+        dto.setVestedTopupValueToday(getBigDecimal(data, "VESTED TOPUP VALUE TODAY"));
+    }
+
+    private void mapTransactionAmounts(ACPPolicyRequestDTO dto, Map<String, Object> data) {
+        dto.setInsuredTransactionAmount(getBigDecimal(data, "INSURED TRANSACTION AMOUNT"));
+        dto.setUnvestedPremiumTransactionAmount(getBigDecimal(data, "UNVESTED PREMIUM TRANSACTION AMOUNT"));
+        dto.setVestedPremiumTransactionAmount(getBigDecimal(data, "VESTED PREMIUM TRANSACTION AMOUNT"));
+        dto.setInsuredTopupTransactionAmount(getBigDecimal(data, "INSURED TOPUP TRANSACTION AMOUNT"));
+        dto.setUnvestedTopupTransactionAmount(getBigDecimal(data, "UNVESTED TOPUP TRANSACTION AMOUNT"));
+        dto.setVestedTopupTransactionAmount(getBigDecimal(data, "VESTED TOPUP TRANSACTION AMOUNT"));
+    }
+
+    private void mapInterestCredited(ACPPolicyRequestDTO dto, Map<String, Object> data) {
+        dto.setInsuredInterestCredited(getBigDecimal(data, "INSURED INTEREST CREDITED"));
+        dto.setUnvestedPremiumInterestCredited(getBigDecimal(data, "UNVESTED PREMIUM INTEREST CREDITED"));
+        dto.setVestedPremiumInterestCredited(getBigDecimal(data, "VESTED PREMIUM INTEREST CREDITED"));
+        dto.setInsuredTopupInterestCredited(getBigDecimal(data, "INSURED TOPUP INTEREST CREDITED"));
+        dto.setUnvestedTopupInterestCredited(getBigDecimal(data, "UNVESTED TOPUP INTEREST CREDITED"));
+        dto.setVestedTopupInterestCredited(getBigDecimal(data, "VESTED TOPUP INTEREST CREDITED"));
+    }
+
+    private void mapSurrenderValues(ACPPolicyRequestDTO dto, Map<String, Object> data) {
+        dto.setInsuredSurrenderValue(getBigDecimal(data, "INSURED SURRENDER VALUE"));
+        dto.setUnvestedPremiumSurrenderValue(getBigDecimal(data, "UNVESTED PREMIUM SURRENDER VALUE"));
+        dto.setVestedPremiumSurrenderValue(getBigDecimal(data, "VESTED PREMIUM SURRENDER VALUE"));
+        dto.setInsuredTopupSurrenderValue(getBigDecimal(data, "INSURED TOPUP SURRENDER VALUE"));
+        dto.setUnvestedTopupSurrenderValue(getBigDecimal(data, "UNVESTED TOPUP SURRENDER VALUE"));
+        dto.setVestedTopupSurrenderValue(getBigDecimal(data, "VESTED TOPUP SURRENDER VALUE"));
+    }
+
+    // ==================== Value Extraction Methods ====================
+
+    private String getString(Map<String, Object> data, String key) {
         Object value = data.get(key);
         return value != null ? value.toString().trim() : null;
     }
 
-    private Integer getIntegerValue(Map<String, Object> data, String key) {
+    private Integer getInteger(Map<String, Object> data, String key) {
         Object value = data.get(key);
         if (value == null) return null;
 
@@ -225,12 +300,12 @@ public class DataIngestorServiceImpl implements DataIngestorService {
             String stringValue = value.toString().trim();
             return stringValue.isEmpty() ? null : Integer.valueOf(stringValue);
         } catch (NumberFormatException e) {
-            log.warn("Could not parse integer value for key '{}': {}", key, value);
+            log.warn("Could not parse integer for key '{}': {}", key, value);
             return null;
         }
     }
 
-    private BigDecimal getBigDecimalValue(Map<String, Object> data, String key) {
+    private BigDecimal getBigDecimal(Map<String, Object> data, String key) {
         Object value = data.get(key);
         if (value == null) return null;
 
@@ -244,48 +319,34 @@ public class DataIngestorServiceImpl implements DataIngestorService {
             String stringValue = value.toString().trim();
             return stringValue.isEmpty() ? null : new BigDecimal(stringValue);
         } catch (NumberFormatException e) {
-            log.warn("Could not parse BigDecimal value for key '{}': {}", key, value);
+            log.warn("Could not parse BigDecimal for key '{}': {}", key, value);
             return null;
         }
     }
 
-    private LocalDate getLocalDateValue(Map<String, Object> data, String key) {
+    private LocalDate getDateFromInteger(Map<String, Object> data, String key) {
         Object value = data.get(key);
         if (value == null) return null;
 
         try {
-            if (value instanceof LocalDate) {
-                return (LocalDate) value;
-            }
             String stringValue = value.toString().trim();
             if (stringValue.isEmpty()) return null;
 
-            // Try common date formats
-            DateTimeFormatter[] formatters = {
-                    DateTimeFormatter.ofPattern("yyyy-MM-dd"),
-                    DateTimeFormatter.ofPattern("MM/dd/yyyy"),
-                    DateTimeFormatter.ofPattern("dd/MM/yyyy"),
-                    DateTimeFormatter.ofPattern("dd-MM-yyyy"),
-                    DateTimeFormatter.ofPattern("yyyy/MM/dd")
-            };
-
-            for (DateTimeFormatter formatter : formatters) {
-                try {
-                    return LocalDate.parse(stringValue, formatter);
-                } catch (DateTimeParseException ignored) {
-                    // Try next formatter
-                }
+            // Handle YYYYMMDD format (e.g., 20190301)
+            if (stringValue.matches(YYYYMMDD_PATTERN)) {
+                return parseYYYYMMDD(stringValue);
             }
 
-            log.warn("Could not parse date value for key '{}': {}", key, value);
-            return null;
+            // Try standard date formats
+            return parseDate(stringValue, DATE_FORMATTERS);
+
         } catch (Exception e) {
-            log.warn("Error parsing date value for key '{}': {}", key, value);
+            log.warn("Could not parse date for key '{}': {}", key, value);
             return null;
         }
     }
 
-    private LocalDateTime getLocalDateTimeValue(Map<String, Object> data, String key) {
+    private LocalDateTime getDateTimeFromInteger(Map<String, Object> data, String key) {
         Object value = data.get(key);
         if (value == null) return null;
 
@@ -293,34 +354,64 @@ public class DataIngestorServiceImpl implements DataIngestorService {
             if (value instanceof LocalDateTime) {
                 return (LocalDateTime) value;
             }
+
             String stringValue = value.toString().trim();
             if (stringValue.isEmpty()) return null;
 
-            // Try common datetime formats
-            DateTimeFormatter[] formatters = {
-                    DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"),
-                    DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"),
-                    DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm:ss"),
-                    DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss")
-            };
-
-            for (DateTimeFormatter formatter : formatters) {
-                try {
-                    return LocalDateTime.parse(stringValue, formatter);
-                } catch (DateTimeParseException ignored) {
-                    // Try next formatter
-                }
+            // IMPORTANT: Check for YYYYMMDD format first (same as getDateFromInteger)
+            if (stringValue.matches(YYYYMMDD_PATTERN)) {
+                LocalDate date = parseYYYYMMDD(stringValue);
+                return date != null ? date.atStartOfDay() : null;
             }
 
-            // If no datetime format works, try to parse as date and convert to datetime
-            LocalDate date = getLocalDateValue(data, key);
+            // Try datetime formats (with time component)
+            LocalDateTime dateTime = parseDateTime(stringValue, DATETIME_FORMATTERS);
+            if (dateTime != null) return dateTime;
+
+            // Fallback to date parsing with standard formatters
+            LocalDate date = parseDate(stringValue, DATE_FORMATTERS);
             return date != null ? date.atStartOfDay() : null;
 
         } catch (Exception e) {
-            log.warn("Error parsing datetime value for key '{}': {}", key, value);
+            log.warn("Could not parse datetime for key '{}': {}", key, value);
             return null;
         }
     }
 
+    // ==================== Date Parsing Utilities ====================
 
+    private LocalDate parseYYYYMMDD(String value) {
+        int year = Integer.parseInt(value.substring(0, 4));
+        int month = Integer.parseInt(value.substring(4, 6));
+        int day = Integer.parseInt(value.substring(6, 8));
+        return LocalDate.of(year, month, day);
+    }
+
+    private LocalDate parseDate(String value, DateTimeFormatter[] formatters) {
+        for (DateTimeFormatter formatter : formatters) {
+            try {
+                return LocalDate.parse(value, formatter);
+            } catch (DateTimeParseException e) {
+                // The current formatter doesn't match this date format, try the next one
+                log.debug("Failed to parse date '{}' with formatter {}: {}", value, formatter, e.getMessage());
+            }
+        }
+        // None of the formatters worked
+        log.warn("Unable to parse date value '{}' with any of the configured formatters", value);
+        return null;
+    }
+
+    private LocalDateTime parseDateTime(String value, DateTimeFormatter[] formatters) {
+        for (DateTimeFormatter formatter : formatters) {
+            try {
+                return LocalDateTime.parse(value, formatter);
+            } catch (DateTimeParseException e) {
+                // The current formatter doesn't match this datetime format, try the next one
+                log.debug("Failed to parse datetime '{}' with formatter {}: {}", value, formatter, e.getMessage());
+            }
+        }
+        // None of the formatters worked
+        log.warn("Unable to parse datetime value '{}' with any of the configured formatters", value);
+        return null;
+    }
 }

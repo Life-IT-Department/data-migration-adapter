@@ -3,10 +3,10 @@ package lk.avengers.datamigrationadapter.dto.request;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.beans.BeanUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
@@ -28,7 +28,7 @@ public class ACPPolicyRequestDTO {
     private String premiumPaymentTerm;
     private String status;
     private LocalDate date;
-    private LocalDateTime operationDate;
+    private LocalDate operationDate;
     private String reason;
 
     // --- Sales & Branch Info ---
@@ -48,7 +48,7 @@ public class ACPPolicyRequestDTO {
     private BigDecimal insuredModalPremium;
     private BigDecimal companyModalPremium;
     private String frequency;
-    private BigDecimal nextPremium;
+    private LocalDate nextPremium;
     private String employerName;
     private String insuranceCategory;
     private BigDecimal minContributionPerc;
@@ -154,4 +154,10 @@ public class ACPPolicyRequestDTO {
     private BigDecimal pacInsuredShare;
     private LocalDate lastPaymentDate;
     private LocalDate lastPremiumDueDate;
+
+    public <E> E mapData(Class<E> receiverClass) {
+        E receiver = BeanUtils.instantiateClass(receiverClass);
+        BeanUtils.copyProperties(this, receiver);
+        return receiver;
+    }
 }
