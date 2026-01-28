@@ -1,5 +1,6 @@
 package lk.avengers.datamigrationadapter.service.impl;
 
+
 import com.monitorjbl.xlsx.StreamingReader;
 import lk.avengers.datamigrationadapter.dto.CommonResponseDTO;
 import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.MainDataReportEntity;
@@ -204,7 +205,7 @@ public class MainDataReportUploadServiceImpl implements MainDataReportUploadServ
                 .aae(getIntegerValue(row.getCell(col++)))
                 .sarChoice(getStringValue(row.getCell(col++)))
                 .numberOfRidersTaken(getIntegerValue(row.getCell(col++)))
-                .dthSar(getIntegerValue(row.getCell(col++)))
+                .dthSar(getBigDecimalValue(row.getCell(col++)))
                 .subDth(getIntegerValue(row.getCell(col++)))
                 .subRateMilDth(getBigDecimalValue(row.getCell(col++)))
                 .dthOccupationalLoadingPercent(getDoubleValue(row.getCell(col++)))
