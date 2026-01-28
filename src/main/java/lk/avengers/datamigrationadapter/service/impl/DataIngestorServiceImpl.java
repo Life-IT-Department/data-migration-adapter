@@ -73,6 +73,7 @@ public class DataIngestorServiceImpl implements DataIngestorService {
             List<Map<String, Object>> cleanedData = cleanAndValidateData(uuid, extractedExcelFile);
             log.info("UUID: {} - Cleaned {} records ready for processing", uuid, cleanedData.size());
 
+            // Delete existing data
             log.info("UUID: {} - Deleting existing Policy List data", uuid);
             policyListRepository.truncateTable();
             log.info("UUID: {} - Existing Policy List data deleted successfully", uuid);
@@ -109,7 +110,8 @@ public class DataIngestorServiceImpl implements DataIngestorService {
 
             // Delete existing data
             log.info("UUID: {} - Deleting existing ACP policy data", uuid);
-            acpPolicyRepository.deleteAll();
+            acpPolicyRepository.truncateTable();
+            log.info("UUID: {} - Existing ACP policy data deleted successfully", uuid);
 
             // Map and save in batches
             List<ACPPolicyEntity> entities = cleanedData.stream()
