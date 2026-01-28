@@ -11,6 +11,8 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -21,6 +23,76 @@ import java.util.Map;
 @Slf4j
 @Service
 public class ExcelDataExtractorServiceImpl implements ExcelDataExtractorService {
+
+    @Override
+    public ExcelDataResponseDTO extractExcelFileFromPath(ExcelExtractorRequestDTO requestDTO) {
+        try {
+            if (requestDTO.getFilePath() == null || requestDTO.getFilePath().isEmpty()) {
+                log.error("File path is null or empty in request");
+                return null;
+            }
+
+            File file = new File(requestDTO.getFilePath());
+            if (!file.exists()) {
+                log.error("File not found at path: {}", requestDTO.getFilePath());
+                return null;
+            }
+
+            log.info("Processing Excel file from path: {}", requestDTO.getFilePath());
+
+            try (InputStream inputStream = new FileInputStream(file)) {
+                Workbook workbook = createWorkbookFromPath(inputStream, file.getName());
+                Sheet firstSheet = workbook.getSheetAt(requestDTO.getSheetIndex());
+
+                String sheetName = firstSheet.getSheetName();
+                log.info("Processing sheet: {}", sheetName);
+
+                // Extract headers from the first row
+                List<String> headers = extractHeaders(firstSheet, requestDTO.getHeaderRow());
+                log.info("Extracted headers: {}", headers);
+
+                // Extract data rows
+                List<Map<String, Object>> data = extractData(firstSheet, headers, requestDTO.getDataRow());
+                log.info("Extracted {} data rows", data.size());
+
+                workbook.close();
+
+                if (data.isEmpty()) {
+                    log.warn("No data found in the Excel file");
+                    return null;
+                } else {
+                    return ExcelDataResponseDTO.builder()
+                            .headers(headers)
+                            .extractedData(data)
+                            .build();
+                }
+            }
+
+        } catch (Exception e) {
+            log.error("Error processing Excel file from path: {}", e.getMessage(), e);
+            return null;
+        }
+    }
+
+    private Workbook createWorkbookFromPath(InputStream inputStream, String filename) throws IOException {
+        if (filename != null) {
+            String lowerFilename = filename.toLowerCase();
+            if (lowerFilename.endsWith(".xlsx") || lowerFilename.endsWith(".xlsm")) {
+                // Both .xlsx and .xlsm are Office 2007+ XML format - use XSSFWorkbook
+                return new XSSFWorkbook(inputStream);
+            } else if (lowerFilename.endsWith(".xls")) {
+                // Only .xls is the old OLE2 format - use HSSFWorkbook
+                return new HSSFWorkbook(inputStream);
+            }
+        }
+        // If the filename is null or unknown extension, use WorkbookFactory for auto-detection
+        try {
+            return WorkbookFactory.create(inputStream);
+        } catch (Exception e) {
+            log.error("Failed to read Excel file with auto-detection");
+            throw new IOException("Unsupported Excel file format", e);
+        }
+    }
 
     @Override
     public ExcelDataResponseDTO extractExcelFile(ExcelExtractorRequestDTO requestDTO) {

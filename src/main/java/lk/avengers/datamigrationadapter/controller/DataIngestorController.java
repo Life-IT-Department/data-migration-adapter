@@ -24,4 +24,13 @@ public class DataIngestorController {
         return ResponseEntity.ok("ACP Data extracted successfully.") ;
     }
 
+    @PostMapping("/extract-policy-list")
+    public ResponseEntity<String> retrievePolicyListData(@RequestHeader String uuid, @RequestParam MultipartFile file) {
+      log.info("UUID: {} RETRIEVE_POLICY_LIST_DATA (STRING, MULTIPART_FILE) METHOD ACCESSED.", uuid);
+
+        dataIngestorService.ProcessPolicyListData(uuid, file);
+
+        return ResponseEntity.ok("Policy Data extracted successfully.") ;
+    }
+
 }

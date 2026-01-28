@@ -6,6 +6,8 @@ import lk.avengers.datamigrationadapter.dto.excel.ExcelExtractorRequestDTO;
 
 public interface ExcelDataExtractorService {
 
+    ExcelDataResponseDTO extractExcelFileFromPath(ExcelExtractorRequestDTO requestDTO);
+
     ExcelDataResponseDTO extractExcelFile(ExcelExtractorRequestDTO requestDTO);
 }
 

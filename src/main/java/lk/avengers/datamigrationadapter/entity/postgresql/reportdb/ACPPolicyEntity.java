@@ -164,10 +164,4 @@ public class ACPPolicyEntity {
     private BigDecimal pacInsuredShare;
     private LocalDate lastPaymentDate;
     private LocalDate lastPremiumDueDate;
-
-    public <E> E mapData(Class<E> receiverClass) {
-        E receiver = BeanUtils.instantiateClass(receiverClass);
-        BeanUtils.copyProperties(this, receiver);
-        return receiver;
-    }
 }
