@@ -3,23 +3,29 @@ package lk.avengers.datamigrationadapter.service.impl;
 import lk.avengers.datamigrationadapter.dto.excel.ExcelDataResponseDTO;
 import lk.avengers.datamigrationadapter.dto.excel.ExcelExtractorRequestDTO;
 import lk.avengers.datamigrationadapter.dto.request.ACPPolicyRequestDTO;
+import lk.avengers.datamigrationadapter.dto.request.PolicyListRequestDTO;
 import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.ACPPolicyEntity;
+import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.PolicyListEntity;
 import lk.avengers.datamigrationadapter.repository.postgresql.reportdb.ACPPolicyRepository;
+import lk.avengers.datamigrationadapter.repository.postgresql.reportdb.PolicyListRepository;
 import lk.avengers.datamigrationadapter.service.DataIngestorService;
 import lk.avengers.datamigrationadapter.service.ExcelDataExtractorService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -27,11 +33,22 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class DataIngestorServiceImpl implements DataIngestorService {
 
+    @Value("${acp.data.file}")
+    private String acpDataFilePath;
+
+    @Value("${policy.list.file}")
+    private String policyListFilePath;
+
     private final ExcelDataExtractorService excelDataExtractorService;
     private final ACPPolicyRepository acpPolicyRepository;
+    private final PolicyListRepository policyListRepository;
 
-    // Constants for date patterns
+    // Constants
+    private static final int BATCH_SIZE = 1000;
     private static final String YYYYMMDD_PATTERN = "\\d{8}";
+    private static final Set<String> INVALID_DATE_VALUES = Set.of(
+            "?", "-", "N/A", "NA", "NULL", "NONE", "#N/A", ""
+    );
     private static final DateTimeFormatter[] DATE_FORMATTERS = {
             DateTimeFormatter.ofPattern("yyyy-MM-dd"),
             DateTimeFormatter.ofPattern("MM/dd/yyyy"),
@@ -39,75 +56,186 @@ public class DataIngestorServiceImpl implements DataIngestorService {
             DateTimeFormatter.ofPattern("dd-MM-yyyy"),
             DateTimeFormatter.ofPattern("yyyy/MM/dd")
     };
-    private static final DateTimeFormatter[] DATETIME_FORMATTERS = {
-            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"),
-            DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"),
-            DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm:ss"),
-            DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss")
-    };
+
+    // ==================== Main Processing Methods ====================
 
     @Override
+    @Transactional
+    public void ProcessPolicyListData(String uuid, MultipartFile excelFile) {
+        log.info("UUID: {} - Starting Policy List data processing", uuid);
+
+        try {
+            // Extract data from Excel
+            ExcelDataResponseDTO extractedExcelFile = extractExcelData(uuid, policyListFilePath, 0, 1, 3);
+            if (extractedExcelFile == null) return;
+
+            // Process and clean data
+            List<Map<String, Object>> cleanedData = cleanAndValidateData(uuid, extractedExcelFile);
+            log.info("UUID: {} - Cleaned {} records ready for processing", uuid, cleanedData.size());
+
+            log.info("UUID: {} - Deleting existing Policy List data", uuid);
+            policyListRepository.truncateTable();
+            log.info("UUID: {} - Existing Policy List data deleted successfully", uuid);
+
+            // Map and save in batches
+            List<PolicyListEntity> entities = cleanedData.stream()
+                    .map(rowData -> mapToPolicyListRequestDTO(rowData, uuid))
+                    .map(dto -> dto.mapData(PolicyListEntity.class))
+                    .toList();
+
+            processBatch(uuid, entities, "Policy List records", policyListRepository::saveAll, BATCH_SIZE);
+
+            log.info("UUID: {} - Policy List data processing completed successfully", uuid);
+
+        } catch (Exception e) {
+            log.error("UUID: {} - Failed to process Policy List data: {}", uuid, e.getMessage(), e);
+            throw new RuntimeException("Failed to process Policy List data", e);
+        }
+    }
+
+    @Override
+    @Transactional
     public void ProcessACPData(String uuid, MultipartFile excelFile) {
         log.info("UUID: {} - Starting ACP data processing", uuid);
 
         try {
-            ExcelExtractorRequestDTO excelData = ExcelExtractorRequestDTO.builder()
-                    .file(excelFile)
-                    .sheetIndex(0)
-                    .headerRow(0)
-                    .dataRow(1)
-                    .build();
+            // Extract data from Excel
+            ExcelDataResponseDTO extractedExcelFile = extractExcelData(uuid, acpDataFilePath, 0, 0, 1);
+            if (extractedExcelFile == null) return;
 
-            ExcelDataResponseDTO extractedExcelFile = excelDataExtractorService.extractExcelFile(excelData);
+            // Process and clean data
+            List<Map<String, Object>> cleanedData = cleanAndValidateData(uuid, extractedExcelFile);
+            log.info("UUID: {} - Cleaned {} records ready for processing", uuid, cleanedData.size());
 
-            if (extractedExcelFile == null || extractedExcelFile.getExtractedData().isEmpty()) {
-                log.warn("UUID: {} - No data extracted from Excel file", uuid);
-                return;
-            }
+            // Delete existing data
+            log.info("UUID: {} - Deleting existing ACP policy data", uuid);
+            acpPolicyRepository.deleteAll();
 
-            // Filter out empty headers to avoid processing empty columns
-            List<String> validHeaders = extractedExcelFile.getHeaders().stream()
-                    .filter(header -> header != null && !header.trim().isEmpty())
-                    .collect(Collectors.toList());
-
-            log.info("UUID: {} - Found {} valid headers out of {} total columns",
-                    uuid, validHeaders.size(), extractedExcelFile.getHeaders().size());
-
-            // Clean the extracted data by removing empty header columns
-            List<Map<String, Object>> cleanedData = extractedExcelFile.getExtractedData().stream()
-                    .map(rowData -> filterValidColumns(rowData, validHeaders))
-                    .toList();
-
-            // Map to DTOs
-            List<ACPPolicyRequestDTO> acpPolicyRequestDTOS = cleanedData.stream()
+            // Map and save in batches
+            List<ACPPolicyEntity> entities = cleanedData.stream()
                     .map(rowData -> mapToACPPolicyRequestDTO(rowData, uuid))
-                    .toList();
-
-            // Map DTO's to Entities
-            List<ACPPolicyEntity> acpPolicyEntities = acpPolicyRequestDTOS.stream()
                     .map(dto -> dto.mapData(ACPPolicyEntity.class))
                     .toList();
 
-            acpPolicyRepository.saveAll(acpPolicyEntities);
-            log.info("UUID: {} - Successfully saved {} ACP policies", uuid, acpPolicyEntities.size());
+            processBatch(uuid, entities, "ACP policies", acpPolicyRepository::saveAll, BATCH_SIZE);
+
+            log.info("UUID: {} - ACP data processing completed successfully", uuid);
 
         } catch (Exception e) {
-            log.error("UUID: {} - Error processing ACP data: {}", uuid, e.getMessage(), e);
+            log.error("UUID: {} - Failed to process ACP data: {}", uuid, e.getMessage(), e);
             throw new RuntimeException("Failed to process ACP data", e);
         }
     }
 
+    // ==================== Helper Methods ====================
+
     /**
-     * Filter row data to only include valid (non-empty) column headers
+     * Extract Excel data with specified parameters
+     */
+    private ExcelDataResponseDTO extractExcelData(String uuid, String filePath, int sheetIndex,
+                                                  int headerRow, int dataRow) {
+        ExcelExtractorRequestDTO request = ExcelExtractorRequestDTO.builder()
+                .filePath(filePath)
+                .sheetIndex(sheetIndex)
+                .headerRow(headerRow)
+                .dataRow(dataRow)
+                .build();
+
+        ExcelDataResponseDTO result = excelDataExtractorService.extractExcelFileFromPath(request);
+
+        if (result == null || result.getExtractedData().isEmpty()) {
+            log.warn("UUID: {} - No data extracted from file: {}", uuid, filePath);
+            return null;
+        }
+
+        log.info("UUID: {} - Successfully extracted {} rows from Excel", uuid, result.getExtractedData().size());
+        return result;
+    }
+
+    /**
+     * Clean and validate extracted data
+     */
+    private List<Map<String, Object>> cleanAndValidateData(String uuid, ExcelDataResponseDTO extractedData) {
+        // Filter valid headers
+        List<String> validHeaders = extractedData.getHeaders().stream()
+                .filter(header -> header != null && !header.trim().isEmpty())
+                .collect(Collectors.toList());
+
+        log.info("UUID: {} - Found {} valid headers out of {} total columns",
+                uuid, validHeaders.size(), extractedData.getHeaders().size());
+
+        // Clean data
+        return extractedData.getExtractedData().stream()
+                .map(rowData -> filterValidColumns(rowData, validHeaders))
+                .toList();
+    }
+
+    /**
+     * Filter row data to only include valid column headers
      */
     private Map<String, Object> filterValidColumns(Map<String, Object> rowData, List<String> validHeaders) {
         Map<String, Object> cleanedRow = new LinkedHashMap<>();
         for (String header : validHeaders) {
-            if (rowData.containsKey(header)) {
-                cleanedRow.put(header, rowData.get(header));
-            }
+            cleanedRow.put(header, rowData.getOrDefault(header, null));
         }
         return cleanedRow;
+    }
+
+    /**
+     * Generic batch processor for saving entities
+     */
+    private <T> void processBatch(String uuid, List<T> entities, String entityName,
+                                  Consumer<List<T>> batchSaver, int batchSize) {
+        int totalRecords = entities.size();
+        int processedRecords = 0;
+
+        log.info("UUID: {} - Starting batch save for {} {}", uuid, totalRecords, entityName);
+
+        for (int i = 0; i < totalRecords; i += batchSize) {
+            int endIndex = Math.min(i + batchSize, totalRecords);
+            List<T> batch = entities.subList(i, endIndex);
+
+            batchSaver.accept(batch);
+
+            processedRecords += batch.size();
+
+            if (processedRecords % (batchSize * 5) == 0 || processedRecords == totalRecords) {
+                log.info("UUID: {} - Progress: {}/{} {} saved ({} %)",
+                        uuid, processedRecords, totalRecords, entityName,
+                        String.format("%.1f", (processedRecords * 100.0 / totalRecords)));
+            }
+        }
+
+        log.info("UUID: {} - Successfully saved all {} {}", uuid, processedRecords, entityName);
+    }
+
+    // ==================== DTO Mapping Methods ====================
+
+    private PolicyListRequestDTO mapToPolicyListRequestDTO(Map<String, Object> data, String uuid) {
+        try {
+            PolicyListRequestDTO dto = new PolicyListRequestDTO();
+            dto.setAgent(getString(data, "Agent"));
+            dto.setUnitHead(getString(data, "Unit Head"));
+            dto.setSalesBranch(getString(data, "Sales Branch"));
+            dto.setCompanyBranch(getString(data, "Company Branch"));
+            dto.setPolicyBranch(getString(data, "Policy Branch"));
+            dto.setIntroducer(getString(data, "Introducer"));
+            dto.setSupervisor(getString(data, "Supervisor"));
+            dto.setContract(getString(data, "Contract"));
+            dto.setCurrency(getString(data, "C/Y"));
+            dto.setCustomerName(getString(data, "Customer Name"));
+            dto.setInception(getDateFromInteger(data, "Inception"));
+            dto.setFrequencyMode(getString(data, "Frequency Mode"));
+            dto.setStatus(getString(data, "Status"));
+            dto.setAnnualPremium(getBigDecimal(data, "Annual Premium"));
+            dto.setPaidUpTo(getDateFromInteger(data, "Paid Up To"));
+            dto.setUnappropriateBalance(getBigDecimal(data, "Unappopriate Balance"));
+            dto.setRequestUuid(uuid);
+            return dto;
+        } catch (Exception e) {
+            log.error("UUID: {} - Error mapping Policy List row data: {}", uuid, e.getMessage());
+            throw new RuntimeException("Failed to map Excel data to Policy List DTO", e);
+        }
     }
 
     private ACPPolicyRequestDTO mapToACPPolicyRequestDTO(Map<String, Object> data, String uuid) {
@@ -167,7 +295,7 @@ public class DataIngestorServiceImpl implements DataIngestorService {
             dto.setSarChoice(getString(data, "SAR CHOICE"));
             dto.setNumberOfRidersTaken(getInteger(data, "Number of Riders Taken"));
 
-            // Rider Details - Using helper method to reduce repetition
+            // Rider Details
             mapRiderDetails(dto, data);
 
             // Basic Sums & Values
@@ -175,7 +303,7 @@ public class DataIngestorServiceImpl implements DataIngestorService {
             dto.setBasicSumAssured(getBigDecimal(data, "Basic Sum Assured"));
             dto.setBasicSumAssuredInflation(getBigDecimal(data, "Basic Sum Assured Inflation"));
 
-            // Value Groups - Using helper methods
+            // Value Groups
             mapValueToday(dto, data);
             mapTransactionAmounts(dto, data);
             mapInterestCredited(dto, data);
@@ -188,14 +316,14 @@ public class DataIngestorServiceImpl implements DataIngestorService {
             dto.setLastPremiumDueDate(getDateFromInteger(data, "Last Premium Due Date"));
 
             return dto;
-
         } catch (Exception e) {
-            log.error("UUID: {} - Error mapping row data: {}", uuid, e.getMessage(), e);
+            log.error("UUID: {} - Error mapping ACP Policy row data: {}", uuid, e.getMessage());
             throw new RuntimeException("Failed to map Excel data to ACP Policy DTO", e);
         }
     }
 
-    // Helper method to map all rider details
+    // ==================== Rider Mapping Helper Methods ====================
+
     private void mapRiderDetails(ACPPolicyRequestDTO dto, Map<String, Object> data) {
         // DTH Rider
         dto.setDthSar(getBigDecimal(data, "DTH SAR"));
@@ -300,7 +428,7 @@ public class DataIngestorServiceImpl implements DataIngestorService {
             String stringValue = value.toString().trim();
             return stringValue.isEmpty() ? null : Integer.valueOf(stringValue);
         } catch (NumberFormatException e) {
-            log.warn("Could not parse integer for key '{}': {}", key, value);
+            log.debug("Could not parse integer for key '{}': {}", key, value);
             return null;
         }
     }
@@ -319,7 +447,7 @@ public class DataIngestorServiceImpl implements DataIngestorService {
             String stringValue = value.toString().trim();
             return stringValue.isEmpty() ? null : new BigDecimal(stringValue);
         } catch (NumberFormatException e) {
-            log.warn("Could not parse BigDecimal for key '{}': {}", key, value);
+            log.debug("Could not parse BigDecimal for key '{}': {}", key, value);
             return null;
         }
     }
@@ -332,48 +460,26 @@ public class DataIngestorServiceImpl implements DataIngestorService {
             String stringValue = value.toString().trim();
             if (stringValue.isEmpty()) return null;
 
-            // Handle YYYYMMDD format (e.g., 20190301)
+            // Early exit for known non-date values
+            if (INVALID_DATE_VALUES.contains(stringValue.toUpperCase())) {
+                return null;
+            }
+
+            // Quick validation: check if string contains at least one digit
+            if (!stringValue.matches(".*\\d.*")) {
+                return null;
+            }
+
+            // Handle YYYYMMDD format
             if (stringValue.matches(YYYYMMDD_PATTERN)) {
                 return parseYYYYMMDD(stringValue);
             }
 
             // Try standard date formats
-            return parseDate(stringValue, DATE_FORMATTERS);
+            return parseDate(stringValue);
 
         } catch (Exception e) {
-            log.warn("Could not parse date for key '{}': {}", key, value);
-            return null;
-        }
-    }
-
-    private LocalDateTime getDateTimeFromInteger(Map<String, Object> data, String key) {
-        Object value = data.get(key);
-        if (value == null) return null;
-
-        try {
-            if (value instanceof LocalDateTime) {
-                return (LocalDateTime) value;
-            }
-
-            String stringValue = value.toString().trim();
-            if (stringValue.isEmpty()) return null;
-
-            // IMPORTANT: Check for YYYYMMDD format first (same as getDateFromInteger)
-            if (stringValue.matches(YYYYMMDD_PATTERN)) {
-                LocalDate date = parseYYYYMMDD(stringValue);
-                return date != null ? date.atStartOfDay() : null;
-            }
-
-            // Try datetime formats (with time component)
-            LocalDateTime dateTime = parseDateTime(stringValue, DATETIME_FORMATTERS);
-            if (dateTime != null) return dateTime;
-
-            // Fallback to date parsing with standard formatters
-            LocalDate date = parseDate(stringValue, DATE_FORMATTERS);
-            return date != null ? date.atStartOfDay() : null;
-
-        } catch (Exception e) {
-            log.warn("Could not parse datetime for key '{}': {}", key, value);
+            log.debug("Could not parse date for key '{}': {}", key, value);
             return null;
         }
     }
@@ -387,31 +493,14 @@ public class DataIngestorServiceImpl implements DataIngestorService {
         return LocalDate.of(year, month, day);
     }
 
-    private LocalDate parseDate(String value, DateTimeFormatter[] formatters) {
-        for (DateTimeFormatter formatter : formatters) {
+    private LocalDate parseDate(String value) {
+        for (DateTimeFormatter formatter : DATE_FORMATTERS) {
             try {
                 return LocalDate.parse(value, formatter);
-            } catch (DateTimeParseException e) {
-                // The current formatter doesn't match this date format, try the next one
-                log.debug("Failed to parse date '{}' with formatter {}: {}", value, formatter, e.getMessage());
+            } catch (DateTimeParseException ignored) {
+                // Try next formatter
             }
         }
-        // None of the formatters worked
-        log.warn("Unable to parse date value '{}' with any of the configured formatters", value);
-        return null;
-    }
-
-    private LocalDateTime parseDateTime(String value, DateTimeFormatter[] formatters) {
-        for (DateTimeFormatter formatter : formatters) {
-            try {
-                return LocalDateTime.parse(value, formatter);
-            } catch (DateTimeParseException e) {
-                // The current formatter doesn't match this datetime format, try the next one
-                log.debug("Failed to parse datetime '{}' with formatter {}: {}", value, formatter, e.getMessage());
-            }
-        }
-        // None of the formatters worked
-        log.warn("Unable to parse datetime value '{}' with any of the configured formatters", value);
         return null;
     }
 }
