@@ -9,13 +9,14 @@ import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.PolicyListEnt
 import lk.avengers.datamigrationadapter.repository.postgresql.reportdb.ACPPolicyRepository;
 import lk.avengers.datamigrationadapter.repository.postgresql.reportdb.PolicyListRepository;
 import lk.avengers.datamigrationadapter.service.DataIngestorService;
+import lk.avengers.datamigrationadapter.service.ExcelDataExtractorEnhancedService;
 import lk.avengers.datamigrationadapter.service.ExcelDataExtractorService;
+import lk.avengers.datamigrationadapter.util.MemoryMonitor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -39,9 +40,13 @@ public class DataIngestorServiceImpl implements DataIngestorService {
     @Value("${policy.list.file}")
     private String policyListFilePath;
 
+    @Value("${contact.detail.file}")
+    private String contactDetailFilePath;
+
     private final ExcelDataExtractorService excelDataExtractorService;
     private final ACPPolicyRepository acpPolicyRepository;
     private final PolicyListRepository policyListRepository;
+    private final ExcelDataExtractorEnhancedService excelDataExtractorEnhancedService;
 
     // Constants
     private static final int BATCH_SIZE = 1000;
@@ -60,8 +65,8 @@ public class DataIngestorServiceImpl implements DataIngestorService {
     // ==================== Main Processing Methods ====================
 
     @Override
-    @Transactional
-    public void ProcessPolicyListData(String uuid, MultipartFile excelFile) {
+    @Transactional("reportPlatformTransactionManager")
+    public void ProcessPolicyListData(String uuid) {
         log.info("UUID: {} - Starting Policy List data processing", uuid);
 
         try {
@@ -95,8 +100,8 @@ public class DataIngestorServiceImpl implements DataIngestorService {
     }
 
     @Override
-    @Transactional
-    public void ProcessACPData(String uuid, MultipartFile excelFile) {
+    @Transactional("reportPlatformTransactionManager")
+    public void ProcessACPData(String uuid) {
         log.info("UUID: {} - Starting ACP data processing", uuid);
 
         try {
@@ -129,6 +134,31 @@ public class DataIngestorServiceImpl implements DataIngestorService {
         }
     }
 
+    @Override
+    public void ProcessContactDetailData(String uuid) {
+        log.info("UUID: {} - Starting Contact Detail data processing", uuid);
+
+        try{
+            ExcelDataResponseDTO extractedExcelFile = extractExcelData(uuid, contactDetailFilePath, 0, 1, 3);
+            if (extractedExcelFile == null) return;
+            log.info("UUID: {} - File extraction successful", uuid);
+
+            // Process and clean data
+            List<Map<String, Object>> cleanedData = cleanAndValidateData(uuid, extractedExcelFile);
+            log.info("UUID: {} - Cleaned {} records ready for processing", uuid, cleanedData.size());
+
+            // Force GC if memory usage is high (> 75%)
+            MemoryMonitor.forceGcIfNeeded(75.0);
+
+        } catch (Exception e) {
+            log.error("UUID: {} - Failed to process Policy List data: {}", uuid, e.getMessage(), e);
+            throw new RuntimeException("Failed to process Policy List data", e);
+        } finally {
+            // Log final memory state
+            MemoryMonitor.logMemoryUsage("After Processing Complete");
+        }
+    }
+
     // ==================== Helper Methods ====================
 
     /**
@@ -143,7 +173,7 @@ public class DataIngestorServiceImpl implements DataIngestorService {
                 .dataRow(dataRow)
                 .build();
 
-        ExcelDataResponseDTO result = excelDataExtractorService.extractExcelFileFromPath(request);
+        ExcelDataResponseDTO result = excelDataExtractorEnhancedService.extractExcelFileFromPath(request);
 
         if (result == null || result.getExtractedData().isEmpty()) {
             log.warn("UUID: {} - No data extracted from file: {}", uuid, filePath);
