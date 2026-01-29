@@ -1,7 +1,8 @@
 package lk.avengers.datamigrationadapter.service.impl;
 
 
-import com.monitorjbl.xlsx.StreamingReader;
+
+import com.github.pjfanning.xlsx.StreamingReader;
 import lk.avengers.datamigrationadapter.dto.CommonResponseDTO;
 import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.MainDataReportEntity;
 import lk.avengers.datamigrationadapter.exception.ReportException;

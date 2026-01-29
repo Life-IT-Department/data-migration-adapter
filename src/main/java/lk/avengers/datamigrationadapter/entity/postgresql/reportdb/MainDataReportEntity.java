@@ -470,7 +470,10 @@ public class MainDataReportEntity extends BaseMainData {
     @Column(name = "premium_escalation_benefit_percentage")
     private Double premiumEscalationBenefitPercentage;
 
-
+    // -- audit --
+    @CreatedDate
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
 
 
 

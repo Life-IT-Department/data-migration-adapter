@@ -5,10 +5,12 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.Table;
 import lombok.*;
+import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "main_data_alh_report")
@@ -78,33 +80,8 @@ public class MainDataALHReportEntity extends BaseMainData{
     // Note: Since this file has 20 children and the other had 5,
     // it is cleaner to define them here rather than in the base class.
 
-    // --- CHILD 1 ---
-    @Column(name = "child1_name")
-    private String child1Name;
-    @Column(name = "child1_dob")
-    private LocalDate child1Dob;
-    @Column(name = "child1_age")
-    private Integer child1Age;
-    @Column(name = "child1_hbc")
-    private BigDecimal child1Hbc;
-    @Column(name = "child1_inp_sar")
-    private BigDecimal child1InpSar;
-    @Column(name = "child1_bonus")
-    private BigDecimal child1Bonus;
 
-    // --- CHILD 2 ---
-    @Column(name = "child2_name")
-    private String child2Name;
-    @Column(name = "child2_dob")
-    private LocalDate child2Dob;
-    @Column(name = "child2_age")
-    private Integer child2Age;
-    @Column(name = "child2_hbc")
-    private BigDecimal child2Hbc;
-    @Column(name = "child2_inp_sar")
-    private BigDecimal child2InpSar;
-    @Column(name = "child2_bonus")
-    private BigDecimal child2Bonus;
+
 
     // ... (REPEAT THIS PATTERN FOR CHILDREN 3 THROUGH 19) ...
 
@@ -125,4 +102,9 @@ public class MainDataALHReportEntity extends BaseMainData{
     // --- 4. EXTRA FIELDS (If any differ from Base) ---
     @Column(name = "operation_date")
     private LocalDate operationDate;
+
+    // -- audit --
+    @CreatedDate
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
 }
