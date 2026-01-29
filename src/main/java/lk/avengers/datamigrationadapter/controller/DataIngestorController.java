@@ -33,4 +33,13 @@ public class DataIngestorController {
         return ResponseEntity.ok("Policy Data extracted successfully.") ;
     }
 
+    @PostMapping("/extract-contact-detail")
+    public ResponseEntity<String> retrieveContactDetailData(@RequestHeader String uuid) {
+        log.info("UUID: {} RETRIEVE_CONTACT_DETAIL_DATA (STRING) METHOD ACCESSED.", uuid);
+
+       dataIngestorService.ProcessContactDetailData(uuid);
+
+        return ResponseEntity.ok("Contact Detail Data extracted successfully.") ;
+    }
+
 }

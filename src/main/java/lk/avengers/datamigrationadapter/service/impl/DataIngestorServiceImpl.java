@@ -10,6 +10,8 @@ import lk.avengers.datamigrationadapter.repository.postgresql.reportdb.ACPPolicy
 import lk.avengers.datamigrationadapter.repository.postgresql.reportdb.PolicyListRepository;
 import lk.avengers.datamigrationadapter.service.DataIngestorService;
 import lk.avengers.datamigrationadapter.service.ExcelDataExtractorService;
+import lk.avengers.datamigrationadapter.service.StreamingExcelReaderService;
+import lk.avengers.datamigrationadapter.service.StreamingExcelReaderServiceEdit;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -25,8 +27,12 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.*;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+
+import org.apache.poi.ss.usermodel.*;
+import java.io.FileInputStream;
 
 @Slf4j
 @Service
@@ -39,9 +45,14 @@ public class DataIngestorServiceImpl implements DataIngestorService {
     @Value("${policy.list.file}")
     private String policyListFilePath;
 
+    @Value("${contact.detail.file}")
+    private String contactDetailFilePath;
+
     private final ExcelDataExtractorService excelDataExtractorService;
     private final ACPPolicyRepository acpPolicyRepository;
     private final PolicyListRepository policyListRepository;
+    private final StreamingExcelReaderServiceEdit streamingExcelReaderServiceEdit;
+    private final StreamingExcelReaderService streamingExcelReaderService;
 
     // Constants
     private static final int BATCH_SIZE = 1000;
@@ -129,8 +140,84 @@ public class DataIngestorServiceImpl implements DataIngestorService {
         }
     }
 
-    // ==================== Helper Methods ====================
+//    @Override
+//    public void ProcessContactDetailData(String uuid) {
+//        try{
+//
+//
+//            // Extract data from Excel
+//            ExcelDataResponseDTO extractedExcelFile= extractExcelData(uuid,contactDetailFilePath,0,2,4);
+//            if (extractedExcelFile == null) return;
+//
+//            // Process and clean data
+//            List<Map<String, Object>> cleanedData = cleanAndValidateData(uuid, extractedExcelFile);
+//            log.info("UUID: {} - Cleaned {} records ready for processing", uuid, cleanedData.size());
+//
+//            System.out.println("s" +
+//                    "ds");
+//
+//
+//
+//        }catch (Exception e) {
+//            log.error("UUID: {} - Failed to process Contact Detail data: {}", uuid, e.getMessage(), e);
+//            throw new RuntimeException("Failed to process Contact Detail data", e);
+//        }
+//    }
+//
+//    // ==================== Helper Methods ====================
+//
+//    /**
+//     * NEW METHOD: Extract Excel data using streaming (for large files)
+//     */
+//    private ExcelDataResponseDTO extractExcelDataStreaming(String uuid, String filePath,
+//                                                           int sheetIndex, int headerRow,
+//                                                           int dataStartRow) {
+//        log.info("UUID: {} - Using STREAMING extraction for large file", uuid);
+//        return streamingExcelReaderServiceEdit.readExcelStreaming(filePath, sheetIndex, headerRow, dataStartRow);
+//    }
+@Override
+public void ProcessContactDetailData(String uuid) {
+    try {
+        log.info("UUID: {} - Starting contact detail data processing", uuid);
 
+        // NEW: Use streaming for large files
+        ExcelDataResponseDTO extractedExcelFile = extractExcelDataStreaming(
+                uuid,
+                contactDetailFilePath,
+                0,  // sheetIndex
+                1,  // headerRow (0-based, so this is row 2 in Excel)
+                3   // dataStartRow (0-based, so this is row 4 in Excel)
+        );
+
+        if (extractedExcelFile == null) {
+            log.error("UUID: {} - Failed to extract Excel data", uuid);
+            return;
+        }
+
+        log.info("UUID: {} - Successfully extracted {} rows",
+                uuid, extractedExcelFile.getExtractedData().size());
+
+        // Process and clean data
+        List<Map<String, Object>> cleanedData = cleanAndValidateData(uuid, extractedExcelFile);
+        log.info("UUID: {} - Cleaned {} records ready for processing", uuid, cleanedData.size());
+
+        // Continue with your existing processing...
+
+    } catch (Exception e) {
+        log.error("UUID: {} - Failed to process Contact Detail data: {}", uuid, e.getMessage(), e);
+        throw new RuntimeException("Failed to process Contact Detail data", e);
+    }
+}
+
+    /**
+     * NEW METHOD: Extract Excel data using streaming (for large files)
+     */
+    private ExcelDataResponseDTO extractExcelDataStreaming(String uuid, String filePath,
+                                                           int sheetIndex, int headerRow,
+                                                           int dataStartRow) {
+        log.info("UUID: {} - Using STREAMING extraction for large file", uuid);
+        return streamingExcelReaderServiceEdit.readExcelStreaming(filePath, sheetIndex, headerRow, dataStartRow);
+    }
     /**
      * Extract Excel data with specified parameters
      */
@@ -154,6 +241,43 @@ public class DataIngestorServiceImpl implements DataIngestorService {
         return result;
     }
 
+    public ExcelDataResponseDTO extractExcelData2(String uuid, String filePath,
+                                                 int sheetIndex, int headerRow,
+                                                 int dataStartRow) {
+        log.info("UUID: {} - Starting to read Excel file: {}", uuid, filePath);
+
+        try (FileInputStream fis = new FileInputStream(filePath)) {
+
+            // Option 1: Try with default XSSFWorkbook first with increased limit
+            // But set a reasonable timeout
+            ExecutorService executor = Executors.newSingleThreadExecutor();
+            Future<Workbook> future = executor.submit(() -> {
+                return WorkbookFactory.create(fis);
+            });
+
+            Workbook workbook;
+            try {
+                // Wait max 2 minutes
+                workbook = future.get(2, TimeUnit.MINUTES);
+            } catch (TimeoutException e) {
+                future.cancel(true);
+                executor.shutdownNow();
+                throw new RuntimeException("Excel file took too long to load - possibly corrupted");
+            } finally {
+                executor.shutdown();
+            }
+
+            Sheet sheet = workbook.getSheetAt(sheetIndex);
+            log.info("UUID: {} - Loaded sheet with {} rows", uuid, sheet.getLastRowNum());
+
+           return null;
+
+        } catch (Exception e) {
+            log.error("UUID: {} - Error reading Excel: {}", uuid, e.getMessage(), e);
+            throw new RuntimeException("Failed to read Excel file", e);
+        }
+    }
+
     /**
      * Clean and validate extracted data
      */
@@ -162,6 +286,10 @@ public class DataIngestorServiceImpl implements DataIngestorService {
         List<String> validHeaders = extractedData.getHeaders().stream()
                 .filter(header -> header != null && !header.trim().isEmpty())
                 .collect(Collectors.toList());
+
+        //TODO: Remove the below print statement.
+        validHeaders.forEach(System.out::println);
+
 
         log.info("UUID: {} - Found {} valid headers out of {} total columns",
                 uuid, validHeaders.size(), extractedData.getHeaders().size());

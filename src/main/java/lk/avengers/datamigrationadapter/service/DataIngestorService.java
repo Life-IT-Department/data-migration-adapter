@@ -7,4 +7,6 @@ public interface DataIngestorService {
     void ProcessPolicyListData(String uuid, MultipartFile excelFile);
 
     void ProcessACPData(String uuid, MultipartFile excelFile);
+
+    void ProcessContactDetailData(String uuid);
 }
