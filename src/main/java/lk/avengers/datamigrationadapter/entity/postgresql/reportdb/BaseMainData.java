@@ -18,7 +18,6 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @MappedSuperclass
 public abstract class BaseMainData {
-
     // --- 1. COMMON IDENTIFIERS ---
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -26,7 +25,7 @@ public abstract class BaseMainData {
     @Column(name = "policy_no", nullable = false)
     private Integer policyNo;
     @Column(name = "proposal_no",nullable = false)
-    private String proposalNo;
+    private Integer proposalNo;
     @Column(name = "product_code",nullable = false)
     private String productCode;
     @Column(name = "plan_no")
@@ -38,22 +37,20 @@ public abstract class BaseMainData {
     @Column(name = "issue_date")
     private LocalDate issueDate;
     @Column(name = "sales_branch_code")
-    private String salesBranchCode;
+    private Integer salesBranchCode;
     @Column(name = "sales_branch_name")
     private String salesBranchName;
     @Column(name = "company_branch_code")
-    private String companyBranchCode;
+    private Integer companyBranchCode;
     @Column(name = "company_branch_name")
     private String companyBranchName;
     @Column(name = "policy_branch_code")
-    private String policyBranchCode;
+    private Integer policyBranchCode;
     @Column(name = "policy_branch_name")
     private String policyBranchName;
     private Integer term;
     @Column(name = "cy")
     private String cy;
-    @Column(name = "premium_payment_term")
-    private String premiumPaymentTerm;
     @Column(name = "modal_premium")
     private BigDecimal modalPremium;
     private Integer frequency;
@@ -73,7 +70,7 @@ public abstract class BaseMainData {
     @Column(name = "full_name")
     private String fullName;
     private String gender;
-    private Integer dob;
+    private LocalDate dob;
     private Integer aae;
     @Column(name = "sar_choice")
     private String sarChoice;
@@ -92,7 +89,7 @@ public abstract class BaseMainData {
     @Column(name = "dth_sar")
     private BigDecimal dthSar;
     @Column(name = "dth_occupational_loading_percentage")
-    private Double dthOccLoading;
+    private Double dthOccLoadingPercentage;
     // COMMON HB (Hospital Benefit?)
     @Column(name = "hb_sa")
     private BigDecimal hbSa;
@@ -154,4 +151,7 @@ public abstract class BaseMainData {
     private Integer child5Age;
     @Column(name = "child5_hbc")
     private Integer child5Hbc;
+    //
+    @Column(name = "operation_date")
+    private LocalDate operationDate;
 }
