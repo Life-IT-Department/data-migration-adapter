@@ -477,6 +477,7 @@ public class DataIngestorServiceImpl implements DataIngestorService {
                 return BigDecimal.valueOf(((Number) value).doubleValue());
             }
             String stringValue = value.toString().trim();
+            stringValue = stringValue.replace(",", "");
             return stringValue.isEmpty() ? null : new BigDecimal(stringValue);
         } catch (NumberFormatException e) {
             log.debug("Could not parse BigDecimal for key '{}': {}", key, value);
