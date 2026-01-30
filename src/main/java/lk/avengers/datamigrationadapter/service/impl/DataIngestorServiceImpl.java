@@ -334,11 +334,11 @@ public class DataIngestorServiceImpl implements DataIngestorService {
             dto.setContract(getString(data, "Contract"));
             dto.setCurrency(getString(data, "C/Y"));
             dto.setCustomerName(getString(data, "Customer Name"));
-            dto.setInception(getDateFromInteger(data, "Inception"));
+            dto.setInception(getDateDDMMYYYY(data, "Inception"));
             dto.setFrequencyMode(getString(data, "Frequency Mode"));
             dto.setStatus(getString(data, "Status"));
             dto.setAnnualPremium(getBigDecimal(data, "Annual Premium"));
-            dto.setPaidUpTo(getDateFromInteger(data, "Paid Up To"));
+            dto.setPaidUpTo(getDateDDMMYYYY(data, "Paid Up To"));
             dto.setUnappropriateBalance(getBigDecimal(data, "Unappopriate Balance"));
             dto.setRequestUuid(uuid);
             return dto;
