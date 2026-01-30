@@ -1,13 +1,13 @@
 package lk.avengers.datamigrationadapter.service.impl;
 
 
-
 import com.github.pjfanning.xlsx.StreamingReader;
 import lk.avengers.datamigrationadapter.dto.CommonResponseDTO;
 import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.MainDataReportEntity;
 import lk.avengers.datamigrationadapter.exception.ReportException;
 import lk.avengers.datamigrationadapter.repository.postgresql.reportdb.MainDataReportRepository;
 import lk.avengers.datamigrationadapter.service.BatchProcessService;
+import lk.avengers.datamigrationadapter.service.CommonFunction;
 import lk.avengers.datamigrationadapter.service.MainDataReportUploadService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,6 +22,7 @@ import org.springframework.stereotype.Service;
 import java.io.InputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
@@ -38,6 +39,7 @@ public class MainDataReportUploadServiceImpl implements MainDataReportUploadServ
     private final BatchProcessService genisysBatchService;
     private final ResourceLoader resourceLoader;
     private final MainDataReportRepository mainDataReportRepository;
+    private final CommonFunction commonFunction;
 
     @Value("${mainDataReport.file}")
     private String mainDataReportFilePath;
@@ -52,11 +54,16 @@ public class MainDataReportUploadServiceImpl implements MainDataReportUploadServ
     @Override
     public ResponseEntity<CommonResponseDTO> uploadMainDataReports() {
         log.info("uploadMainDataReports called");
-        return upload(
-                this::getMainDataReportFileInputStream,
-                this::mapExcelRowsToMainDataReportEntity,
-                true
-        );
+        try {
+            return upload(
+                    this::getMainDataReportFileInputStream,
+                    this::mapExcelRowsToMainDataReportEntity,
+                    true
+            );
+        } catch (Exception e) {
+            log.error("Error in uploadMainDataReports: {}", e.getMessage());
+            return ResponseEntity.internalServerError().build();
+        }
     }
 
     @Override
@@ -133,7 +140,7 @@ public class MainDataReportUploadServiceImpl implements MainDataReportUploadServ
 
         return ResponseEntity.ok(
                 CommonResponseDTO.builder()
-                        .message("Main data report ecords uploaded successfully.")
+                        .message("Main data report " + totalCount + " records uploaded successfully.")
                         .status(HttpStatus.OK.toString())
                         .build()
         );
@@ -144,10 +151,8 @@ public class MainDataReportUploadServiceImpl implements MainDataReportUploadServ
     // -------------------------------------------------------------------------
 
     private boolean shouldSkipRow(Row row) {
-        if (row.getRowNum() == HEADER_ROW_1 || row.getRowNum() == HEADER_ROW_2) {
-            return true;
-        }
-        return isCellBlank(row.getCell(1)) || isCellBlank(row.getCell(3));
+        return row.getRowNum() == HEADER_ROW_1;
+        // return isCellBlank(row.getCell(1)) || isCellBlank(row.getCell(3));
     }
 
     private boolean isCellBlank(Cell cell) {
@@ -165,6 +170,7 @@ public class MainDataReportUploadServiceImpl implements MainDataReportUploadServ
     // -------------------------------------------------------------------------
 
     private void mapExcelRowsToMainDataReportEntity(Row row, List<MainDataReportEntity> list) {
+        HashMap<Integer, String> dateMap = new HashMap<>();
         int col = 0;
         MainDataReportEntity entity = MainDataReportEntity.builder()
                 // id - auto generated, skip
@@ -173,9 +179,10 @@ public class MainDataReportUploadServiceImpl implements MainDataReportUploadServ
                 .productCode(getStringValue(row.getCell(col++)))
                 .planNo(getStringValue(row.getCell(col++)))
                 // Dates & Terms
-                .inception(getLocalDateValue(row.getCell(col++)))
-                .expiry(getLocalDateValue(row.getCell(col++)))
-                .issueDate(getLocalDateValue(row.getCell(col++)))
+
+                .inception(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+                .expiry(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+                .issueDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
                 .salesBranchCode(getStringValue(row.getCell(col++)))
                 .salesBranchName(getStringValue(row.getCell(col++)))
                 .companyBranchCode(getStringValue(row.getCell(col++)))
@@ -189,9 +196,9 @@ public class MainDataReportUploadServiceImpl implements MainDataReportUploadServ
                 .retirementBenefitPayoutTerm(getIntegerValue(row.getCell(col++)))
                 .modalPremium(getBigDecimalValue(row.getCell(col++)))
                 .frequency(getIntegerValue(row.getCell(col++)))
-                .nextPremium(getLocalDateValue(row.getCell(col++)))
+                .nextPremium(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
                 .status(getStringValue(row.getCell(col++)))
-                .statusDate(getLocalDateValue(row.getCell(col++)))
+                .statusDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
                 .reason(getStringValue(row.getCell(col++)))
                 .agentCode(getStringValue(row.getCell(col++)))
                 .introducer(getStringValue(row.getCell(col++)))
@@ -202,7 +209,7 @@ public class MainDataReportUploadServiceImpl implements MainDataReportUploadServ
                 .title(getStringValue(row.getCell(col++)))
                 .fullName(getStringValue(row.getCell(col++)))
                 .gender(getStringValue(row.getCell(col++)))
-                .dob(getIntegerValue(row.getCell(col++)))
+                .dob(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
                 .aae(getIntegerValue(row.getCell(col++)))
                 .sarChoice(getStringValue(row.getCell(col++)))
                 .numberOfRidersTaken(getIntegerValue(row.getCell(col++)))
@@ -307,7 +314,7 @@ public class MainDataReportUploadServiceImpl implements MainDataReportUploadServ
                 .spouseChildTitle(getStringValue(row.getCell(col++)))
                 .spouseChildFullName(getStringValue(row.getCell(col++)))
                 .spouseChildGender(getStringValue(row.getCell(col++)))
-                .spouseChildDob(getLocalDateValue(row.getCell(col++)))
+                .spouseChildDob(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
                 .spouseChildAge(getIntegerValue(row.getCell(col++)))
                 .spouseDeathSa(getIntegerValue(row.getCell(col++)))
                 .spouseSubDeath(getIntegerValue(row.getCell(col++)))
@@ -359,27 +366,27 @@ public class MainDataReportUploadServiceImpl implements MainDataReportUploadServ
                 .spouseHbaOccupationalLoadingPercent(getDoubleValue(row.getCell(col++)))
                 // Children 1..5
                 .child1Name(getStringValue(row.getCell(col++)))
-                .child1Dob(getLocalDateValue(row.getCell(col++)))
+                .child1Dob(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
                 .child1Age(getIntegerValue(row.getCell(col++)))
                 .child1Hbc(getIntegerValue(row.getCell(col++)))
                 .child1Hbcac(getIntegerValue(row.getCell(col++)))
                 .child2Name(getStringValue(row.getCell(col++)))
-                .child2Dob(getLocalDateValue(row.getCell(col++)))
+                .child2Dob(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
                 .child2Age(getIntegerValue(row.getCell(col++)))
                 .child2Hbc(getStringValue(row.getCell(col++)))
                 .child2Hbcac(getStringValue(row.getCell(col++)))
                 .child3Name(getStringValue(row.getCell(col++)))
-                .child3Dob(getLocalDateValue(row.getCell(col++)))
+                .child3Dob(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
                 .child3Age(getIntegerValue(row.getCell(col++)))
                 .child3Hbc(getIntegerValue(row.getCell(col++)))
                 .child3Hbcac(getIntegerValue(row.getCell(col++)))
                 .child4Name(getStringValue(row.getCell(col++)))
-                .child4Dob(getLocalDateValue(row.getCell(col++)))
+                .child4Dob(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
                 .child4Age(getIntegerValue(row.getCell(col++)))
                 .child4Hbc(getIntegerValue(row.getCell(col++)))
                 .child4Hbcac(getIntegerValue(row.getCell(col++)))
                 .child5Name(getStringValue(row.getCell(col++)))
-                .child5Dob(getLocalDateValue(row.getCell(col++)))
+                .child5Dob(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
                 .child5Age(getIntegerValue(row.getCell(col++)))
                 .child5Hbc(getIntegerValue(row.getCell(col++)))
                 .child5Hbcac(getIntegerValue(row.getCell(col++)))
@@ -397,9 +404,9 @@ public class MainDataReportUploadServiceImpl implements MainDataReportUploadServ
                 .prmSurrenderValue(getBigDecimalValue(row.getCell(col++)))
                 .bstSurrenderValue(getBigDecimalValue(row.getCell(col++)))
                 .insuranceCoveragePeriod(getIntegerValue(row.getCell(col++)))
-                .operationDate(getLocalDateValue(row.getCell(col++)))
-                .lastPaymentDate(getLocalDateValue(row.getCell(col++)))
-                .lastPremiumDueDate(getLocalDateValue(row.getCell(col++)))
+                .operationDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+                .lastPaymentDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+                .lastPremiumDueDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
                 .premiumEscalationBenefitPercentage(getDoubleValue(row.getCell(col++)))
                 .refundValue(getBigDecimalValue(row.getCell(col++)))
                 // createdAt - handled by @CreatedDate
@@ -416,7 +423,7 @@ public class MainDataReportUploadServiceImpl implements MainDataReportUploadServ
         entity.setIntroducer(getStringValue(row.getCell(25)));
         entity.setFullName(getStringValue(row.getCell(30))); // FULL NAME
         entity.setGender(getStringValue(row.getCell(31)));
-        entity.setDob(getIntegerValue(row.getCell(32)));
+        //   entity.setDob(getIntegerValue(row.getCell(32)));
         entity.setAae(getIntegerValue(row.getCell(33))); // AAE
         entity.setNumberOfRidersTaken(getIntegerValue(row.getCell(36))); // Number of Riders Taken
 //        entity.setDthSar(getStringValue(row.getCell(37))); // DTH SAR
@@ -510,6 +517,7 @@ public class MainDataReportUploadServiceImpl implements MainDataReportUploadServ
                 default -> null;
             };
         } catch (NumberFormatException e) {
+            log.error("Error parsing integer value from cell: {} cell address: {}", cell.toString(), cell.getAddress());
             return null;
         }
     }
@@ -523,6 +531,7 @@ public class MainDataReportUploadServiceImpl implements MainDataReportUploadServ
                 default -> null;
             };
         } catch (NumberFormatException e) {
+            log.error("Error parsing long value from cell: {} cell address: {}", cell.toString(), cell.getAddress());
             return null;
         }
     }
@@ -536,17 +545,23 @@ public class MainDataReportUploadServiceImpl implements MainDataReportUploadServ
                 default -> null;
             };
         } catch (NumberFormatException e) {
+            log.error("Error parsing double value from cell: {} cell address: {}", cell.toString(), cell.getAddress());
             return null;
         }
     }
 
     private String getStringValue(Cell cell) {
         if (cell == null || cell.getCellType() == CellType.BLANK) return null;
-        return switch (cell.getCellType()) {
-            case STRING -> cell.getStringCellValue().trim();
-            case NUMERIC -> String.valueOf(cell.getNumericCellValue()).trim();
-            default -> null;
-        };
+        try {
+            return switch (cell.getCellType()) {
+                case STRING -> cell.getStringCellValue().trim();
+                case NUMERIC -> String.valueOf(cell.getNumericCellValue()).trim();
+                default -> null;
+            };
+        } catch (Exception e) {
+            log.error("Error parsing string value from cell: {} cell address: {}", cell.toString(), cell.getAddress());
+            return null;
+        }
     }
 
     private java.math.BigDecimal getBigDecimalValue(Cell cell) {
@@ -558,18 +573,20 @@ public class MainDataReportUploadServiceImpl implements MainDataReportUploadServ
                 default -> null;
             };
         } catch (NumberFormatException e) {
+            log.error("Error parsing BigDecimal value from cell: {} cell address: {}", cell.toString(), cell.getAddress());
             return null;
         }
     }
 
-    private java.time.LocalDate getLocalDateValue(Cell cell) {
+    private String getStringDateValue(Cell cell) {
         if (cell == null || cell.getCellType() == CellType.BLANK) return null;
         try {
-            if (cell.getCellType() == CellType.NUMERIC && DateUtil.isCellDateFormatted(cell)) {
-                return cell.getLocalDateTimeCellValue().toLocalDate();
+            if (cell.getCellType() == CellType.NUMERIC) {
+                return cell.getStringCellValue().trim();
             }
             return null;
         } catch (Exception e) {
+            log.error("Error parsing date value from cell: {} cell address: {}", cell.toString(), cell.getAddress());
             return null;
         }
     }
