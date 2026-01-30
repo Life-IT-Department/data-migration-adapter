@@ -3,10 +3,13 @@ package lk.avengers.datamigrationadapter.service.impl;
 import lk.avengers.datamigrationadapter.dto.excel.ExcelDataResponseDTO;
 import lk.avengers.datamigrationadapter.dto.excel.ExcelExtractorRequestDTO;
 import lk.avengers.datamigrationadapter.dto.request.ACPPolicyRequestDTO;
+import lk.avengers.datamigrationadapter.dto.request.ContactDetailRequestDTO;
 import lk.avengers.datamigrationadapter.dto.request.PolicyListRequestDTO;
 import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.ACPPolicyEntity;
+import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.ContactDetailEntity;
 import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.PolicyListEntity;
 import lk.avengers.datamigrationadapter.repository.postgresql.reportdb.ACPPolicyRepository;
+import lk.avengers.datamigrationadapter.repository.postgresql.reportdb.ContactDetailRepository;
 import lk.avengers.datamigrationadapter.repository.postgresql.reportdb.PolicyListRepository;
 import lk.avengers.datamigrationadapter.service.DataIngestorService;
 import lk.avengers.datamigrationadapter.service.ExcelDataExtractorEnhancedService;
@@ -32,6 +35,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional("reportPlatformTransactionManager")
 public class DataIngestorServiceImpl implements DataIngestorService {
 
     @Value("${acp.data.file}")
@@ -46,6 +50,7 @@ public class DataIngestorServiceImpl implements DataIngestorService {
     private final ExcelDataExtractorService excelDataExtractorService;
     private final ACPPolicyRepository acpPolicyRepository;
     private final PolicyListRepository policyListRepository;
+    private final ContactDetailRepository contactDetailRepository;
     private final ExcelDataExtractorEnhancedService excelDataExtractorEnhancedService;
 
     // Constants
@@ -65,7 +70,6 @@ public class DataIngestorServiceImpl implements DataIngestorService {
     // ==================== Main Processing Methods ====================
 
     @Override
-    @Transactional("reportPlatformTransactionManager")
     public void ProcessPolicyListData(String uuid) {
         log.info("UUID: {} - Starting Policy List data processing", uuid);
 
@@ -100,7 +104,6 @@ public class DataIngestorServiceImpl implements DataIngestorService {
     }
 
     @Override
-    @Transactional("reportPlatformTransactionManager")
     public void ProcessACPData(String uuid) {
         log.info("UUID: {} - Starting ACP data processing", uuid);
 
@@ -149,6 +152,22 @@ public class DataIngestorServiceImpl implements DataIngestorService {
 
             // Force GC if memory usage is high (> 75%)
             MemoryMonitor.forceGcIfNeeded(75.0);
+
+            // Delete existing data
+            log.info("UUID: {} - Deleting existing contact detail data", uuid);
+            contactDetailRepository.truncateTable();
+            log.info("UUID: {} - Existing contact detail data deleted successfully", uuid);
+
+            // Map and save in batches
+            List<ContactDetailEntity> entities = cleanedData.stream()
+                    .map(rowData -> mapToContactDetailRequestDTO(rowData, uuid))
+                    .map(dto -> dto.mapData(ContactDetailEntity.class))
+                    .toList();
+
+            processBatch(uuid, entities, "Contact Detail records", contactDetailRepository::saveAll, BATCH_SIZE);
+
+            log.info("UUID: {} - Contact Detail data processing completed successfully", uuid);
+
 
         } catch (Exception e) {
             log.error("UUID: {} - Failed to process Policy List data: {}", uuid, e.getMessage(), e);
@@ -242,6 +261,65 @@ public class DataIngestorServiceImpl implements DataIngestorService {
     }
 
     // ==================== DTO Mapping Methods ====================
+
+    private ContactDetailRequestDTO mapToContactDetailRequestDTO(Map<String, Object> data, String uuid) {
+        try {
+            ContactDetailRequestDTO dto = new ContactDetailRequestDTO();
+
+            // Basic Information
+            dto.setProduct(getString(data, "Product"));
+            dto.setPolicyNo(getString(data, "Policy No"));
+            dto.setPin(getInteger(data, "Pin"));
+            dto.setTitle(getString(data, "Title"));
+            dto.setFirstName(getString(data, "First Name"));
+            dto.setLastName(getString(data, "Last Name"));
+            dto.setGender(getString(data, "Gender"));
+            dto.setDateOfBirth(getDateDDMMYYYY(data, "Date Of Birth")); // this
+            dto.setCurrentAge(getInteger(data, "Current Age"));
+            dto.setNicNumber(getString(data, "NIC #"));
+            dto.setOccupation(getString(data, "Occupation"));
+
+            // Contact Information
+            dto.setAddress(getString(data, "Address"));
+            dto.setCity(getString(data, "City"));
+            dto.setMobile(getString(data, "Mobile"));
+            dto.setOtherTelephoneNumber(getString(data, "Other Telephone#"));
+            dto.setEmailAddress(getString(data, "Email Address"));
+
+            // Policy Status & Details
+            dto.setPolicyStatus(getString(data, "Policy Status"));
+            dto.setNbrOfCustomers(getInteger(data, "Nbr Of Customers"));
+            dto.setNationality(getString(data, "Nationality"));
+
+            // Agent & Branch Information
+            dto.setAgentCode(getString(data, "Agent Code"));
+            dto.setSalesBranch(getString(data, "Sales Branch"));
+
+            // Financial Information
+            dto.setTotalPremiumsPaid(getBigDecimal(data, "Total Premiums Paid"));
+            dto.setOutstanding(getBigDecimal(data, "Outstanding"));
+            dto.setModalPremiumWithoutHandlingFee(getBigDecimal(data, "Modal Premium without handling fee"));
+
+            // Policy Dates
+            dto.setPolicyInceptionDate(getDateDDMMYYYY(data, "Policy Inception Date"));
+            dto.setPolicyIssueDate(getDateDDMMYYYY(data, "Policy Issue Date"));
+            dto.setFrequency(getString(data, "Frequency"));
+            dto.setNextPremiumDueDate(getDateDDMMYYYY(data, "Next Premium due date"));
+            dto.setLastPremiumPaymentDueDate(getDateDDMMYYYY(data, "Last premium Payment due date"));
+            dto.setPolicyExpiryDate(getDateDDMMYYYY(data, "Policy Expiry Date"));
+            dto.setTerm(getInteger(data, "Term"));
+            dto.setLapsedDate(getDateDDMMYYYY(data, "Lapsed Date"));
+            dto.setExpiryDate(getDateDDMMYYYY(data, "Expiry Date"));
+
+            // Preferences
+            dto.setLanguagePreference(getString(data, "Language Preference"));
+
+            return dto;
+        } catch (Exception e) {
+            log.error("UUID: {} - Error mapping Contact Detail row data: {}", uuid, e.getMessage());
+            throw new RuntimeException("Failed to map Excel data to Contact Detail DTO", e);
+        }
+    }
 
     private PolicyListRequestDTO mapToPolicyListRequestDTO(Map<String, Object> data, String uuid) {
         try {
@@ -536,4 +614,255 @@ public class DataIngestorServiceImpl implements DataIngestorService {
         }
         return null;
     }
+
+    // ==================== Improved Date Extraction Methods ====================
+    /**
+     * Extract date with DD/MM/YYYY format (with or without leading zeros)
+     * Used for: Date Of Birth
+     * Example: "2/11/1974" or "02/11/1974" = 2nd November 1974
+     * Example: "1/10/2020" = 1st October 2020
+     */
+    private LocalDate getDateDDMMYYYY(Map<String, Object> data, String key) {
+        Object value = data.get(key);
+        if (value == null) return null;
+
+        try {
+            String stringValue = value.toString().trim();
+            if (stringValue.isEmpty()) return null;
+
+            // Early exit for known non-date values
+            if (INVALID_DATE_VALUES.contains(stringValue.toUpperCase())) {
+                return null;
+            }
+
+            // Quick validation: check if a string contains at least one digit
+            if (!stringValue.matches(".*\\d.*")) {
+                return null;
+            }
+
+            // Handle YYYYMMDD format (20021974)
+            if (stringValue.matches(YYYYMMDD_PATTERN)) {
+                return parseYYYYMMDD(stringValue);
+            }
+
+            // Try DD/MM/YYYY formats (with and without leading zeros)
+            DateTimeFormatter[] ddMMyyyyFormatters = {
+                    // 4-digit year formats
+                    DateTimeFormatter.ofPattern("d/M/yyyy"),    // 1/10/2020
+                    DateTimeFormatter.ofPattern("dd/MM/yyyy"),  // 02/11/1974
+                    DateTimeFormatter.ofPattern("d/MM/yyyy"),   // 1/11/1974
+                    DateTimeFormatter.ofPattern("dd/M/yyyy"),   // 02/1/1974
+                    DateTimeFormatter.ofPattern("d-M-yyyy"),    // 1-10-2020
+                    DateTimeFormatter.ofPattern("dd-MM-yyyy"),  // 02-11-1974
+                    DateTimeFormatter.ofPattern("d-MM-yyyy"),   // 1-11-1974
+                    DateTimeFormatter.ofPattern("dd-M-yyyy"),   // 02-1-1974
+
+                    // 2-digit year formats (handles Excel's shortened format)
+                    DateTimeFormatter.ofPattern("d/M/yy"),      // 1/3/19
+                    DateTimeFormatter.ofPattern("dd/MM/yy"),    // 02/11/74
+                    DateTimeFormatter.ofPattern("d/MM/yy"),     // 1/11/74
+                    DateTimeFormatter.ofPattern("dd/M/yy"),     // 02/3/19
+                    DateTimeFormatter.ofPattern("d-M-yy"),      // 1-3-19
+                    DateTimeFormatter.ofPattern("dd-MM-yy"),    // 02-11-74
+                    DateTimeFormatter.ofPattern("d-MM-yy"),     // 1-11-74
+                    DateTimeFormatter.ofPattern("dd-M-yy")      // 02-3-19
+            };
+
+            for (DateTimeFormatter formatter : ddMMyyyyFormatters) {
+                try {
+                    return LocalDate.parse(stringValue, formatter);
+                } catch (DateTimeParseException ignored) {
+                    // Try next formatter
+                }
+            }
+
+            log.debug("Could not parse DD/MM/YYYY date for key '{}': {}", key, value);
+            return null;
+
+        } catch (Exception e) {
+            log.debug("Could not parse date for key '{}': {}", key, value);
+            return null;
+        }
+    }
+
+    /**
+     * Extract date with MM/DD/YYYY format (with or without leading zeros)
+     * Used for: dates entered in US format
+     * Example: "11/2/1974" or "11/02/1974" = November 2nd 1974
+     */
+    private LocalDate getDateMMDDYYYY(Map<String, Object> data, String key) {
+        Object value = data.get(key);
+        if (value == null) return null;
+
+        try {
+            String stringValue = value.toString().trim();
+            if (stringValue.isEmpty()) return null;
+
+            if (INVALID_DATE_VALUES.contains(stringValue.toUpperCase())) {
+                return null;
+            }
+
+            if (!stringValue.matches(".*\\d.*")) {
+                return null;
+            }
+
+            if (stringValue.matches(YYYYMMDD_PATTERN)) {
+                return parseYYYYMMDD(stringValue);
+            }
+
+            // Try MM/DD/YYYY formats (with and without leading zeros)
+            DateTimeFormatter[] mmDDyyyyFormatters = {
+                    DateTimeFormatter.ofPattern("M/d/yyyy"),    // 1/2/1974
+                    DateTimeFormatter.ofPattern("MM/dd/yyyy"),  // 11/02/1974
+                    DateTimeFormatter.ofPattern("M/dd/yyyy"),   // 1/02/1974
+                    DateTimeFormatter.ofPattern("MM/d/yyyy")    // 11/2/1974
+            };
+
+            for (DateTimeFormatter formatter : mmDDyyyyFormatters) {
+                try {
+                    return LocalDate.parse(stringValue, formatter);
+                } catch (DateTimeParseException ignored) {
+                    // Try next formatter
+                }
+            }
+
+            log.debug("Could not parse MM/DD/YYYY date for key '{}': {}", key, value);
+            return null;
+
+        } catch (Exception e) {
+            log.debug("Could not parse date for key '{}': {}", key, value);
+            return null;
+        }
+    }
+
+    /**
+     * Extract date with YYYY-MM-DD format (with or without leading zeros)
+     * Used for: system-generated dates
+     * Example: "1974-11-2" or "1974-11-02" = November 2nd 1974
+     */
+    private LocalDate getDateYYYYMMDD(Map<String, Object> data, String key) {
+        Object value = data.get(key);
+        if (value == null) return null;
+
+        try {
+            String stringValue = value.toString().trim();
+            if (stringValue.isEmpty()) return null;
+
+            if (INVALID_DATE_VALUES.contains(stringValue.toUpperCase())) {
+                return null;
+            }
+
+            if (!stringValue.matches(".*\\d.*")) {
+                return null;
+            }
+
+            // Handle YYYYMMDD format (19741102)
+            if (stringValue.matches(YYYYMMDD_PATTERN)) {
+                return parseYYYYMMDD(stringValue);
+            }
+
+            // Try YYYY-MM-DD formats (with and without leading zeros)
+            DateTimeFormatter[] yyyyMMddFormatters = {
+                    DateTimeFormatter.ofPattern("yyyy-M-d"),    // 1974-1-2
+                    DateTimeFormatter.ofPattern("yyyy-MM-dd"),  // 1974-11-02
+                    DateTimeFormatter.ofPattern("yyyy-M-dd"),   // 1974-1-02
+                    DateTimeFormatter.ofPattern("yyyy-MM-d"),   // 1974-11-2
+                    DateTimeFormatter.ofPattern("yyyy/M/d"),    // 1974/1/2
+                    DateTimeFormatter.ofPattern("yyyy/MM/dd"),  // 1974/11/02
+                    DateTimeFormatter.ofPattern("yyyy/M/dd"),   // 1974/1/02
+                    DateTimeFormatter.ofPattern("yyyy/MM/d")    // 1974/11/2
+            };
+
+            for (DateTimeFormatter formatter : yyyyMMddFormatters) {
+                try {
+                    return LocalDate.parse(stringValue, formatter);
+                } catch (DateTimeParseException ignored) {
+                    // Try next formatter
+                }
+            }
+
+            log.debug("Could not parse YYYY-MM-DD date for key '{}': {}", key, value);
+            return null;
+
+        } catch (Exception e) {
+            log.debug("Could not parse date for key '{}': {}", key, value);
+            return null;
+        }
+    }
+
+    /**
+     * Generic date extractor that tries multiple formats intelligently
+     * Used for: columns where date format is uncertain
+     * Prioritizes DD/MM/YYYY over MM/DD/YYYY to avoid ambiguity
+     * Handles dates with or without leading zeros
+     */
+    private LocalDate getDateFlexible(Map<String, Object> data, String key) {
+        Object value = data.get(key);
+        if (value == null) return null;
+
+        try {
+            String stringValue = value.toString().trim();
+            if (stringValue.isEmpty()) return null;
+
+            if (INVALID_DATE_VALUES.contains(stringValue.toUpperCase())) {
+                return null;
+            }
+
+            if (!stringValue.matches(".*\\d.*")) {
+                return null;
+            }
+
+            // Handle YYYYMMDD format (19741102)
+            if (stringValue.matches(YYYYMMDD_PATTERN)) {
+                return parseYYYYMMDD(stringValue);
+            }
+
+            // Try formats in priority order (with and without leading zeros)
+            DateTimeFormatter[] prioritizedFormatters = {
+                    // ISO format first (most unambiguous)
+                    DateTimeFormatter.ofPattern("yyyy-MM-dd"),
+                    DateTimeFormatter.ofPattern("yyyy-M-d"),
+                    DateTimeFormatter.ofPattern("yyyy-M-dd"),
+                    DateTimeFormatter.ofPattern("yyyy-MM-d"),
+
+                    // Then DD/MM/YYYY (European - prioritized to avoid ambiguity)
+                    DateTimeFormatter.ofPattern("dd/MM/yyyy"),
+                    DateTimeFormatter.ofPattern("d/M/yyyy"),
+                    DateTimeFormatter.ofPattern("d/MM/yyyy"),
+                    DateTimeFormatter.ofPattern("dd/M/yyyy"),
+                    DateTimeFormatter.ofPattern("dd-MM-yyyy"),
+                    DateTimeFormatter.ofPattern("d-M-yyyy"),
+                    DateTimeFormatter.ofPattern("d-MM-yyyy"),
+                    DateTimeFormatter.ofPattern("dd-M-yyyy"),
+
+                    // US format last (to avoid ambiguity with European dates)
+                    DateTimeFormatter.ofPattern("MM/dd/yyyy"),
+                    DateTimeFormatter.ofPattern("M/d/yyyy"),
+                    DateTimeFormatter.ofPattern("M/dd/yyyy"),
+                    DateTimeFormatter.ofPattern("MM/d/yyyy"),
+
+                    // ISO with slash
+                    DateTimeFormatter.ofPattern("yyyy/MM/dd"),
+                    DateTimeFormatter.ofPattern("yyyy/M/d"),
+                    DateTimeFormatter.ofPattern("yyyy/M/dd"),
+                    DateTimeFormatter.ofPattern("yyyy/MM/d")
+            };
+
+            for (DateTimeFormatter formatter : prioritizedFormatters) {
+                try {
+                    return LocalDate.parse(stringValue, formatter);
+                } catch (DateTimeParseException ignored) {
+                    // Try next formatter
+                }
+            }
+
+            log.debug("Could not parse date with any format for key '{}': {}", key, value);
+            return null;
+
+        } catch (Exception e) {
+            log.debug("Could not parse date for key '{}': {}", key, value);
+            return null;
+        }
+    }
+
 }
