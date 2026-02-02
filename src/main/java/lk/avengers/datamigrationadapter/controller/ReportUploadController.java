@@ -58,9 +58,9 @@ public class ReportUploadController {
         return mainDataReportUploadService.uploadMainDataReports();
     }
 
-    @GetMapping("/main-data-report-2")
-    public ResponseEntity<CommonResponseDTO> uploadMainDataReport2Excel() {
-        log.info("MAIN_DATA_REPORT_2_UPLOAD API METHOD ACCESSED.");
-        return mainDataReportUploadService.uploadMainDataReport2();
+    @PostMapping("/main-data-alh-report")
+    public ResponseEntity<CommonResponseDTO> uploadMainDataALHReportExcel() {
+        log.info("UploadMainDataALLReportExcel API METHOD ACCESSED.");
+        return mainDataReportUploadService.uploadMainDataALHReportExcel();
     }
 }
