@@ -3,8 +3,13 @@ package lk.avengers.datamigrationadapter.entity.postgresql.reportdb;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.beans.BeanUtils;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import java.util.Date;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 @Entity
 @Table(name = "cash_flow")
@@ -13,6 +18,7 @@ import java.util.Date;
 @Getter
 @AllArgsConstructor
 @NoArgsConstructor
+@EntityListeners(AuditingEntityListener.class)
 public class CashFlowReportEntity {
 
     @Id
@@ -20,101 +26,99 @@ public class CashFlowReportEntity {
     @Column(name = "cash_flow_id")
     private Long cashFlowId;
 
-    @Column(name = "fiscalYear")
-    private String fiscalYear;
+    @Column(name = "fiscal_year")
+    private Integer fiscalYear;
 
-    @Column(name = "acDocument")
-    public String ACDocument;
+    @Column(name = "ac_document")
+    private String ACDocument;
 
-    @Column(name = "operationDate")
-    public String OperationDate;
+    @Column(name = "operation_date")
+    private LocalDate OperationDate;
 
     @Column(name = "time")
-    public String time;
+    private LocalTime time;
 
     @Column(name = "station")
-    public String station;
+    private Integer station;
 
-    @Column(name = "receiptNo")
-    public String receiptNo;
+    @Column(name = "receipt_no")
+    private Integer receiptNo;
 
-    @Column(name = "payerPin")
-    public String payerPin;
+    @Column(name = "payer_pin")
+    private String payerPin;
 
-    @Column(name = "payerName")
-    public String payerName;
+    @Column(name = "payer_name")
+    private String payerName;
 
-    @Column(name = "payerAddress")
-    public String payerAddress;
+    @Column(name = "payer_address")
+    private String payerAddress;
 
-    @Column(name = "details")
-    public String details;
+    @Column(name = "details", columnDefinition = "TEXT")
+    private String details;
 
     @Column(name = "payment_mode")
-    public String paymentMode;
+    private String paymentMode;
 
-    @Column(name = "reference")
-    public String reference;
+    @Column(name = "reference",columnDefinition = "TEXT")
+    private String reference;
 
-    @Column(name = "description")
-    public String description;
+    @Column(name = "description", columnDefinition = "TEXT")
+    private String description;
 
-    @Column(name = "accPin")
-    public String accPin;
+    @Column(name = "acc_pin")
+    private Integer accPin;
 
-    @Column(name = "accSeq")
-    public String accSeq;
+    @Column(name = "acc_seq")
+    private Integer accSeq;
 
-    @Column(name = "checkNo")
-    public String checkNo;
+    @Column(name = "check_no")
+    private Integer checkNo;
 
-    @Column(name = "checkDate")
-    public String checkDate;
+    @Column(name = "check_date")
+    private LocalDate checkDate;
 
-    @Column(name = "checkStatus")
-    public String checkStatus;
+    @Column(name = "check_status")
+    private String checkStatus;
 
-    @Column(name = "paymentType")
-    public String paymentType;
+    @Column(name = "payment_type")
+    private String paymentType;
 
     @Column(name = "agency")
-    public String agency;
+    private String agency;
 
-    @Column(name = "drawnBank")
-    public String drawnBank;
+    @Column(name = "drawn_bank")
+    private String drawnBank;
 
-    @Column(name = "clearingBank")
-    public String clearingBank;
+    @Column(name = "clearing_bank")
+    private String clearingBank;
 
-    @Column(name = "amountLC")
-    public String amountLC;
+    @Column(name = "amount_lc")
+    private BigDecimal amountLC;
 
-    @Column(name = "postedBy")
-    public String postedBy;
+    @Column(name = "posted_by")
+    private String postedBy;
 
-    @Column(name = "paidAmount")
-    public String paidAmount;
+    @Column(name = "paid_amount")
+    private BigDecimal paidAmount;
 
-    @Column(name = "totalAmount")
-    public String totalAmount;
+    @Column(name = "total_amount")
+    private BigDecimal totalAmount;
 
-    @Column(name = "receiptCancellation")
-    public String receiptCancellation;
+    @Column(name = "receipt_cancellation")
+    private String receiptCancellation;
 
-    @Column(name = "reason")
-    public String reason;
+    @Column(name = "reason", columnDefinition = "TEXT")
+    private String reason;
 
     @Column(name = "authorizer")
-    public String authorizer;
+    private String authorizer;
 
     @Column(name = "year")
     private Integer year;
 
-    @Column(name = "month")
-    private Integer month;
-
+    @CreatedDate
     @Column(name = "sys_date")
-    private Date sysDate;
+    private LocalDateTime sysDate;
 
     public <E> E mapData(Class<E> receiverClass) {
         E receiver = BeanUtils.instantiateClass(receiverClass);
