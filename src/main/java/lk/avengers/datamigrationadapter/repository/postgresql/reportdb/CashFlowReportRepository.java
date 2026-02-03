@@ -20,4 +20,8 @@ public interface CashFlowReportRepository extends JpaRepository<CashFlowReportEn
     @Transactional
     @Query(value = "TRUNCATE TABLE cash_flow RESTART IDENTITY", nativeQuery = true)
     void truncate();
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Transactional
+    @Query(value = "DELETE FROM cash_flow WHERE year = :year", nativeQuery = true)
+    void deleteAllByYear(@Param("year") int year);
 }

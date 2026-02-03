@@ -10,5 +10,5 @@ public interface MainDataReportUploadService {
            ============================================================ */
     ResponseEntity<CommonResponseDTO> uploadMainDataReports();
 
-    ResponseEntity<CommonResponseDTO> uploadMainDataReport2();
+    ResponseEntity<CommonResponseDTO> uploadMainDataALHReportExcel();
 }

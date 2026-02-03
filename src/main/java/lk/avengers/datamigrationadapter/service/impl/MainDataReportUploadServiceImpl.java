@@ -1,11 +1,15 @@
 package lk.avengers.datamigrationadapter.service.impl;
 
-import com.monitorjbl.xlsx.StreamingReader;
+
+import com.github.pjfanning.xlsx.StreamingReader;
 import lk.avengers.datamigrationadapter.dto.CommonResponseDTO;
+import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.MainDataALHReportEntity;
 import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.MainDataReportEntity;
 import lk.avengers.datamigrationadapter.exception.ReportException;
+import lk.avengers.datamigrationadapter.repository.postgresql.reportdb.MainDataALHReportRepository;
 import lk.avengers.datamigrationadapter.repository.postgresql.reportdb.MainDataReportRepository;
 import lk.avengers.datamigrationadapter.service.BatchProcessService;
+import lk.avengers.datamigrationadapter.service.CommonFunction;
 import lk.avengers.datamigrationadapter.service.MainDataReportUploadService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +24,7 @@ import org.springframework.stereotype.Service;
 import java.io.InputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
@@ -36,12 +41,14 @@ public class MainDataReportUploadServiceImpl implements MainDataReportUploadServ
     private final BatchProcessService genisysBatchService;
     private final ResourceLoader resourceLoader;
     private final MainDataReportRepository mainDataReportRepository;
+    private final MainDataALHReportRepository mainDataALHReportRepository;
+    private final CommonFunction commonFunction;
 
     @Value("${mainDataReport.file}")
     private String mainDataReportFilePath;
 
-    @Value("${mainDataReport2.file}")
-    private String mainDataReport2FilePath;
+    @Value("${mainDataAlhReport.file}")
+    private String mainDataALHReportFilePath;
 
     // -------------------------------------------------------------------------
     // Public API
@@ -50,21 +57,31 @@ public class MainDataReportUploadServiceImpl implements MainDataReportUploadServ
     @Override
     public ResponseEntity<CommonResponseDTO> uploadMainDataReports() {
         log.info("uploadMainDataReports called");
-        return upload(
-                this::getMainDataReportFileInputStream,
-                this::mapExcelRowsToMainDataReportEntity,
-                true
-        );
+        try {
+            return upload(
+                    this::getMainDataReportFileInputStream,
+                    this::mapExcelRowsToMainDataReportEntity,
+                    true
+            );
+        } catch (Exception e) {
+            log.error("Error in uploadMainDataReports: {}", e.getMessage());
+            return ResponseEntity.internalServerError().build();
+        }
     }
 
     @Override
-    public ResponseEntity<CommonResponseDTO> uploadMainDataReport2() {
-        log.info("uploadMainDataReport2 called");
-        return upload(
-                this::getMainDataReport2FileInputStream,
-                this::mapExcelRowsToMainDataReport2Entity,
-                false
-        );
+    public ResponseEntity<CommonResponseDTO> uploadMainDataALHReportExcel() {
+        log.info("uploadMainDataALLReportExcel called");
+        try {
+            return uploadALHReport(
+                    this::getMainDataALHReportFileInputStream,
+                    this::mapExcelRowsToMainDataALHReportEntity,
+                    true
+            );
+        } catch (Exception e) {
+            log.error("Error in uploadMainDataALLReportExcel: {}", e.getMessage());
+            return ResponseEntity.internalServerError().build();
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -99,19 +116,23 @@ public class MainDataReportUploadServiceImpl implements MainDataReportUploadServ
                 if (shouldSkipRow(row)) {
                     continue;
                 }
+                // Stop at first empty row (past last data row)
+                if (isEndOfDataRow(row)) {
+                    break;
+                }
 
                 rowMapper.accept(row, batch);
 
                 if (batch.size() == BATCH_SIZE) {
-                    genisysBatchService.saveBatch(batch);
+                    genisysBatchService.saveMainDataBatch(batch);
                     totalCount += batch.size();
-                    log.info("Saved {} records so far...", totalCount);
+                    log.info("Saved {} Main data records so far...", totalCount);
                     batch.clear();
                 }
             }
 
             if (!batch.isEmpty()) {
-                genisysBatchService.saveBatch(batch);
+                genisysBatchService.saveMainDataBatch(batch);
                 totalCount += batch.size();
             }
 
@@ -131,7 +152,76 @@ public class MainDataReportUploadServiceImpl implements MainDataReportUploadServ
 
         return ResponseEntity.ok(
                 CommonResponseDTO.builder()
-                        .message("Main data report ecords uploaded successfully.")
+                        .message("Main data report " + totalCount + " records uploaded successfully.")
+                        .status(HttpStatus.OK.toString())
+                        .build()
+        );
+    }
+
+    private ResponseEntity<CommonResponseDTO> uploadALHReport(
+            Supplier<InputStream> inputStreamSupplier,
+            BiConsumer<Row, List<MainDataALHReportEntity>> rowMapper,
+            boolean truncateBeforeInsert
+    ) {
+        log.info("called uploadALHReport method.");
+        List<MainDataALHReportEntity> batch = new ArrayList<>();
+        Row currentRow = null;
+        int totalCount = 0;
+
+        try (InputStream is = inputStreamSupplier.get();
+             Workbook workbook = StreamingReader.builder()
+                     .rowCacheSize(1000)
+                     .bufferSize(4096)
+                     .open(is)) {
+
+            Sheet sheet = workbook.getSheetAt(0);
+
+            if (truncateBeforeInsert) {
+                mainDataALHReportRepository.truncate();
+                log.info("Existing Main Data ALH Report records truncated");
+            }
+
+            for (Row row : sheet) {
+                currentRow = row;
+                if (shouldSkipRow(row)) {
+                    continue;
+                }
+                // Stop at first empty row (past last data row)
+                if (isEndOfDataRow(row)) {
+                    break;
+                }
+                rowMapper.accept(row, batch);
+
+                if (batch.size() == BATCH_SIZE) {
+                    genisysBatchService.saveALHBatch(batch);
+                    totalCount += batch.size();
+                    log.info("Saved {} ALH records so far...", totalCount);
+                    batch.clear();
+                }
+            }
+
+            if (!batch.isEmpty()) {
+                genisysBatchService.saveALHBatch(batch);
+                totalCount += batch.size();
+            }
+
+            log.info("ALH upload completed. Total records saved: {}", totalCount);
+
+        } catch (IOException e) {
+            log.error(
+                    "Error processing ALH file. Row index: {}",
+                    currentRow != null ? currentRow.getRowNum() : "N/A",
+                    e
+            );
+            throw new ReportException(
+                    HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                    "Failed to parse Excel file: " + e.getMessage()
+            );
+        }
+
+        return ResponseEntity.ok(
+                CommonResponseDTO.builder()
+                        .message("Main data ALH report " + totalCount + " records uploaded successfully.")
                         .status(HttpStatus.OK.toString())
                         .build()
         );
@@ -142,10 +232,8 @@ public class MainDataReportUploadServiceImpl implements MainDataReportUploadServ
     // -------------------------------------------------------------------------
 
     private boolean shouldSkipRow(Row row) {
-        if (row.getRowNum() == HEADER_ROW_1 || row.getRowNum() == HEADER_ROW_2) {
-            return true;
-        }
-        return isCellBlank(row.getCell(1)) || isCellBlank(row.getCell(3));
+        return row.getRowNum() == HEADER_ROW_1;
+        // return isCellBlank(row.getCell(1)) || isCellBlank(row.getCell(3));
     }
 
     private boolean isCellBlank(Cell cell) {
@@ -158,181 +246,499 @@ public class MainDataReportUploadServiceImpl implements MainDataReportUploadServ
         return false;
     }
 
+    /**
+     * Returns true if all columns in the row are empty or blank, meaning we have passed the last data row.
+     * Processing stops when this returns true.
+     */
+    private boolean isEndOfDataRow(Row row) {
+        if (row == null) {
+            return true;
+        }
+        int lastCellNum = row.getLastCellNum();
+        for (int i = 0; i < lastCellNum; i++) {
+            if (!isCellBlank(row.getCell(i))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     // -------------------------------------------------------------------------
     // Excel → Entity Mapping (UNCHANGED LOGIC)
     // -------------------------------------------------------------------------
 
     private void mapExcelRowsToMainDataReportEntity(Row row, List<MainDataReportEntity> list) {
-        MainDataReportEntity entity = new MainDataReportEntity();
-        // --- Main Policy Holder (Indices based on your provided header list) ---
-        entity.setPolicyNo(getIntegerValue(row.getCell(1))); // POLICY NO
-        entity.setProductCode(getStringValue(row.getCell(3))); // Product Code
-        entity.setIntroducer(getStringValue(row.getCell(26)));
-        entity.setFullName(getStringValue(row.getCell(31))); // FULL NAME
-        entity.setDob(getIntegerValue(row.getCell(33)));
-        entity.setGender(getStringValue(row.getCell(32)));
-        entity.setAae(getIntegerValue(row.getCell(34))); // AAE
-        entity.setNumberOfRidersTaken(getIntegerValue(row.getCell(36))); // Number of Riders Taken
-        entity.setDthSar(getStringValue(row.getCell(37))); // DTH SAR
-        entity.setSubDth(getStringValue(row.getCell(38))); // SUB-DTH
-        entity.setSubRateMilDth(getStringValue(row.getCell(39))); // SUB Rate/Mil-DTH
-        entity.setDthOccupationalLoadingPercent(getDoubleValue(row.getCell(40)));// DTH Occupational Loading %
-        entity.setAccdSa(getStringValue(row.getCell(41))); // ACCD SA
-        entity.setSubAccd(getStringValue(row.getCell(42))); // SUB-ACCD
-        entity.setSubRateMilAccd(getStringValue(row.getCell(43))); // SUB Rate/Mil-ACCD
-        entity.setAccdOccupationalLoadingPercent(getDoubleValue(row.getCell(44))); // ACCD Occupational Loading %
-        entity.setAccpSa(getStringValue(row.getCell(45))); // ACCP SA
-        entity.setSubAccp(getStringValue(row.getCell(46))); // SUB-ACCP
-        entity.setSubRateMilAccp(getStringValue(row.getCell(47))); // SUB Rate/Mil-ACCP
-        entity.setAccpOccupationalLoadingPercent(getDoubleValue(row.getCell(48))); // ACCP Occupational Loading %
-        entity.setAcctSa(getStringValue(row.getCell(49))); // ACCT SA
-        entity.setSubAcct(getStringValue(row.getCell(50))); // SUB-ACCT
-        entity.setSubRateMilAcct(getStringValue(row.getCell(51))); // SUB Rate/Mil-ACCT
-        entity.setAcctOccupationalLoadingPercent(getDoubleValue(row.getCell(52))); // ACCT Occupational Loading %
-        // --- Spouse/Child ---
-        entity.setSpouseChildPin(getIntegerValue(row.getCell(117))); // Spouse/Child PIN
-        entity.setSpouseChildTitle(getStringValue(row.getCell(118))); // Spouse/Child TITLE
-        entity.setSpouseChildFullName(getStringValue(row.getCell(119))); // Spouse/Child FULL NAME
-        entity.setSpouseChildGender(getStringValue(row.getCell(120))); // Spouse/Child GENDER
-        entity.setSpouseChildDob(getIntegerValue(row.getCell(121))); // Spouse/Child DOB
-        entity.setSpouseChildAge(getIntegerValue(row.getCell(122))); // Spouse/Child AGE
-        entity.setSpouseDeathSa(getStringValue(row.getCell(123))); // Spouse DEATH SA
-        entity.setSpouseSubDeath(getStringValue(row.getCell(124))); // Spouse SUB-DEATH
-        entity.setSpouseSubRateMilDeath(getStringValue(row.getCell(125))); // Spouse SUB Rate/Mil-DEATH
-        entity.setSpouseDeathOccupationalLoadingPercent(getDoubleValue(row.getCell(126))); // Spouse DEATH Occupational Loading %
-        entity.setSpouseChildAccdSa(getStringValue(row.getCell(127))); // Spouse/Child ACCD SA
-        entity.setSpouseChildSubAccd(getStringValue(row.getCell(128))); // Spouse/Child SUB-ACCD
-        entity.setSpouseChildSubRateMilAccd(getStringValue(row.getCell(129))); // Spouse/Child SUB Rate/Mil-ACCD
-        entity.setSpouseChildAccdOccupationalLoadingPercent(getDoubleValue(row.getCell(130)));
-        entity.setSpouseChildAccpSa(getStringValue(row.getCell(131))); // Spouse/Child ACCP SA
-        entity.setSpouseChildSubAccp(getStringValue(row.getCell(132))); // Spouse/Child SUB-ACCP
-        entity.setSpouseChildSubRateMilAccp(getStringValue(row.getCell(133))); // Spouse/Child SUB Rate/Mil-ACCP
-        entity.setSpouseChildAccpOccupationalLoadingPercent(getDoubleValue(row.getCell(134))); // Spouse/Child ACCP Occupational Loading %
-        entity.setSpouseChildAcctSa(getStringValue(row.getCell(135))); // Spouse/Child ACCT SA
-        entity.setSpouseChildSubAcct(getStringValue(row.getCell(136))); // Spouse/Child SUB-ACCT
-        entity.setSpouseChildSubRateMilAcct(getStringValue(row.getCell(137))); // Spouse/Child SUB Rate/Mil-ACCT
-        entity.setSpouseChildAcctOccupationalLoadingPercent(getDoubleValue(row.getCell(138))); // Spouse/Child ACCT Occupational Loading %
-        entity.setSpouseChildCillSa(getStringValue(row.getCell(139))); // Spouse/Child CILL SA
-        entity.setSpouseChildSubCill(getStringValue(row.getCell(140))); // Spouse/Child SUB-CILL
-        entity.setSpouseChildSubRateMilCill(getStringValue(row.getCell(141))); // Spouse/Child SUB Rate/Mil-CILL
-        entity.setSpouseChildCillOccupationalLoadingPercent(getDoubleValue(row.getCell(142))); // Spouse/Child CILL Occupational Loading %
-        entity.setSpouseChildCilxSa(getStringValue(row.getCell(143))); // Spouse/Child CILX SA
-        entity.setSpouseChildSubCilx(getStringValue(row.getCell(144))); // Spouse/Child SUB-CILX
-        entity.setSpouseChildSubRateMilCilx(getStringValue(row.getCell(145))); // Spouse/Child SUB Rate/Mil-CILX
-        entity.setSpouseChildCilxOccupationalLoadingPercent(getDoubleValue(row.getCell(146))); // Spouse/Child CILX Occupational Loading %
-        entity.setSpouseChildLebSa(getStringValue(row.getCell(147)));
-        entity.setSpouseChildSubLeb(getStringValue(row.getCell(148)));
-        entity.setSpouseChildSubRateMilLeb(getStringValue(row.getCell(149)));
-        entity.setSpouseChildLebOccupationalLoadingPercent(getDoubleValue(row.getCell(150)));
-        entity.setSpouseChildPtdSa(getStringValue(row.getCell(151)));
-        entity.setSpouseChildSubPtd(getStringValue(row.getCell(152)));
-        entity.setSpouseChildSubRateMilPtd(getStringValue(row.getCell(153)));
-        entity.setSpouseChildPtdOccupationalLoadingPercent(getDoubleValue(row.getCell(154)));
-        entity.setSpouseChildTillSa(getStringValue(row.getCell(155)));
-        entity.setSpouseChildSubTill(getStringValue(row.getCell(156)));
-        entity.setSpouseChildSubRateMilTill(getStringValue(row.getCell(157)));
-        entity.setSpouseChildTillOccupationalLoadingPercent(getDoubleValue(row.getCell(158)));
-        entity.setSpouseChildHbSa(getStringValue(row.getCell(159)));
-        entity.setSpouseChildSubHb(getStringValue(row.getCell(160)));
-        entity.setSpouseChildSubRateMilHb(getStringValue(row.getCell(161)));
-        entity.setSpouseChildHbOccupationalLoadingPercent(getDoubleValue(row.getCell(162)));
-        entity.setSpouseChildPpdSa(getStringValue(row.getCell(163)));
-        entity.setSpouseChildSubPpd(getStringValue(row.getCell(164)));
-        entity.setSpouseChildSubRateMilPpd(getStringValue(row.getCell(165)));
-        entity.setSpouseChildPpdOccupationalLoadingPercent(getDoubleValue(row.getCell(166)));
-        entity.setSpouseHbaSa(getStringValue(row.getCell(167)));
-        entity.setSpouseSubHba(getStringValue(row.getCell(168)));
-        entity.setSpouseSubRateMilHba(getStringValue(row.getCell(169)));
-        entity.setSpouseHbaOccupationalLoadingPercent(getDoubleValue(row.getCell(170)));
-        // --- Children 1..5 ---
-        entity.setChild1Name(getStringValue(row.getCell(171))); // CHILD1 NAME
-        entity.setChild1Dob(getIntegerValue(row.getCell(172))); // CHILD1 DOB
-        entity.setChild1Age(getIntegerValue(row.getCell(173))); // CHILD1 AGE
-        entity.setChild1Hbc(getStringValue(row.getCell(174))); // CHILD1 HBC
-        entity.setChild1Hbcac(getStringValue(row.getCell(175))); // CHILD1 HBCAC
+        HashMap<Integer, String> dateMap = new HashMap<>();
+        int col = 0;
+        MainDataReportEntity entity = MainDataReportEntity.builder()
+                // id - auto generated, skip
+                .policyNo(commonFunction.getIntegerValue(row.getCell(col++)))
+                .proposalNo(commonFunction.getIntegerValue(row.getCell(col++)))
+                .productCode(commonFunction.getStringValue(row.getCell(col++)))
+                .planNo(commonFunction.getStringValue(row.getCell(col++)))
+                // Dates & Terms
 
-        entity.setChild2Name(getStringValue(row.getCell(176))); // CHILD2 NAME
-        entity.setChild2Dob(getIntegerValue(row.getCell(177))); // CHILD2 DOB
-        entity.setChild2Age(getIntegerValue(row.getCell(178))); // CHILD2 AGE
-        entity.setChild2Hbc(getStringValue(row.getCell(179))); // CHILD2 HBC
-        entity.setChild2Hbcac(getStringValue(row.getCell(180))); // CHILD2 HBCAC
-
-        entity.setChild3Name(getStringValue(row.getCell(181)));
-        entity.setChild3Dob(getIntegerValue(row.getCell(182)));
-        entity.setChild3Age(getIntegerValue(row.getCell(183)));
-        entity.setChild3Hbc(getStringValue(row.getCell(184)));
-        entity.setChild3Hbcac(getStringValue(row.getCell(185)));
-
-        entity.setChild4Name(getStringValue(row.getCell(186)));
-        entity.setChild4Dob(getIntegerValue(row.getCell(187)));
-        entity.setChild4Age(getIntegerValue(row.getCell(188)));
-        entity.setChild4Hbc(getStringValue(row.getCell(189)));
-        entity.setChild4Hbcac(getStringValue(row.getCell(190)));
-
-        entity.setChild5Name(getStringValue(row.getCell(191)));
-        entity.setChild5Dob(getIntegerValue(row.getCell(192)));
-        entity.setChild5Age(getIntegerValue(row.getCell(193)));
-        entity.setChild5Hbc(getStringValue(row.getCell(194)));
-        entity.setChild5Hbcac(getStringValue(row.getCell(195)));
+                .inception(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(col++))))
+                .expiry(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(col++))))
+                .issueDate(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(col++))))
+                .salesBranchCode(commonFunction.getIntegerValue(row.getCell(col++)))
+                .salesBranchName(commonFunction.getStringValue(row.getCell(col++)))
+                .companyBranchCode(commonFunction.getIntegerValue(row.getCell(col++)))
+                .companyBranchName(commonFunction.getStringValue(row.getCell(col++)))
+                .policyBranchCode(commonFunction.getIntegerValue(row.getCell(col++)))
+                .policyBranchName(commonFunction.getStringValue(row.getCell(col++)))
+                .term(commonFunction.getIntegerValue(row.getCell(col++)))
+                .cy(commonFunction.getStringValue(row.getCell(col++)))
+                .premiumPaymentTerm(commonFunction.getStringValue(row.getCell(col++)))
+                .defermentTerm(commonFunction.getIntegerValue(row.getCell(col++)))
+                .retirementBenefitPayoutTerm(commonFunction.getIntegerValue(row.getCell(col++)))
+                .modalPremium(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .frequency(commonFunction.getIntegerValue(row.getCell(col++)))
+                .nextPremium(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(col++))))
+                .status(commonFunction.getStringValue(row.getCell(col++)))
+                .statusDate(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(col++))))
+                .reason(commonFunction.getStringValue(row.getCell(col++)))
+                .agentCode(commonFunction.getStringValue(row.getCell(col++)))
+                .introducer(commonFunction.getStringValue(row.getCell(col++)))
+                .supervisor(commonFunction.getStringValue(row.getCell(col++)))
+                .riPercentage(commonFunction.getDoubleValue(row.getCell(col++)))
+                // Main Life Details
+                .pin(commonFunction.getIntegerValue(row.getCell(col++)))
+                .title(commonFunction.getStringValue(row.getCell(col++)))
+                .fullName(commonFunction.getStringValue(row.getCell(col++)))
+                .gender(commonFunction.getStringValue(row.getCell(col++)))
+                .dob(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(col++))))
+                .aae(commonFunction.getIntegerValue(row.getCell(col++)))
+                .sarChoice(commonFunction.getStringValue(row.getCell(col++)))
+                .numberOfRidersTaken(commonFunction.getIntegerValue(row.getCell(col++)))
+                .dthSar(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subDth(commonFunction.getIntegerValue(row.getCell(col++)))
+                .subRateMilDth(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .dthOccupationalLoadingPercent(commonFunction.getDoubleValue(row.getCell(col++)))
+                .accdSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subAccd(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subRateMilAccd(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .accdOccupationalLoadingPercent(commonFunction.getDoubleValue(row.getCell(col++)))
+                .accpSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subAccp(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subRateMilAccp(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .accpOccupationalLoadingPercent(commonFunction.getDoubleValue(row.getCell(col++)))
+                .acctSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subAcct(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subRateMilAcct(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .acctOccupationalLoadingPercent(commonFunction.getDoubleValue(row.getCell(col++)))
+                // CILL
+                .cillSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subCill(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subRateMilCill(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .cillOccupationalLoadingPercentage(commonFunction.getDoubleValue(row.getCell(col++)))
+                // CILX
+                .cilxSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subCilx(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subRateMilCilx(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .cilxOccupationalLoadingPercentage(commonFunction.getDoubleValue(row.getCell(col++)))
+                // FIB
+                .fibSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subFib(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subRateMilFib(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .fibOccupationalLoadingPercentage(commonFunction.getDoubleValue(row.getCell(col++)))
+                // FIBT
+                .fibtSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subFibt(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subRateMilFibt(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .fibtOccupationalLoadingPercentage(commonFunction.getDoubleValue(row.getCell(col++)))
+                // FSEB
+                .fsebSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subFseb(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subRateMilFseb(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .fsebOccupationalLoadingPercentage(commonFunction.getDoubleValue(row.getCell(col++)))
+                // HB
+                .hbSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subHb(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subRateMilHb(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .hbOccupationalLoadingPercentage(commonFunction.getDoubleValue(row.getCell(col++)))
+                // LEB
+                .lebSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subLeb(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subRateMilLeb(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .lebOccupationalLoadingPercentage(commonFunction.getDoubleValue(row.getCell(col++)))
+                // PTD
+                .ptdSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subPtd(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subRateMilPtd(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .ptdOccupationalLoadingPercentage(commonFunction.getDoubleValue(row.getCell(col++)))
+                // TILL
+                .tillSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subTill(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subRateMilTill(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .tillOccupationalLoadingPercentage(commonFunction.getDoubleValue(row.getCell(col++)))
+                // TR
+                .trSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subTr(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subRateMilTr(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .trOccupationalLoadingPercentage(commonFunction.getDoubleValue(row.getCell(col++)))
+                // WOPA
+                .wopaSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subWopa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subRateMilWopa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .wopaOccupationalLoadingPercentage(commonFunction.getDoubleValue(row.getCell(col++)))
+                // WOPC
+                .wopcSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subWopc(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subRateMilWopc(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .wopcOccupationalLoadingPercentage(commonFunction.getDoubleValue(row.getCell(col++)))
+                // WOPD
+                .wopdSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subWopd(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subRateMilWopd(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .wopdOccupationalLoadingPercentage(commonFunction.getDoubleValue(row.getCell(col++)))
+                // FSEBA
+                .fsebaSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subFseba(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subRateMilFseba(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .fsebaOccupationalLoadingPercentage(commonFunction.getDoubleValue(row.getCell(col++)))
+                // HBA
+                .hbaSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subHba(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subRateMilHba(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .hbaOccupationalLoadingPercentage(commonFunction.getDoubleValue(row.getCell(col++)))
+                // HBAC
+                .hbacSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subHbac(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subRateMilHbac(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .hbacOccupationalLoadingPercentage(commonFunction.getDoubleValue(row.getCell(col++)))
+                // Spouse/Child
+                .spouseChildPin(commonFunction.getIntegerValue(row.getCell(col++)))
+                .spouseChildTitle(commonFunction.getStringValue(row.getCell(col++)))
+                .spouseChildFullName(commonFunction.getStringValue(row.getCell(col++)))
+                .spouseChildGender(commonFunction.getStringValue(row.getCell(col++)))
+                .spouseChildDob(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(col++))))
+                .spouseChildAge(commonFunction.getIntegerValue(row.getCell(col++)))
+                .spouseDeathSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseSubDeath(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseSubRateMilDeath(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseDeathOccupationalLoadingPercent(commonFunction.getDoubleValue(row.getCell(col++)))
+                .spouseChildAccdSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildSubAccd(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildSubRateMilAccd(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildAccdOccupationalLoadingPercent(commonFunction.getDoubleValue(row.getCell(col++)))
+                .spouseChildAccpSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildSubAccp(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildSubRateMilAccp(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildAccpOccupationalLoadingPercent(commonFunction.getDoubleValue(row.getCell(col++)))
+                .spouseChildAcctSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildSubAcct(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildSubRateMilAcct(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildAcctOccupationalLoadingPercent(commonFunction.getDoubleValue(row.getCell(col++)))
+                .spouseChildCillSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildSubCill(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildSubRateMilCill(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildCillOccupationalLoadingPercent(commonFunction.getDoubleValue(row.getCell(col++)))
+                .spouseChildCilxSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildSubCilx(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildSubRateMilCilx(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildCilxOccupationalLoadingPercent(commonFunction.getDoubleValue(row.getCell(col++)))
+                .spouseChildLebSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildSubLeb(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildSubRateMilLeb(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildLebOccupationalLoadingPercent(commonFunction.getDoubleValue(row.getCell(col++)))
+                .spouseChildPtdSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildSubPtd(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildSubRateMilPtd(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildPtdOccupationalLoadingPercent(commonFunction.getDoubleValue(row.getCell(col++)))
+                .spouseChildTillSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildSubTill(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildSubRateMilTill(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildTillOccupationalLoadingPercent(commonFunction.getDoubleValue(row.getCell(col++)))
+                .spouseChildHbSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildSubHb(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildSubRateMilHb(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildHbOccupationalLoadingPercent(commonFunction.getDoubleValue(row.getCell(col++)))
+                .spouseChildPpdSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildSubPpd(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildSubRateMilPpd(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildPpdOccupationalLoadingPercent(commonFunction.getDoubleValue(row.getCell(col++)))
+                .spouseHbaSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseSubHba(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseSubRateMilHba(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseHbaOccupationalLoadingPercent(commonFunction.getDoubleValue(row.getCell(col++)))
+                // Children 1..5
+                .child1Name(commonFunction.getStringValue(row.getCell(col++)))
+                .child1Dob(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(col++))))
+                .child1Age(commonFunction.getIntegerValue(row.getCell(col++)))
+                .child1Hbc(commonFunction.getIntegerValue(row.getCell(col++)))
+                .child1Hbcac(commonFunction.getIntegerValue(row.getCell(col++)))
+                .child2Name(commonFunction.getStringValue(row.getCell(col++)))
+                .child2Dob(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(col++))))
+                .child2Age(commonFunction.getIntegerValue(row.getCell(col++)))
+                .child2Hbc(commonFunction.getStringValue(row.getCell(col++)))
+                .child2Hbcac(commonFunction.getStringValue(row.getCell(col++)))
+                .child3Name(commonFunction.getStringValue(row.getCell(col++)))
+                .child3Dob(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(col++))))
+                .child3Age(commonFunction.getIntegerValue(row.getCell(col++)))
+                .child3Hbc(commonFunction.getIntegerValue(row.getCell(col++)))
+                .child3Hbcac(commonFunction.getIntegerValue(row.getCell(col++)))
+                .child4Name(commonFunction.getStringValue(row.getCell(col++)))
+                .child4Dob(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(col++))))
+                .child4Age(commonFunction.getIntegerValue(row.getCell(col++)))
+                .child4Hbc(commonFunction.getIntegerValue(row.getCell(col++)))
+                .child4Hbcac(commonFunction.getIntegerValue(row.getCell(col++)))
+                .child5Name(commonFunction.getStringValue(row.getCell(col++)))
+                .child5Dob(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(col++))))
+                .child5Age(commonFunction.getIntegerValue(row.getCell(col++)))
+                .child5Hbc(commonFunction.getIntegerValue(row.getCell(col++)))
+                .child5Hbcac(commonFunction.getIntegerValue(row.getCell(col++)))
+                // Financial Summary
+                .basicSumAssured(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .interestRate(commonFunction.getDoubleValue(row.getCell(col++)))
+                .tpdPremiumLife1(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .tpdPremiumLife2(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .valueToday(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .prmValueToday(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .bstValueToday(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .transactionAmount(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .interestCredited(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .surrenderValue(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .prmSurrenderValue(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .bstSurrenderValue(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .insuranceCoveragePeriod(commonFunction.getIntegerValue(row.getCell(col++)))
+                .operationDate(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(col++))))
+                .lastPaymentDate(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(col++))))
+                .lastPremiumDueDate(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(col++))))
+                .premiumEscalationBenefitPercentage(commonFunction.getDoubleValue(row.getCell(col++)))
+                .refundValue(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                // createdAt - handled by @CreatedDate
+                .build();
 
         list.add(entity);
     }
 
-    private void mapExcelRowsToMainDataReport2Entity(Row row, List<MainDataReportEntity> list) {
-        MainDataReportEntity entity = new MainDataReportEntity();
-        // --- Main Policy Holder (Indices based on your provided header list) ---
-        entity.setPolicyNo(getIntegerValue(row.getCell(1))); // POLICY NO
-        entity.setProductCode(getStringValue(row.getCell(3))); // Product Code
-        entity.setIntroducer(getStringValue(row.getCell(25)));
-        entity.setFullName(getStringValue(row.getCell(30))); // FULL NAME
-        entity.setGender(getStringValue(row.getCell(31)));
-        entity.setDob(getIntegerValue(row.getCell(32)));
-        entity.setAae(getIntegerValue(row.getCell(33))); // AAE
-        entity.setNumberOfRidersTaken(getIntegerValue(row.getCell(36))); // Number of Riders Taken
-        entity.setDthSar(getStringValue(row.getCell(37))); // DTH SAR
-        entity.setSubDth(getStringValue(row.getCell(38))); // SUB-DTH
-        entity.setSubRateMilDth(getStringValue(row.getCell(39))); // SUB Rate/Mil-DTH
-        entity.setDthOccupationalLoadingPercent(getDoubleValue(row.getCell(40)));// DTH Occupational Loading %
-        // --- Spouse/Child ---
-        entity.setSpouseChildPin(getIntegerValue(row.getCell(50))); // Spouse/Child PIN
-        entity.setSpouseChildTitle(getStringValue(row.getCell(51))); // Spouse/Child TITLE
-        entity.setSpouseChildFullName(getStringValue(row.getCell(52))); // Spouse/Child FULL NAME
-        entity.setSpouseChildGender(getStringValue(row.getCell(53))); // Spouse/Child GENDER
-        entity.setSpouseChildDob(getIntegerValue(row.getCell(54))); // Spouse/Child DOB
-        entity.setSpouseChildAge(getIntegerValue(row.getCell(55))); // Spouse/Child AGE
-        entity.setSpouseDeathSa(getStringValue(row.getCell(57))); // Spouse DEATH SA
-        entity.setSpouseSubDeath(getStringValue(row.getCell(58))); // Spouse SUB-DEATH
-        entity.setSpouseSubRateMilDeath(getStringValue(row.getCell(59))); // Spouse SUB Rate/Mil-DEATH
-        entity.setSpouseDeathOccupationalLoadingPercent(getDoubleValue(row.getCell(60))); // Spouse DEATH Occupational Loading %
-        entity.setSpouseChildHbSa(getStringValue(row.getCell(61)));
-        entity.setSpouseChildSubHb(getStringValue(row.getCell(62)));
-        entity.setSpouseChildSubRateMilHb(getStringValue(row.getCell(63)));
-        entity.setSpouseChildHbOccupationalLoadingPercent(getDoubleValue(row.getCell(64)));
-        // --- Children 1..5 ---
-        entity.setChild1Name(getStringValue(row.getCell(70))); // CHILD1 NAME
-        entity.setChild1Dob(getIntegerValue(row.getCell(71))); // CHILD1 DOB
-        entity.setChild1Age(getIntegerValue(row.getCell(72))); // CHILD1 AGE
-        entity.setChild1Hbc(getStringValue(row.getCell(73))); // CHILD1 HBC
+    /**
+     * Maps Excel row to MainDataALHReportEntity using MainDataReport2 column order (0-based):
+     * POLICY NO, PROPOSAL NO, Product Code, PLAN NO, INCEPTION, EXPIRY, Issue Date,
+     * Sales Branch Code, Sales Branch Name, Company Branch Code, Company Branch Name,
+     * Policy Branch Code, Policy Branch Name, TERM, C/Y, Premium Payment Term, MODAL PREMIUM,
+     * FREQUENCY, NEXT PREMIUM, STATUS, DATE, Operation Date, Reason, AGENT CODE, Introducer,
+     * Supervisor, RI %, PIN, TITLE, FULL NAME, GENDER, DOB, AAE, Occupation Main Life, SAR CHOICE,
+     * Number of Riders Taken, DTH SAR, SUB-DTH, SUB Rate/Mil-DTH, DTH Occupational Loading %,
+     * HB SA, SUB-HB, SUB Rate/Mil-HB, HB Occupational Loading %, INP SAR, SUB-INP, SUB Rate/Mil-INP,
+     * INP Occupational Loading %, ML Bonus, Spouse PIN..Spouse INP Occupational Loading %,
+     * CHILD1..CHILD20 (each: NAME, DOB, AGE, HBC, INP SAR, Bonus), Basic Sum Assured,
+     * Insurance Coverage Period, Last Payment Date, Last Premium Due Date, Refund Value.
+     */
+    private void mapExcelRowsToMainDataALHReportEntity(Row row, List<MainDataALHReportEntity> list) {
+        MainDataALHReportEntity entity = MainDataALHReportEntity.builder().build();
+        int c = 0;
 
-        entity.setChild2Name(getStringValue(row.getCell(76))); // CHILD2 NAME
-        entity.setChild2Dob(getIntegerValue(row.getCell(77))); // CHILD2 DOB
-        entity.setChild2Age(getIntegerValue(row.getCell(78))); // CHILD2 AGE
-        entity.setChild2Hbc(getStringValue(row.getCell(79))); // CHILD2 HBC
-
-        entity.setChild3Name(getStringValue(row.getCell(82)));
-        entity.setChild3Dob(getIntegerValue(row.getCell(83)));
-        entity.setChild3Age(getIntegerValue(row.getCell(84)));
-        entity.setChild3Hbc(getStringValue(row.getCell(85)));
-
-        entity.setChild4Name(getStringValue(row.getCell(88)));
-        entity.setChild4Dob(getIntegerValue(row.getCell(89)));
-        entity.setChild4Age(getIntegerValue(row.getCell(90)));
-        entity.setChild4Hbc(getStringValue(row.getCell(91)));
-
-        entity.setChild5Name(getStringValue(row.getCell(94)));
-        entity.setChild5Dob(getIntegerValue(row.getCell(95)));
-        entity.setChild5Age(getIntegerValue(row.getCell(96)));
-        entity.setChild5Hbc(getStringValue(row.getCell(97)));
+        // Policy & identifiers (0-3)
+        entity.setPolicyNo(commonFunction.getIntegerValue(row.getCell(c++)));
+        entity.setProposalNo(commonFunction.getIntegerValue(row.getCell(c++)));
+        entity.setProductCode(commonFunction.getStringValue(row.getCell(c++)));
+        entity.setPlanNo(commonFunction.getStringValue(row.getCell(c++)));
+        // Dates (4-6)
+        entity.setInception(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
+        entity.setExpiry(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
+        entity.setIssueDate(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
+        // Branches (7-12)
+        entity.setSalesBranchCode(commonFunction.getIntegerValue(row.getCell(c++)));
+        entity.setSalesBranchName(commonFunction.getStringValue(row.getCell(c++)));
+        entity.setCompanyBranchCode(commonFunction.getIntegerValue(row.getCell(c++)));
+        entity.setCompanyBranchName(commonFunction.getStringValue(row.getCell(c++)));
+        entity.setPolicyBranchCode(commonFunction.getIntegerValue(row.getCell(c++)));
+        entity.setPolicyBranchName(commonFunction.getStringValue(row.getCell(c++)));
+        // Term & premium (13-18)
+        entity.setTerm(commonFunction.getIntegerValue(row.getCell(c++)));
+        entity.setCy(commonFunction.getStringValue(row.getCell(c++)));
+        entity.setPremiumPaymentTerm(commonFunction.getIntegerValue(row.getCell(c++)));
+        entity.setModalPremium(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setFrequency(commonFunction.getIntegerValue(row.getCell(c++)));
+        entity.setNextPremium(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
+        // Status & dates (19-22)
+        entity.setStatus(commonFunction.getStringValue(row.getCell(c++)));
+        entity.setDate(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
+        entity.setOperationDate(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
+        entity.setReason(commonFunction.getStringValue(row.getCell(c++)));
+        // Agent (23-26)
+        entity.setAgentCode(commonFunction.getStringValue(row.getCell(c++)));
+        entity.setIntroducer(commonFunction.getStringValue(row.getCell(c++)));
+        entity.setSupervisor(commonFunction.getStringValue(row.getCell(c++)));
+        entity.setRiPercentage(commonFunction.getDoubleValue(row.getCell(c++)));
+        // Main life (27-35)
+        entity.setPin(commonFunction.getIntegerValue(row.getCell(c++)));
+        entity.setTitle(commonFunction.getStringValue(row.getCell(c++)));
+        entity.setFullName(commonFunction.getStringValue(row.getCell(c++)));
+        entity.setGender(commonFunction.getStringValue(row.getCell(c++)));
+        entity.setDob(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
+        entity.setAae(commonFunction.getIntegerValue(row.getCell(c++)));
+        entity.setOccupationMainLife(commonFunction.getStringValue(row.getCell(c++)));
+        entity.setSarChoice(commonFunction.getStringValue(row.getCell(c++)));
+        entity.setNumberOfRidersTaken(commonFunction.getIntegerValue(row.getCell(c++)));
+        // DTH (36-39)
+        entity.setDthSar(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setSubDth(commonFunction.getIntegerValue(row.getCell(c++)));
+        entity.setSubRateMilDth(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setDthOccupationalLoadingPercent(commonFunction.getDoubleValue(row.getCell(c++)));
+        // HB (40-43)
+        entity.setHbSa(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setSubHb(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setSubRateMilHb(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setHbOccupationalLoadingPercentage(commonFunction.getDoubleValue(row.getCell(c++)));
+        // INP (44-47)
+        entity.setInpSar(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setSubInp(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setSubRateMilInp(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setInpOccLoadingPercentage(commonFunction.getDoubleValue(row.getCell(c++)));
+        // ML Bonus (48)
+        entity.setMlBonus(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        // Spouse (49-68)
+        entity.setSpousePin(commonFunction.getIntegerValue(row.getCell(c++)));
+        entity.setSpouseTitle(commonFunction.getStringValue(row.getCell(c++)));
+        entity.setSpouseFullName(commonFunction.getStringValue(row.getCell(c++)));
+        entity.setSpouseGender(commonFunction.getStringValue(row.getCell(c++)));
+        entity.setSpouseDob(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
+        entity.setSpouseAge(commonFunction.getIntegerValue(row.getCell(c++)));
+        entity.setOccupationSpouse(commonFunction.getStringValue(row.getCell(c++)));
+        entity.setSpouseDeathSa(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setSpouseSubDeath(commonFunction.getIntegerValue(row.getCell(c++)));
+        entity.setSpouseSubRateMilDeath(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setSpouseDeathOccLoadingPercentage(commonFunction.getDoubleValue(row.getCell(c++)));
+        entity.setSpouseHbSa(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setSpouseSubHb(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setSpouseSubRateMilHb(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setSpouseHbOccLoadingPercentage(commonFunction.getDoubleValue(row.getCell(c++)));
+        entity.setSpouseBonus(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setSpouseInpSar(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setSpouseSubInp(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setSpouseSubRateMilInp(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setSpouseInpOccLoadingPercentage(commonFunction.getDoubleValue(row.getCell(c++)));
+        // Children 1-5 (NAME, DOB, AGE, HBC, INP SAR, Bonus)
+        entity.setChild1Name(commonFunction.getStringValue(row.getCell(c++)));
+        entity.setChild1Dob(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
+        entity.setChild1Age(commonFunction.getIntegerValue(row.getCell(c++)));
+        entity.setChild1Hbc(commonFunction.getIntegerValue(row.getCell(c++)));
+        entity.setChild1InpSar(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setChild1Bonus(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setChild2Name(commonFunction.getStringValue(row.getCell(c++)));
+        entity.setChild2Dob(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
+        entity.setChild2Age(commonFunction.getIntegerValue(row.getCell(c++)));
+        entity.setChild2Hbc(commonFunction.getStringValue(row.getCell(c++)));
+        entity.setChild2InpSar(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setChild2Bonus(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setChild3Name(commonFunction.getStringValue(row.getCell(c++)));
+        entity.setChild3Dob(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
+        entity.setChild3Age(commonFunction.getIntegerValue(row.getCell(c++)));
+        entity.setChild3Hbc(commonFunction.getIntegerValue(row.getCell(c++)));
+        entity.setChild3InpSar(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setChild3Bonus(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setChild4Name(commonFunction.getStringValue(row.getCell(c++)));
+        entity.setChild4Dob(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
+        entity.setChild4Age(commonFunction.getIntegerValue(row.getCell(c++)));
+        entity.setChild4Hbc(commonFunction.getIntegerValue(row.getCell(c++)));
+        entity.setChild4InpSar(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setChild4Bonus(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setChild5Name(commonFunction.getStringValue(row.getCell(c++)));
+        entity.setChild5Dob(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
+        entity.setChild5Age(commonFunction.getIntegerValue(row.getCell(c++)));
+        entity.setChild5Hbc(commonFunction.getIntegerValue(row.getCell(c++)));
+        entity.setChild5InpSar(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setChild5Bonus(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        // Children 6-20 (each: NAME, DOB, AGE, HBC, INP SAR, Bonus)
+        entity.setChild6Name(commonFunction.getStringValue(row.getCell(c++)));
+        entity.setChild6Dob(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
+        entity.setChild6Age(commonFunction.getIntegerValue(row.getCell(c++)));
+        entity.setChild6Hbc(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setChild6InpSar(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setChild6Bonus(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setChild7Name(commonFunction.getStringValue(row.getCell(c++)));
+        entity.setChild7Dob(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
+        entity.setChild7Age(commonFunction.getIntegerValue(row.getCell(c++)));
+        entity.setChild7Hbc(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setChild7InpSar(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setChild7Bonus(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setChild8Name(commonFunction.getStringValue(row.getCell(c++)));
+        entity.setChild8Dob(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
+        entity.setChild8Age(commonFunction.getIntegerValue(row.getCell(c++)));
+        entity.setChild8Hbc(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setChild8InpSar(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setChild8Bonus(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setChild9Name(commonFunction.getStringValue(row.getCell(c++)));
+        entity.setChild9Dob(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
+        entity.setChild9Age(commonFunction.getIntegerValue(row.getCell(c++)));
+        entity.setChild9Hbc(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setChild9InpSar(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setChild9Bonus(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setChild10Name(commonFunction.getStringValue(row.getCell(c++)));
+        entity.setChild10Dob(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
+        entity.setChild10Age(commonFunction.getIntegerValue(row.getCell(c++)));
+        entity.setChild10Hbc(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setChild10InpSar(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setChild10Bonus(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setChild11Name(commonFunction.getStringValue(row.getCell(c++)));
+        entity.setChild11Dob(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
+        entity.setChild11Age(commonFunction.getIntegerValue(row.getCell(c++)));
+        entity.setChild11Hbc(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setChild11InpSar(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setChild11Bonus(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setChild12Name(commonFunction.getStringValue(row.getCell(c++)));
+        entity.setChild12Dob(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
+        entity.setChild12Age(commonFunction.getIntegerValue(row.getCell(c++)));
+        entity.setChild12Hbc(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setChild12InpSar(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setChild12Bonus(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setChild13Name(commonFunction.getStringValue(row.getCell(c++)));
+        entity.setChild13Dob(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
+        entity.setChild13Age(commonFunction.getIntegerValue(row.getCell(c++)));
+        entity.setChild13Hbc(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setChild13InpSar(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setChild13Bonus(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setChild14Name(commonFunction.getStringValue(row.getCell(c++)));
+        entity.setChild14Dob(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
+        entity.setChild14Age(commonFunction.getIntegerValue(row.getCell(c++)));
+        entity.setChild14Hbc(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setChild14InpSar(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setChild14Bonus(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setChild15Name(commonFunction.getStringValue(row.getCell(c++)));
+        entity.setChild15Dob(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
+        entity.setChild15Age(commonFunction.getIntegerValue(row.getCell(c++)));
+        entity.setChild15Hbc(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setChild15InpSar(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setChild15Bonus(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setChild16Name(commonFunction.getStringValue(row.getCell(c++)));
+        entity.setChild16Dob(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
+        entity.setChild16Age(commonFunction.getIntegerValue(row.getCell(c++)));
+        entity.setChild16Hbc(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setChild16InpSar(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setChild16Bonus(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setChild17Name(commonFunction.getStringValue(row.getCell(c++)));
+        entity.setChild17Dob(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
+        entity.setChild17Age(commonFunction.getIntegerValue(row.getCell(c++)));
+        entity.setChild17Hbc(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setChild17InpSar(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setChild17Bonus(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setChild18Name(commonFunction.getStringValue(row.getCell(c++)));
+        entity.setChild18Dob(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
+        entity.setChild18Age(commonFunction.getIntegerValue(row.getCell(c++)));
+        entity.setChild18Hbc(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setChild18InpSar(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setChild18Bonus(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setChild19Name(commonFunction.getStringValue(row.getCell(c++)));
+        entity.setChild19Dob(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
+        entity.setChild19Age(commonFunction.getIntegerValue(row.getCell(c++)));
+        entity.setChild19Hbc(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setChild19InpSar(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setChild19Bonus(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setChild20Name(commonFunction.getStringValue(row.getCell(c++)));
+        entity.setChild20Dob(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
+        entity.setChild20Age(commonFunction.getIntegerValue(row.getCell(c++)));
+        entity.setChild20Hbc(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setChild20InpSar(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setChild20Bonus(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        // Basic Sum Assured, Insurance Coverage Period, Last Payment Date, Last Premium Due Date, Refund Value
+        entity.setBasicSumAssured(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setInsuranceCoveragePeriod(commonFunction.getIntegerValue(row.getCell(c++)));
+        entity.setLastPaymentDate(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
+        entity.setLastPremiumDueDate(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
+        entity.setRefundValue(commonFunction.getBigDecimalValue(row.getCell(c++)));
 
         list.add(entity);
     }
@@ -342,11 +748,11 @@ public class MainDataReportUploadServiceImpl implements MainDataReportUploadServ
     // -------------------------------------------------------------------------
 
     private InputStream getMainDataReportFileInputStream() {
-        return getFileInputStream(mainDataReportFilePath, "MainDataReport");
+        return getFileInputStream(mainDataReportFilePath, "Main Data Report");
     }
 
-    private InputStream getMainDataReport2FileInputStream() {
-        return getFileInputStream(mainDataReport2FilePath, "MainDataReport2");
+    private InputStream getMainDataALHReportFileInputStream() {
+        return getFileInputStream(mainDataALHReportFilePath, "Main Data ALH Report");
     }
 
     private InputStream getFileInputStream(String path, String name) {
@@ -365,45 +771,6 @@ public class MainDataReportUploadServiceImpl implements MainDataReportUploadServ
                     "Error reading " + name + " file: " + e.getMessage()
             );
         }
-    }
-
-    // -------------------------------------------------------------------------
-    // Cell Helpers
-    // -------------------------------------------------------------------------
-
-    private Integer getIntegerValue(Cell cell) {
-        if (cell == null || cell.getCellType() == CellType.BLANK) return null;
-        try {
-            return switch (cell.getCellType()) {
-                case NUMERIC -> (int) cell.getNumericCellValue();
-                case STRING -> Integer.parseInt(cell.getStringCellValue().trim());
-                default -> null;
-            };
-        } catch (NumberFormatException e) {
-            return null;
-        }
-    }
-
-    private Double getDoubleValue(Cell cell) {
-        if (cell == null || cell.getCellType() == CellType.BLANK) return null;
-        try {
-            return switch (cell.getCellType()) {
-                case NUMERIC -> cell.getNumericCellValue();
-                case STRING -> Double.parseDouble(cell.getStringCellValue().trim());
-                default -> null;
-            };
-        } catch (NumberFormatException e) {
-            return null;
-        }
-    }
-
-    private String getStringValue(Cell cell) {
-        if (cell == null || cell.getCellType() == CellType.BLANK) return null;
-        return switch (cell.getCellType()) {
-            case STRING -> cell.getStringCellValue().trim();
-            case NUMERIC -> String.valueOf(cell.getNumericCellValue()).trim();
-            default -> null;
-        };
     }
 }
 
