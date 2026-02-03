@@ -13,7 +13,6 @@ import lk.avengers.datamigrationadapter.repository.postgresql.reportdb.ContactDe
 import lk.avengers.datamigrationadapter.repository.postgresql.reportdb.PolicyListRepository;
 import lk.avengers.datamigrationadapter.service.DataIngestorService;
 import lk.avengers.datamigrationadapter.service.ExcelDataExtractorEnhancedService;
-import lk.avengers.datamigrationadapter.service.ExcelDataExtractorService;
 import lk.avengers.datamigrationadapter.util.MemoryMonitor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -47,7 +46,6 @@ public class DataIngestorServiceImpl implements DataIngestorService {
     @Value("${contact.detail.file}")
     private String contactDetailFilePath;
 
-    private final ExcelDataExtractorService excelDataExtractorService;
     private final ACPPolicyRepository acpPolicyRepository;
     private final PolicyListRepository policyListRepository;
     private final ContactDetailRepository contactDetailRepository;
@@ -55,19 +53,11 @@ public class DataIngestorServiceImpl implements DataIngestorService {
 
     // Constants
     private static final int BATCH_SIZE = 1000;
-    private static final String YYYYMMDD_PATTERN = "\\d{8}";
+    private static final String EIGHT_DIGIT_DATE_PATTERN = "\\d{8}";
     private static final Set<String> INVALID_DATE_VALUES = Set.of(
             "?", "-", "N/A", "NA", "NULL", "NONE", "#N/A", ""
     );
-    private static final DateTimeFormatter[] DATE_FORMATTERS = {
-            DateTimeFormatter.ofPattern("yyyy-MM-dd"),
-            DateTimeFormatter.ofPattern("MM/dd/yyyy"),
-            DateTimeFormatter.ofPattern("dd/MM/yyyy"),
-            DateTimeFormatter.ofPattern("dd-MM-yyyy"),
-            DateTimeFormatter.ofPattern("yyyy/MM/dd")
-    };
 
-    // ==================== Main Processing Methods ====================
 
     @Override
     public void ProcessPolicyListData(String uuid) {
@@ -141,7 +131,7 @@ public class DataIngestorServiceImpl implements DataIngestorService {
     public void ProcessContactDetailData(String uuid) {
         log.info("UUID: {} - Starting Contact Detail data processing", uuid);
 
-        try{
+        try {
             ExcelDataResponseDTO extractedExcelFile = extractExcelData(uuid, contactDetailFilePath, 0, 1, 3);
             if (extractedExcelFile == null) return;
             log.info("UUID: {} - File extraction successful", uuid);
@@ -180,9 +170,6 @@ public class DataIngestorServiceImpl implements DataIngestorService {
 
     // ==================== Helper Methods ====================
 
-    /**
-     * Extract Excel data with specified parameters
-     */
     private ExcelDataResponseDTO extractExcelData(String uuid, String filePath, int sheetIndex,
                                                   int headerRow, int dataRow) {
         ExcelExtractorRequestDTO request = ExcelExtractorRequestDTO.builder()
@@ -203,9 +190,6 @@ public class DataIngestorServiceImpl implements DataIngestorService {
         return result;
     }
 
-    /**
-     * Clean and validate extracted data
-     */
     private List<Map<String, Object>> cleanAndValidateData(String uuid, ExcelDataResponseDTO extractedData) {
         // Filter valid headers
         List<String> validHeaders = extractedData.getHeaders().stream()
@@ -221,9 +205,7 @@ public class DataIngestorServiceImpl implements DataIngestorService {
                 .toList();
     }
 
-    /**
-     * Filter row data to only include valid column headers
-     */
+
     private Map<String, Object> filterValidColumns(Map<String, Object> rowData, List<String> validHeaders) {
         Map<String, Object> cleanedRow = new LinkedHashMap<>();
         for (String header : validHeaders) {
@@ -232,9 +214,7 @@ public class DataIngestorServiceImpl implements DataIngestorService {
         return cleanedRow;
     }
 
-    /**
-     * Generic batch processor for saving entities
-     */
+   // GENERIC BATCH PROCESSOR FOR SAVING ENTITIES
     private <T> void processBatch(String uuid, List<T> entities, String entityName,
                                   Consumer<List<T>> batchSaver, int batchSize) {
         int totalRecords = entities.size();
@@ -359,15 +339,15 @@ public class DataIngestorServiceImpl implements DataIngestorService {
             dto.setProposalNo(getString(data, "PROPOSAL NO"));
             dto.setProductCode(getString(data, "Product Code"));
             dto.setPlanNo(getString(data, "PLAN NO"));
-            dto.setInception(getDateFromInteger(data, "INCEPTION"));
-            dto.setExpiry(getDateFromInteger(data, "EXPIRY"));
-            dto.setIssueDate(getDateFromInteger(data, "Issue Date"));
+            dto.setInception(getDateYYYYMMDD(data, "INCEPTION"));
+            dto.setExpiry(getDateYYYYMMDD(data, "EXPIRY"));
+            dto.setIssueDate(getDateYYYYMMDD(data, "Issue Date"));
             dto.setTerm(getInteger(data, "TERM"));
             dto.setCy(getString(data, "C/Y"));
             dto.setPremiumPaymentTerm(getString(data, "Premium Payment Term"));
             dto.setStatus(getString(data, "STATUS"));
-            dto.setDate(getDateFromInteger(data, "DATE"));
-            dto.setOperationDate(getDateFromInteger(data, "Operation Date"));
+            dto.setDate(getDateYYYYMMDD(data, "DATE"));
+            dto.setOperationDate(getDateYYYYMMDD(data, "Operation Date"));
             dto.setReason(getString(data, "Reason"));
 
             // Sales & Branch Info
@@ -387,7 +367,7 @@ public class DataIngestorServiceImpl implements DataIngestorService {
             dto.setInsuredModalPremium(getBigDecimal(data, "INSURED MODAL PREMIUM"));
             dto.setCompanyModalPremium(getBigDecimal(data, "COMPANY MODAL PREMIUM"));
             dto.setFrequency(getString(data, "FREQUENCY"));
-            dto.setNextPremium(getDateFromInteger(data, "NEXT PREMIUM"));
+            dto.setNextPremium(getDateYYYYMMDD(data, "NEXT PREMIUM"));
             dto.setEmployerName(getString(data, "EMPLOYER NAME"));
             dto.setInsuranceCategory(getString(data, "INSURANCE CATEGORY"));
             dto.setMinContributionPerc(getBigDecimal(data, "MIN CONTRIBUTION PERC"));
@@ -400,7 +380,7 @@ public class DataIngestorServiceImpl implements DataIngestorService {
             dto.setTitle(getString(data, "TITLE"));
             dto.setFullName(getString(data, "FULL NAME"));
             dto.setGender(getString(data, "GENDER"));
-            dto.setDob(getDateFromInteger(data, "DOB"));
+            dto.setDob(getDateYYYYMMDD(data, "DOB"));
             dto.setAae(getInteger(data, "AAE"));
             dto.setSarChoice(getString(data, "SAR CHOICE"));
             dto.setNumberOfRidersTaken(getInteger(data, "Number of Riders Taken"));
@@ -422,8 +402,8 @@ public class DataIngestorServiceImpl implements DataIngestorService {
             // Final Policy Attributes
             dto.setInsuranceCoveragePeriod(getString(data, "Insurance Coverage Period"));
             dto.setPacInsuredShare(getBigDecimal(data, "PAC INSURED SHARE"));
-            dto.setLastPaymentDate(getDateFromInteger(data, "Last Payment Date"));
-            dto.setLastPremiumDueDate(getDateFromInteger(data, "Last Premium Due Date"));
+            dto.setLastPaymentDate(getDateYYYYMMDD(data, "Last Payment Date"));
+            dto.setLastPremiumDueDate(getDateYYYYMMDD(data, "Last Premium Due Date"));
 
             return dto;
         } catch (Exception e) {
@@ -563,38 +543,6 @@ public class DataIngestorServiceImpl implements DataIngestorService {
         }
     }
 
-    private LocalDate getDateFromInteger(Map<String, Object> data, String key) {
-        Object value = data.get(key);
-        if (value == null) return null;
-
-        try {
-            String stringValue = value.toString().trim();
-            if (stringValue.isEmpty()) return null;
-
-            // Early exit for known non-date values
-            if (INVALID_DATE_VALUES.contains(stringValue.toUpperCase())) {
-                return null;
-            }
-
-            // Quick validation: check if string contains at least one digit
-            if (!stringValue.matches(".*\\d.*")) {
-                return null;
-            }
-
-            // Handle YYYYMMDD format
-            if (stringValue.matches(YYYYMMDD_PATTERN)) {
-                return parseYYYYMMDD(stringValue);
-            }
-
-            // Try standard date formats
-            return parseDate(stringValue);
-
-        } catch (Exception e) {
-            log.debug("Could not parse date for key '{}': {}", key, value);
-            return null;
-        }
-    }
-
     // ==================== Date Parsing Utilities ====================
 
     private LocalDate parseYYYYMMDD(String value) {
@@ -604,18 +552,8 @@ public class DataIngestorServiceImpl implements DataIngestorService {
         return LocalDate.of(year, month, day);
     }
 
-    private LocalDate parseDate(String value) {
-        for (DateTimeFormatter formatter : DATE_FORMATTERS) {
-            try {
-                return LocalDate.parse(value, formatter);
-            } catch (DateTimeParseException ignored) {
-                // Try next formatter
-            }
-        }
-        return null;
-    }
+    // ==================== Date Extraction Methods ====================
 
-    // ==================== Improved Date Extraction Methods ====================
     /**
      * Extract date with DD/MM/YYYY format (with or without leading zeros)
      * Used for: Date Of Birth
@@ -641,7 +579,7 @@ public class DataIngestorServiceImpl implements DataIngestorService {
             }
 
             // Handle YYYYMMDD format (20021974)
-            if (stringValue.matches(YYYYMMDD_PATTERN)) {
+            if (stringValue.matches(EIGHT_DIGIT_DATE_PATTERN)) {
                 return parseYYYYMMDD(stringValue);
             }
 
@@ -672,61 +610,11 @@ public class DataIngestorServiceImpl implements DataIngestorService {
                 try {
                     return LocalDate.parse(stringValue, formatter);
                 } catch (DateTimeParseException ignored) {
-                    // Try next formatter
+                    // Try the next formatter
                 }
             }
 
             log.debug("Could not parse DD/MM/YYYY date for key '{}': {}", key, value);
-            return null;
-
-        } catch (Exception e) {
-            log.debug("Could not parse date for key '{}': {}", key, value);
-            return null;
-        }
-    }
-
-    /**
-     * Extract date with MM/DD/YYYY format (with or without leading zeros)
-     * Used for: dates entered in US format
-     * Example: "11/2/1974" or "11/02/1974" = November 2nd 1974
-     */
-    private LocalDate getDateMMDDYYYY(Map<String, Object> data, String key) {
-        Object value = data.get(key);
-        if (value == null) return null;
-
-        try {
-            String stringValue = value.toString().trim();
-            if (stringValue.isEmpty()) return null;
-
-            if (INVALID_DATE_VALUES.contains(stringValue.toUpperCase())) {
-                return null;
-            }
-
-            if (!stringValue.matches(".*\\d.*")) {
-                return null;
-            }
-
-            if (stringValue.matches(YYYYMMDD_PATTERN)) {
-                return parseYYYYMMDD(stringValue);
-            }
-
-            // Try MM/DD/YYYY formats (with and without leading zeros)
-            DateTimeFormatter[] mmDDyyyyFormatters = {
-                    DateTimeFormatter.ofPattern("M/d/yyyy"),    // 1/2/1974
-                    DateTimeFormatter.ofPattern("MM/dd/yyyy"),  // 11/02/1974
-                    DateTimeFormatter.ofPattern("M/dd/yyyy"),   // 1/02/1974
-                    DateTimeFormatter.ofPattern("MM/d/yyyy")    // 11/2/1974
-            };
-
-            for (DateTimeFormatter formatter : mmDDyyyyFormatters) {
-                try {
-                    return LocalDate.parse(stringValue, formatter);
-                } catch (DateTimeParseException ignored) {
-                    // Try next formatter
-                }
-            }
-
-            log.debug("Could not parse MM/DD/YYYY date for key '{}': {}", key, value);
             return null;
 
         } catch (Exception e) {
@@ -757,12 +645,13 @@ public class DataIngestorServiceImpl implements DataIngestorService {
             }
 
             // Handle YYYYMMDD format (19741102)
-            if (stringValue.matches(YYYYMMDD_PATTERN)) {
+            if (stringValue.matches(EIGHT_DIGIT_DATE_PATTERN)) {
                 return parseYYYYMMDD(stringValue);
             }
 
             // Try YYYY-MM-DD formats (with and without leading zeros)
             DateTimeFormatter[] yyyyMMddFormatters = {
+                    // 4-digit year formats
                     DateTimeFormatter.ofPattern("yyyy-M-d"),    // 1974-1-2
                     DateTimeFormatter.ofPattern("yyyy-MM-dd"),  // 1974-11-02
                     DateTimeFormatter.ofPattern("yyyy-M-dd"),   // 1974-1-02
@@ -770,14 +659,24 @@ public class DataIngestorServiceImpl implements DataIngestorService {
                     DateTimeFormatter.ofPattern("yyyy/M/d"),    // 1974/1/2
                     DateTimeFormatter.ofPattern("yyyy/MM/dd"),  // 1974/11/02
                     DateTimeFormatter.ofPattern("yyyy/M/dd"),   // 1974/1/02
-                    DateTimeFormatter.ofPattern("yyyy/MM/d")    // 1974/11/2
+                    DateTimeFormatter.ofPattern("yyyy/MM/d"),   // 1974/11/2
+
+                    // 2-digit year formats (handles Excel's shortened format)
+                    DateTimeFormatter.ofPattern("yy-M-d"),      // 74-1-2
+                    DateTimeFormatter.ofPattern("yy-MM-dd"),    // 74-11-02
+                    DateTimeFormatter.ofPattern("yy-M-dd"),     // 74-1-02
+                    DateTimeFormatter.ofPattern("yy-MM-d"),     // 74-11-2
+                    DateTimeFormatter.ofPattern("yy/M/d"),      // 74/1/2
+                    DateTimeFormatter.ofPattern("yy/MM/dd"),    // 74/11/02
+                    DateTimeFormatter.ofPattern("yy/M/dd"),     // 74/1/02
+                    DateTimeFormatter.ofPattern("yy/MM/d")      // 74/11/2
             };
 
             for (DateTimeFormatter formatter : yyyyMMddFormatters) {
                 try {
                     return LocalDate.parse(stringValue, formatter);
                 } catch (DateTimeParseException ignored) {
-                    // Try next formatter
+                    // Try the next formatter
                 }
             }
 
@@ -791,78 +690,33 @@ public class DataIngestorServiceImpl implements DataIngestorService {
     }
 
     /**
-     * Generic date extractor that tries multiple formats intelligently
-     * Used for: columns where date format is uncertain
-     * Prioritizes DD/MM/YYYY over MM/DD/YYYY to avoid ambiguity
-     * Handles dates with or without leading zeros
+     * Common validation logic for date strings
+     * Returns the cleaned string value if valid, null otherwise
+     * Also handles YYYYMMDD format directly
      */
-    private LocalDate getDateFlexible(Map<String, Object> data, String key) {
-        Object value = data.get(key);
+    private LocalDate validateAndParseCommonDateFormats(Object value, String key) {
         if (value == null) return null;
 
-        try {
-            String stringValue = value.toString().trim();
-            if (stringValue.isEmpty()) return null;
+        String stringValue = value.toString().trim();
+        if (stringValue.isEmpty()) return null;
 
-            if (INVALID_DATE_VALUES.contains(stringValue.toUpperCase())) {
-                return null;
-            }
-
-            if (!stringValue.matches(".*\\d.*")) {
-                return null;
-            }
-
-            // Handle YYYYMMDD format (19741102)
-            if (stringValue.matches(YYYYMMDD_PATTERN)) {
-                return parseYYYYMMDD(stringValue);
-            }
-
-            // Try formats in priority order (with and without leading zeros)
-            DateTimeFormatter[] prioritizedFormatters = {
-                    // ISO format first (most unambiguous)
-                    DateTimeFormatter.ofPattern("yyyy-MM-dd"),
-                    DateTimeFormatter.ofPattern("yyyy-M-d"),
-                    DateTimeFormatter.ofPattern("yyyy-M-dd"),
-                    DateTimeFormatter.ofPattern("yyyy-MM-d"),
-
-                    // Then DD/MM/YYYY (European - prioritized to avoid ambiguity)
-                    DateTimeFormatter.ofPattern("dd/MM/yyyy"),
-                    DateTimeFormatter.ofPattern("d/M/yyyy"),
-                    DateTimeFormatter.ofPattern("d/MM/yyyy"),
-                    DateTimeFormatter.ofPattern("dd/M/yyyy"),
-                    DateTimeFormatter.ofPattern("dd-MM-yyyy"),
-                    DateTimeFormatter.ofPattern("d-M-yyyy"),
-                    DateTimeFormatter.ofPattern("d-MM-yyyy"),
-                    DateTimeFormatter.ofPattern("dd-M-yyyy"),
-
-                    // US format last (to avoid ambiguity with European dates)
-                    DateTimeFormatter.ofPattern("MM/dd/yyyy"),
-                    DateTimeFormatter.ofPattern("M/d/yyyy"),
-                    DateTimeFormatter.ofPattern("M/dd/yyyy"),
-                    DateTimeFormatter.ofPattern("MM/d/yyyy"),
-
-                    // ISO with slash
-                    DateTimeFormatter.ofPattern("yyyy/MM/dd"),
-                    DateTimeFormatter.ofPattern("yyyy/M/d"),
-                    DateTimeFormatter.ofPattern("yyyy/M/dd"),
-                    DateTimeFormatter.ofPattern("yyyy/MM/d")
-            };
-
-            for (DateTimeFormatter formatter : prioritizedFormatters) {
-                try {
-                    return LocalDate.parse(stringValue, formatter);
-                } catch (DateTimeParseException ignored) {
-                    // Try next formatter
-                }
-            }
-
-            log.debug("Could not parse date with any format for key '{}': {}", key, value);
-            return null;
-
-        } catch (Exception e) {
-            log.debug("Could not parse date for key '{}': {}", key, value);
+        // Early exit for known non-date values
+        if (INVALID_DATE_VALUES.contains(stringValue.toUpperCase())) {
             return null;
         }
+
+        // Quick validation: check if string contains at least one digit
+        if (!stringValue.matches(".*\\d.*")) {
+            return null;
+        }
+
+        // Handle YYYYMMDD format (19741102 or 20021974)
+        if (stringValue.matches(EIGHT_DIGIT_DATE_PATTERN)) {
+            return parseYYYYMMDD(stringValue);
+        }
+
+        // Return null to indicate further parsing needed
+        return null;
     }
 
 }
