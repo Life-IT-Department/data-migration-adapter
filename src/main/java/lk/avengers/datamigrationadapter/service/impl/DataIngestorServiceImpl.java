@@ -3,19 +3,22 @@ package lk.avengers.datamigrationadapter.service.impl;
 import lk.avengers.datamigrationadapter.dto.excel.ExcelDataResponseDTO;
 import lk.avengers.datamigrationadapter.dto.excel.ExcelExtractorRequestDTO;
 import lk.avengers.datamigrationadapter.dto.request.ACPPolicyRequestDTO;
+import lk.avengers.datamigrationadapter.dto.request.ContactDetailRequestDTO;
 import lk.avengers.datamigrationadapter.dto.request.PolicyListRequestDTO;
 import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.ACPPolicyEntity;
+import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.ContactDetailEntity;
 import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.PolicyListEntity;
 import lk.avengers.datamigrationadapter.repository.postgresql.reportdb.ACPPolicyRepository;
+import lk.avengers.datamigrationadapter.repository.postgresql.reportdb.ContactDetailRepository;
 import lk.avengers.datamigrationadapter.repository.postgresql.reportdb.PolicyListRepository;
 import lk.avengers.datamigrationadapter.service.DataIngestorService;
-import lk.avengers.datamigrationadapter.service.ExcelDataExtractorService;
+import lk.avengers.datamigrationadapter.service.ExcelDataExtractorEnhancedService;
+import lk.avengers.datamigrationadapter.util.MemoryMonitor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -31,6 +34,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional("reportPlatformTransactionManager")
 public class DataIngestorServiceImpl implements DataIngestorService {
 
     @Value("${acp.data.file}")
@@ -39,29 +43,24 @@ public class DataIngestorServiceImpl implements DataIngestorService {
     @Value("${policy.list.file}")
     private String policyListFilePath;
 
-    private final ExcelDataExtractorService excelDataExtractorService;
+    @Value("${contact.detail.file}")
+    private String contactDetailFilePath;
+
     private final ACPPolicyRepository acpPolicyRepository;
     private final PolicyListRepository policyListRepository;
+    private final ContactDetailRepository contactDetailRepository;
+    private final ExcelDataExtractorEnhancedService excelDataExtractorEnhancedService;
 
     // Constants
     private static final int BATCH_SIZE = 1000;
-    private static final String YYYYMMDD_PATTERN = "\\d{8}";
+    private static final String EIGHT_DIGIT_DATE_PATTERN = "\\d{8}";
     private static final Set<String> INVALID_DATE_VALUES = Set.of(
             "?", "-", "N/A", "NA", "NULL", "NONE", "#N/A", ""
     );
-    private static final DateTimeFormatter[] DATE_FORMATTERS = {
-            DateTimeFormatter.ofPattern("yyyy-MM-dd"),
-            DateTimeFormatter.ofPattern("MM/dd/yyyy"),
-            DateTimeFormatter.ofPattern("dd/MM/yyyy"),
-            DateTimeFormatter.ofPattern("dd-MM-yyyy"),
-            DateTimeFormatter.ofPattern("yyyy/MM/dd")
-    };
 
-    // ==================== Main Processing Methods ====================
 
     @Override
-    @Transactional
-    public void ProcessPolicyListData(String uuid, MultipartFile excelFile) {
+    public void ProcessPolicyListData(String uuid) {
         log.info("UUID: {} - Starting Policy List data processing", uuid);
 
         try {
@@ -73,6 +72,7 @@ public class DataIngestorServiceImpl implements DataIngestorService {
             List<Map<String, Object>> cleanedData = cleanAndValidateData(uuid, extractedExcelFile);
             log.info("UUID: {} - Cleaned {} records ready for processing", uuid, cleanedData.size());
 
+            // Delete existing data
             log.info("UUID: {} - Deleting existing Policy List data", uuid);
             policyListRepository.truncateTable();
             log.info("UUID: {} - Existing Policy List data deleted successfully", uuid);
@@ -94,8 +94,7 @@ public class DataIngestorServiceImpl implements DataIngestorService {
     }
 
     @Override
-    @Transactional
-    public void ProcessACPData(String uuid, MultipartFile excelFile) {
+    public void ProcessACPData(String uuid) {
         log.info("UUID: {} - Starting ACP data processing", uuid);
 
         try {
@@ -109,7 +108,8 @@ public class DataIngestorServiceImpl implements DataIngestorService {
 
             // Delete existing data
             log.info("UUID: {} - Deleting existing ACP policy data", uuid);
-            acpPolicyRepository.deleteAll();
+            acpPolicyRepository.truncateTable();
+            log.info("UUID: {} - Existing ACP policy data deleted successfully", uuid);
 
             // Map and save in batches
             List<ACPPolicyEntity> entities = cleanedData.stream()
@@ -127,11 +127,49 @@ public class DataIngestorServiceImpl implements DataIngestorService {
         }
     }
 
+    @Override
+    public void ProcessContactDetailData(String uuid) {
+        log.info("UUID: {} - Starting Contact Detail data processing", uuid);
+
+        try {
+            ExcelDataResponseDTO extractedExcelFile = extractExcelData(uuid, contactDetailFilePath, 0, 1, 3);
+            if (extractedExcelFile == null) return;
+            log.info("UUID: {} - File extraction successful", uuid);
+
+            // Process and clean data
+            List<Map<String, Object>> cleanedData = cleanAndValidateData(uuid, extractedExcelFile);
+            log.info("UUID: {} - Cleaned {} records ready for processing", uuid, cleanedData.size());
+
+            // Force GC if memory usage is high (> 75%)
+            MemoryMonitor.forceGcIfNeeded(75.0);
+
+            // Delete existing data
+            log.info("UUID: {} - Deleting existing contact detail data", uuid);
+            contactDetailRepository.truncateTable();
+            log.info("UUID: {} - Existing contact detail data deleted successfully", uuid);
+
+            // Map and save in batches
+            List<ContactDetailEntity> entities = cleanedData.stream()
+                    .map(rowData -> mapToContactDetailRequestDTO(rowData, uuid))
+                    .map(dto -> dto.mapData(ContactDetailEntity.class))
+                    .toList();
+
+            processBatch(uuid, entities, "Contact Detail records", contactDetailRepository::saveAll, BATCH_SIZE);
+
+            log.info("UUID: {} - Contact Detail data processing completed successfully", uuid);
+
+
+        } catch (Exception e) {
+            log.error("UUID: {} - Failed to process Policy List data: {}", uuid, e.getMessage(), e);
+            throw new RuntimeException("Failed to process Policy List data", e);
+        } finally {
+            // Log final memory state
+            MemoryMonitor.logMemoryUsage("After Processing Complete");
+        }
+    }
+
     // ==================== Helper Methods ====================
 
-    /**
-     * Extract Excel data with specified parameters
-     */
     private ExcelDataResponseDTO extractExcelData(String uuid, String filePath, int sheetIndex,
                                                   int headerRow, int dataRow) {
         ExcelExtractorRequestDTO request = ExcelExtractorRequestDTO.builder()
@@ -141,7 +179,7 @@ public class DataIngestorServiceImpl implements DataIngestorService {
                 .dataRow(dataRow)
                 .build();
 
-        ExcelDataResponseDTO result = excelDataExtractorService.extractExcelFileFromPath(request);
+        ExcelDataResponseDTO result = excelDataExtractorEnhancedService.extractExcelFileFromPath(request);
 
         if (result == null || result.getExtractedData().isEmpty()) {
             log.warn("UUID: {} - No data extracted from file: {}", uuid, filePath);
@@ -152,9 +190,6 @@ public class DataIngestorServiceImpl implements DataIngestorService {
         return result;
     }
 
-    /**
-     * Clean and validate extracted data
-     */
     private List<Map<String, Object>> cleanAndValidateData(String uuid, ExcelDataResponseDTO extractedData) {
         // Filter valid headers
         List<String> validHeaders = extractedData.getHeaders().stream()
@@ -170,9 +205,7 @@ public class DataIngestorServiceImpl implements DataIngestorService {
                 .toList();
     }
 
-    /**
-     * Filter row data to only include valid column headers
-     */
+
     private Map<String, Object> filterValidColumns(Map<String, Object> rowData, List<String> validHeaders) {
         Map<String, Object> cleanedRow = new LinkedHashMap<>();
         for (String header : validHeaders) {
@@ -181,9 +214,7 @@ public class DataIngestorServiceImpl implements DataIngestorService {
         return cleanedRow;
     }
 
-    /**
-     * Generic batch processor for saving entities
-     */
+   // GENERIC BATCH PROCESSOR FOR SAVING ENTITIES
     private <T> void processBatch(String uuid, List<T> entities, String entityName,
                                   Consumer<List<T>> batchSaver, int batchSize) {
         int totalRecords = entities.size();
@@ -211,6 +242,65 @@ public class DataIngestorServiceImpl implements DataIngestorService {
 
     // ==================== DTO Mapping Methods ====================
 
+    private ContactDetailRequestDTO mapToContactDetailRequestDTO(Map<String, Object> data, String uuid) {
+        try {
+            ContactDetailRequestDTO dto = new ContactDetailRequestDTO();
+
+            // Basic Information
+            dto.setProduct(getString(data, "Product"));
+            dto.setPolicyNo(getString(data, "Policy No"));
+            dto.setPin(getInteger(data, "Pin"));
+            dto.setTitle(getString(data, "Title"));
+            dto.setFirstName(getString(data, "First Name"));
+            dto.setLastName(getString(data, "Last Name"));
+            dto.setGender(getString(data, "Gender"));
+            dto.setDateOfBirth(getDateDDMMYYYY(data, "Date Of Birth")); // this
+            dto.setCurrentAge(getInteger(data, "Current Age"));
+            dto.setNicNumber(getString(data, "NIC #"));
+            dto.setOccupation(getString(data, "Occupation"));
+
+            // Contact Information
+            dto.setAddress(getString(data, "Address"));
+            dto.setCity(getString(data, "City"));
+            dto.setMobile(getString(data, "Mobile"));
+            dto.setOtherTelephoneNumber(getString(data, "Other Telephone#"));
+            dto.setEmailAddress(getString(data, "Email Address"));
+
+            // Policy Status & Details
+            dto.setPolicyStatus(getString(data, "Policy Status"));
+            dto.setNbrOfCustomers(getInteger(data, "Nbr Of Customers"));
+            dto.setNationality(getString(data, "Nationality"));
+
+            // Agent & Branch Information
+            dto.setAgentCode(getString(data, "Agent Code"));
+            dto.setSalesBranch(getString(data, "Sales Branch"));
+
+            // Financial Information
+            dto.setTotalPremiumsPaid(getBigDecimal(data, "Total Premiums Paid"));
+            dto.setOutstanding(getBigDecimal(data, "Outstanding"));
+            dto.setModalPremiumWithoutHandlingFee(getBigDecimal(data, "Modal Premium without handling fee"));
+
+            // Policy Dates
+            dto.setPolicyInceptionDate(getDateDDMMYYYY(data, "Policy Inception Date"));
+            dto.setPolicyIssueDate(getDateDDMMYYYY(data, "Policy Issue Date"));
+            dto.setFrequency(getString(data, "Frequency"));
+            dto.setNextPremiumDueDate(getDateDDMMYYYY(data, "Next Premium due date"));
+            dto.setLastPremiumPaymentDueDate(getDateDDMMYYYY(data, "Last premium Payment due date"));
+            dto.setPolicyExpiryDate(getDateDDMMYYYY(data, "Policy Expiry Date"));
+            dto.setTerm(getInteger(data, "Term"));
+            dto.setLapsedDate(getDateDDMMYYYY(data, "Lapsed Date"));
+            dto.setExpiryDate(getDateDDMMYYYY(data, "Expiry Date"));
+
+            // Preferences
+            dto.setLanguagePreference(getString(data, "Language Preference"));
+
+            return dto;
+        } catch (Exception e) {
+            log.error("UUID: {} - Error mapping Contact Detail row data: {}", uuid, e.getMessage());
+            throw new RuntimeException("Failed to map Excel data to Contact Detail DTO", e);
+        }
+    }
+
     private PolicyListRequestDTO mapToPolicyListRequestDTO(Map<String, Object> data, String uuid) {
         try {
             PolicyListRequestDTO dto = new PolicyListRequestDTO();
@@ -224,11 +314,11 @@ public class DataIngestorServiceImpl implements DataIngestorService {
             dto.setContract(getString(data, "Contract"));
             dto.setCurrency(getString(data, "C/Y"));
             dto.setCustomerName(getString(data, "Customer Name"));
-            dto.setInception(getDateFromInteger(data, "Inception"));
+            dto.setInception(getDateDDMMYYYY(data, "Inception"));
             dto.setFrequencyMode(getString(data, "Frequency Mode"));
             dto.setStatus(getString(data, "Status"));
             dto.setAnnualPremium(getBigDecimal(data, "Annual Premium"));
-            dto.setPaidUpTo(getDateFromInteger(data, "Paid Up To"));
+            dto.setPaidUpTo(getDateDDMMYYYY(data, "Paid Up To"));
             dto.setUnappropriateBalance(getBigDecimal(data, "Unappopriate Balance"));
             dto.setRequestUuid(uuid);
             return dto;
@@ -249,15 +339,15 @@ public class DataIngestorServiceImpl implements DataIngestorService {
             dto.setProposalNo(getString(data, "PROPOSAL NO"));
             dto.setProductCode(getString(data, "Product Code"));
             dto.setPlanNo(getString(data, "PLAN NO"));
-            dto.setInception(getDateFromInteger(data, "INCEPTION"));
-            dto.setExpiry(getDateFromInteger(data, "EXPIRY"));
-            dto.setIssueDate(getDateFromInteger(data, "Issue Date"));
+            dto.setInception(getDateYYYYMMDD(data, "INCEPTION"));
+            dto.setExpiry(getDateYYYYMMDD(data, "EXPIRY"));
+            dto.setIssueDate(getDateYYYYMMDD(data, "Issue Date"));
             dto.setTerm(getInteger(data, "TERM"));
             dto.setCy(getString(data, "C/Y"));
             dto.setPremiumPaymentTerm(getString(data, "Premium Payment Term"));
             dto.setStatus(getString(data, "STATUS"));
-            dto.setDate(getDateFromInteger(data, "DATE"));
-            dto.setOperationDate(getDateFromInteger(data, "Operation Date"));
+            dto.setDate(getDateYYYYMMDD(data, "DATE"));
+            dto.setOperationDate(getDateYYYYMMDD(data, "Operation Date"));
             dto.setReason(getString(data, "Reason"));
 
             // Sales & Branch Info
@@ -277,7 +367,7 @@ public class DataIngestorServiceImpl implements DataIngestorService {
             dto.setInsuredModalPremium(getBigDecimal(data, "INSURED MODAL PREMIUM"));
             dto.setCompanyModalPremium(getBigDecimal(data, "COMPANY MODAL PREMIUM"));
             dto.setFrequency(getString(data, "FREQUENCY"));
-            dto.setNextPremium(getDateFromInteger(data, "NEXT PREMIUM"));
+            dto.setNextPremium(getDateYYYYMMDD(data, "NEXT PREMIUM"));
             dto.setEmployerName(getString(data, "EMPLOYER NAME"));
             dto.setInsuranceCategory(getString(data, "INSURANCE CATEGORY"));
             dto.setMinContributionPerc(getBigDecimal(data, "MIN CONTRIBUTION PERC"));
@@ -290,7 +380,7 @@ public class DataIngestorServiceImpl implements DataIngestorService {
             dto.setTitle(getString(data, "TITLE"));
             dto.setFullName(getString(data, "FULL NAME"));
             dto.setGender(getString(data, "GENDER"));
-            dto.setDob(getDateFromInteger(data, "DOB"));
+            dto.setDob(getDateYYYYMMDD(data, "DOB"));
             dto.setAae(getInteger(data, "AAE"));
             dto.setSarChoice(getString(data, "SAR CHOICE"));
             dto.setNumberOfRidersTaken(getInteger(data, "Number of Riders Taken"));
@@ -312,8 +402,8 @@ public class DataIngestorServiceImpl implements DataIngestorService {
             // Final Policy Attributes
             dto.setInsuranceCoveragePeriod(getString(data, "Insurance Coverage Period"));
             dto.setPacInsuredShare(getBigDecimal(data, "PAC INSURED SHARE"));
-            dto.setLastPaymentDate(getDateFromInteger(data, "Last Payment Date"));
-            dto.setLastPremiumDueDate(getDateFromInteger(data, "Last Premium Due Date"));
+            dto.setLastPaymentDate(getDateYYYYMMDD(data, "Last Payment Date"));
+            dto.setLastPremiumDueDate(getDateYYYYMMDD(data, "Last Premium Due Date"));
 
             return dto;
         } catch (Exception e) {
@@ -445,41 +535,10 @@ public class DataIngestorServiceImpl implements DataIngestorService {
                 return BigDecimal.valueOf(((Number) value).doubleValue());
             }
             String stringValue = value.toString().trim();
+            stringValue = stringValue.replace(",", "");
             return stringValue.isEmpty() ? null : new BigDecimal(stringValue);
         } catch (NumberFormatException e) {
             log.debug("Could not parse BigDecimal for key '{}': {}", key, value);
-            return null;
-        }
-    }
-
-    private LocalDate getDateFromInteger(Map<String, Object> data, String key) {
-        Object value = data.get(key);
-        if (value == null) return null;
-
-        try {
-            String stringValue = value.toString().trim();
-            if (stringValue.isEmpty()) return null;
-
-            // Early exit for known non-date values
-            if (INVALID_DATE_VALUES.contains(stringValue.toUpperCase())) {
-                return null;
-            }
-
-            // Quick validation: check if string contains at least one digit
-            if (!stringValue.matches(".*\\d.*")) {
-                return null;
-            }
-
-            // Handle YYYYMMDD format
-            if (stringValue.matches(YYYYMMDD_PATTERN)) {
-                return parseYYYYMMDD(stringValue);
-            }
-
-            // Try standard date formats
-            return parseDate(stringValue);
-
-        } catch (Exception e) {
-            log.debug("Could not parse date for key '{}': {}", key, value);
             return null;
         }
     }
@@ -493,14 +552,171 @@ public class DataIngestorServiceImpl implements DataIngestorService {
         return LocalDate.of(year, month, day);
     }
 
-    private LocalDate parseDate(String value) {
-        for (DateTimeFormatter formatter : DATE_FORMATTERS) {
-            try {
-                return LocalDate.parse(value, formatter);
-            } catch (DateTimeParseException ignored) {
-                // Try next formatter
+    // ==================== Date Extraction Methods ====================
+
+    /**
+     * Extract date with DD/MM/YYYY format (with or without leading zeros)
+     * Used for: Date Of Birth
+     * Example: "2/11/1974" or "02/11/1974" = 2nd November 1974
+     * Example: "1/10/2020" = 1st October 2020
+     */
+    private LocalDate getDateDDMMYYYY(Map<String, Object> data, String key) {
+        Object value = data.get(key);
+        if (value == null) return null;
+
+        try {
+            String stringValue = value.toString().trim();
+            if (stringValue.isEmpty()) return null;
+
+            // Early exit for known non-date values
+            if (INVALID_DATE_VALUES.contains(stringValue.toUpperCase())) {
+                return null;
             }
+
+            // Quick validation: check if a string contains at least one digit
+            if (!stringValue.matches(".*\\d.*")) {
+                return null;
+            }
+
+            // Handle YYYYMMDD format (20021974)
+            if (stringValue.matches(EIGHT_DIGIT_DATE_PATTERN)) {
+                return parseYYYYMMDD(stringValue);
+            }
+
+            // Try DD/MM/YYYY formats (with and without leading zeros)
+            DateTimeFormatter[] ddMMyyyyFormatters = {
+                    // 4-digit year formats
+                    DateTimeFormatter.ofPattern("d/M/yyyy"),    // 1/10/2020
+                    DateTimeFormatter.ofPattern("dd/MM/yyyy"),  // 02/11/1974
+                    DateTimeFormatter.ofPattern("d/MM/yyyy"),   // 1/11/1974
+                    DateTimeFormatter.ofPattern("dd/M/yyyy"),   // 02/1/1974
+                    DateTimeFormatter.ofPattern("d-M-yyyy"),    // 1-10-2020
+                    DateTimeFormatter.ofPattern("dd-MM-yyyy"),  // 02-11-1974
+                    DateTimeFormatter.ofPattern("d-MM-yyyy"),   // 1-11-1974
+                    DateTimeFormatter.ofPattern("dd-M-yyyy"),   // 02-1-1974
+
+                    // 2-digit year formats (handles Excel's shortened format)
+                    DateTimeFormatter.ofPattern("d/M/yy"),      // 1/3/19
+                    DateTimeFormatter.ofPattern("dd/MM/yy"),    // 02/11/74
+                    DateTimeFormatter.ofPattern("d/MM/yy"),     // 1/11/74
+                    DateTimeFormatter.ofPattern("dd/M/yy"),     // 02/3/19
+                    DateTimeFormatter.ofPattern("d-M-yy"),      // 1-3-19
+                    DateTimeFormatter.ofPattern("dd-MM-yy"),    // 02-11-74
+                    DateTimeFormatter.ofPattern("d-MM-yy"),     // 1-11-74
+                    DateTimeFormatter.ofPattern("dd-M-yy")      // 02-3-19
+            };
+
+            for (DateTimeFormatter formatter : ddMMyyyyFormatters) {
+                try {
+                    return LocalDate.parse(stringValue, formatter);
+                } catch (DateTimeParseException ignored) {
+                    // Try the next formatter
+                }
+            }
+
+            log.debug("Could not parse DD/MM/YYYY date for key '{}': {}", key, value);
+            return null;
+
+        } catch (Exception e) {
+            log.debug("Could not parse date for key '{}': {}", key, value);
+            return null;
         }
+    }
+
+    /**
+     * Extract date with YYYY-MM-DD format (with or without leading zeros)
+     * Used for: system-generated dates
+     * Example: "1974-11-2" or "1974-11-02" = November 2nd 1974
+     */
+    private LocalDate getDateYYYYMMDD(Map<String, Object> data, String key) {
+        Object value = data.get(key);
+        if (value == null) return null;
+
+        try {
+            String stringValue = value.toString().trim();
+            if (stringValue.isEmpty()) return null;
+
+            if (INVALID_DATE_VALUES.contains(stringValue.toUpperCase())) {
+                return null;
+            }
+
+            if (!stringValue.matches(".*\\d.*")) {
+                return null;
+            }
+
+            // Handle YYYYMMDD format (19741102)
+            if (stringValue.matches(EIGHT_DIGIT_DATE_PATTERN)) {
+                return parseYYYYMMDD(stringValue);
+            }
+
+            // Try YYYY-MM-DD formats (with and without leading zeros)
+            DateTimeFormatter[] yyyyMMddFormatters = {
+                    // 4-digit year formats
+                    DateTimeFormatter.ofPattern("yyyy-M-d"),    // 1974-1-2
+                    DateTimeFormatter.ofPattern("yyyy-MM-dd"),  // 1974-11-02
+                    DateTimeFormatter.ofPattern("yyyy-M-dd"),   // 1974-1-02
+                    DateTimeFormatter.ofPattern("yyyy-MM-d"),   // 1974-11-2
+                    DateTimeFormatter.ofPattern("yyyy/M/d"),    // 1974/1/2
+                    DateTimeFormatter.ofPattern("yyyy/MM/dd"),  // 1974/11/02
+                    DateTimeFormatter.ofPattern("yyyy/M/dd"),   // 1974/1/02
+                    DateTimeFormatter.ofPattern("yyyy/MM/d"),   // 1974/11/2
+
+                    // 2-digit year formats (handles Excel's shortened format)
+                    DateTimeFormatter.ofPattern("yy-M-d"),      // 74-1-2
+                    DateTimeFormatter.ofPattern("yy-MM-dd"),    // 74-11-02
+                    DateTimeFormatter.ofPattern("yy-M-dd"),     // 74-1-02
+                    DateTimeFormatter.ofPattern("yy-MM-d"),     // 74-11-2
+                    DateTimeFormatter.ofPattern("yy/M/d"),      // 74/1/2
+                    DateTimeFormatter.ofPattern("yy/MM/dd"),    // 74/11/02
+                    DateTimeFormatter.ofPattern("yy/M/dd"),     // 74/1/02
+                    DateTimeFormatter.ofPattern("yy/MM/d")      // 74/11/2
+            };
+
+            for (DateTimeFormatter formatter : yyyyMMddFormatters) {
+                try {
+                    return LocalDate.parse(stringValue, formatter);
+                } catch (DateTimeParseException ignored) {
+                    // Try the next formatter
+                }
+            }
+
+            log.debug("Could not parse YYYY-MM-DD date for key '{}': {}", key, value);
+            return null;
+
+        } catch (Exception e) {
+            log.debug("Could not parse date for key '{}': {}", key, value);
+            return null;
+        }
+    }
+
+    /**
+     * Common validation logic for date strings
+     * Returns the cleaned string value if valid, null otherwise
+     * Also handles YYYYMMDD format directly
+     */
+    private LocalDate validateAndParseCommonDateFormats(Object value, String key) {
+        if (value == null) return null;
+
+        String stringValue = value.toString().trim();
+        if (stringValue.isEmpty()) return null;
+
+        // Early exit for known non-date values
+        if (INVALID_DATE_VALUES.contains(stringValue.toUpperCase())) {
+            return null;
+        }
+
+        // Quick validation: check if string contains at least one digit
+        if (!stringValue.matches(".*\\d.*")) {
+            return null;
+        }
+
+        // Handle YYYYMMDD format (19741102 or 20021974)
+        if (stringValue.matches(EIGHT_DIGIT_DATE_PATTERN)) {
+            return parseYYYYMMDD(stringValue);
+        }
+
+        // Return null to indicate further parsing needed
         return null;
     }
+
 }
