@@ -175,11 +175,25 @@ public class CashFlowReportUploadServiceImpl implements CashFlowReportUploadServ
         try {
             // Get the directory path from the configured path
             Path directoryPath;
-            if (cashFlowReportPath.contains("/") || cashFlowReportPath.contains("\\")) {
-                // If path contains directory separators, get the parent directory
-                directoryPath = Paths.get(cashFlowReportPath).getParent();
-                if (directoryPath == null) {
-                    directoryPath = Paths.get(".");
+            Path configuredPath = Paths.get(cashFlowReportPath);
+            
+            // Check if the configured path is a directory or file
+            if (Files.exists(configuredPath) && Files.isDirectory(configuredPath)) {
+                // If it's an existing directory, use it directly
+                directoryPath = configuredPath;
+            } else if (cashFlowReportPath.contains("/") || cashFlowReportPath.contains("\\")) {
+                // If path contains directory separators, check if it's meant to be a directory
+                // or get the parent directory if it's a file path
+                if (configuredPath.toString().endsWith("/") || configuredPath.toString().endsWith("\\") || 
+                    !configuredPath.getFileName().toString().contains(".")) {
+                    // Treat as directory path
+                    directoryPath = configuredPath;
+                } else {
+                    // Get parent directory
+                    directoryPath = configuredPath.getParent();
+                    if (directoryPath == null) {
+                        directoryPath = Paths.get(".");
+                    }
                 }
             } else {
                 // If it's just a filename, use current directory
@@ -187,23 +201,52 @@ public class CashFlowReportUploadServiceImpl implements CashFlowReportUploadServ
             }
 
             // Pattern to match year anywhere in filename as a standalone number (supports files with or without Excel extensions)
-            Pattern yearPattern = Pattern.compile(".*(?:^|[^\\d])" + year + "(?:[^\\d]|$).*(?:\\.(xlsx?|xlsm))?$", Pattern.CASE_INSENSITIVE);
+            // This pattern looks for the year as a 4-digit number that's either:
+            // - At the start of filename followed by non-digit
+            // - Preceded by non-digit and followed by non-digit  
+            // - At the end of filename preceded by non-digit
+            Pattern yearPattern = Pattern.compile(".*(?:^|[^\\d])" + year + "(?:[^\\d]|$).*", Pattern.CASE_INSENSITIVE);
             
-            // Find all files in the directory that match the year pattern
+            log.info("Searching for cash flow files for year {} in directory: {}", year, directoryPath.toAbsolutePath());
+            log.info("Using pattern: {}", yearPattern.pattern());
+            
+            // Find all Excel files in the directory that match the year pattern
             List<Path> matchingFiles = Files.list(directoryPath)
                     .filter(Files::isRegularFile)
                     .filter(path -> {
+                        String fileName = path.getFileName().toString().toLowerCase();
+                        // Only consider Excel files
+                        return fileName.endsWith(".xlsx") || fileName.endsWith(".xls") || fileName.endsWith(".xlsm");
+                    })
+                    .filter(path -> {
                         String fileName = path.getFileName().toString();
                         Matcher matcher = yearPattern.matcher(fileName);
-                        return matcher.matches();
+                        boolean matches = matcher.matches();
+                        log.debug("Checking file '{}' against pattern: {}", fileName, matches);
+                        return matches;
                     })
                     .toList();
 
             // Handle different scenarios
             if (matchingFiles.isEmpty()) {
+                // List all Excel files in the directory for debugging
+                List<String> allExcelFiles = Files.list(directoryPath)
+                        .filter(Files::isRegularFile)
+                        .filter(path -> {
+                            String fileName = path.getFileName().toString().toLowerCase();
+                            return fileName.endsWith(".xlsx") || fileName.endsWith(".xls") || fileName.endsWith(".xlsm");
+                        })
+                        .map(path -> path.getFileName().toString())
+                        .collect(Collectors.toList());
+                
+                String debugInfo = allExcelFiles.isEmpty() ? 
+                    "No Excel files found in directory." : 
+                    "Available Excel files: " + String.join(", ", allExcelFiles);
+                
                 throw new ReportException(
                         HttpStatus.NOT_FOUND.value(),
-                        "No cash flow file found for year " + year + " in directory: " + directoryPath.toAbsolutePath()
+                        "No cash flow file found for year " + year + " in directory: " + directoryPath.toAbsolutePath() + 
+                        ". " + debugInfo + " Expected filename pattern: contains '" + year + "' as standalone number."
                 );
             }
 
