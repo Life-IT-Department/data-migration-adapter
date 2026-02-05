@@ -278,9 +278,9 @@ public class MainDataReportUploadServiceImpl implements MainDataReportUploadServ
                 .planNo(commonFunction.getStringValue(row.getCell(col++)))
                 // Dates & Terms
 
-                .inception(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(col++))))
-                .expiry(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(col++))))
-                .issueDate(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(col++))))
+                .inception(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+                .expiry(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+                .issueDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
                 .salesBranchCode(commonFunction.getIntegerValue(row.getCell(col++)))
                 .salesBranchName(commonFunction.getStringValue(row.getCell(col++)))
                 .companyBranchCode(commonFunction.getIntegerValue(row.getCell(col++)))
@@ -294,9 +294,9 @@ public class MainDataReportUploadServiceImpl implements MainDataReportUploadServ
                 .retirementBenefitPayoutTerm(commonFunction.getIntegerValue(row.getCell(col++)))
                 .modalPremium(commonFunction.getBigDecimalValue(row.getCell(col++)))
                 .frequency(commonFunction.getIntegerValue(row.getCell(col++)))
-                .nextPremium(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(col++))))
+                .nextPremium(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
                 .status(commonFunction.getStringValue(row.getCell(col++)))
-                .statusDate(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(col++))))
+                .statusDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
                 .reason(commonFunction.getStringValue(row.getCell(col++)))
                 .agentCode(commonFunction.getStringValue(row.getCell(col++)))
                 .introducer(commonFunction.getStringValue(row.getCell(col++)))
@@ -307,7 +307,7 @@ public class MainDataReportUploadServiceImpl implements MainDataReportUploadServ
                 .title(commonFunction.getStringValue(row.getCell(col++)))
                 .fullName(commonFunction.getStringValue(row.getCell(col++)))
                 .gender(commonFunction.getStringValue(row.getCell(col++)))
-                .dob(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(col++))))
+                .dob(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
                 .aae(commonFunction.getIntegerValue(row.getCell(col++)))
                 .sarChoice(commonFunction.getStringValue(row.getCell(col++)))
                 .numberOfRidersTaken(commonFunction.getIntegerValue(row.getCell(col++)))
@@ -412,7 +412,7 @@ public class MainDataReportUploadServiceImpl implements MainDataReportUploadServ
                 .spouseChildTitle(commonFunction.getStringValue(row.getCell(col++)))
                 .spouseChildFullName(commonFunction.getStringValue(row.getCell(col++)))
                 .spouseChildGender(commonFunction.getStringValue(row.getCell(col++)))
-                .spouseChildDob(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(col++))))
+                .spouseChildDob(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
                 .spouseChildAge(commonFunction.getIntegerValue(row.getCell(col++)))
                 .spouseDeathSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
                 .spouseSubDeath(commonFunction.getBigDecimalValue(row.getCell(col++)))
@@ -464,27 +464,27 @@ public class MainDataReportUploadServiceImpl implements MainDataReportUploadServ
                 .spouseHbaOccupationalLoadingPercent(commonFunction.getDoubleValue(row.getCell(col++)))
                 // Children 1..5
                 .child1Name(commonFunction.getStringValue(row.getCell(col++)))
-                .child1Dob(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(col++))))
+                .child1Dob(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
                 .child1Age(commonFunction.getIntegerValue(row.getCell(col++)))
                 .child1Hbc(commonFunction.getIntegerValue(row.getCell(col++)))
                 .child1Hbcac(commonFunction.getIntegerValue(row.getCell(col++)))
                 .child2Name(commonFunction.getStringValue(row.getCell(col++)))
-                .child2Dob(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(col++))))
+                .child2Dob(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
                 .child2Age(commonFunction.getIntegerValue(row.getCell(col++)))
                 .child2Hbc(commonFunction.getStringValue(row.getCell(col++)))
                 .child2Hbcac(commonFunction.getStringValue(row.getCell(col++)))
                 .child3Name(commonFunction.getStringValue(row.getCell(col++)))
-                .child3Dob(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(col++))))
+                .child3Dob(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
                 .child3Age(commonFunction.getIntegerValue(row.getCell(col++)))
                 .child3Hbc(commonFunction.getIntegerValue(row.getCell(col++)))
                 .child3Hbcac(commonFunction.getIntegerValue(row.getCell(col++)))
                 .child4Name(commonFunction.getStringValue(row.getCell(col++)))
-                .child4Dob(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(col++))))
+                .child4Dob(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
                 .child4Age(commonFunction.getIntegerValue(row.getCell(col++)))
                 .child4Hbc(commonFunction.getIntegerValue(row.getCell(col++)))
                 .child4Hbcac(commonFunction.getIntegerValue(row.getCell(col++)))
                 .child5Name(commonFunction.getStringValue(row.getCell(col++)))
-                .child5Dob(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(col++))))
+                .child5Dob(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
                 .child5Age(commonFunction.getIntegerValue(row.getCell(col++)))
                 .child5Hbc(commonFunction.getIntegerValue(row.getCell(col++)))
                 .child5Hbcac(commonFunction.getIntegerValue(row.getCell(col++)))
@@ -502,9 +502,9 @@ public class MainDataReportUploadServiceImpl implements MainDataReportUploadServ
                 .prmSurrenderValue(commonFunction.getBigDecimalValue(row.getCell(col++)))
                 .bstSurrenderValue(commonFunction.getBigDecimalValue(row.getCell(col++)))
                 .insuranceCoveragePeriod(commonFunction.getIntegerValue(row.getCell(col++)))
-                .operationDate(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(col++))))
-                .lastPaymentDate(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(col++))))
-                .lastPremiumDueDate(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(col++))))
+                .operationDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+                .lastPaymentDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+                .lastPremiumDueDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
                 .premiumEscalationBenefitPercentage(commonFunction.getDoubleValue(row.getCell(col++)))
                 .refundValue(commonFunction.getBigDecimalValue(row.getCell(col++)))
                 // createdAt - handled by @CreatedDate
@@ -536,9 +536,9 @@ public class MainDataReportUploadServiceImpl implements MainDataReportUploadServ
         entity.setProductCode(commonFunction.getStringValue(row.getCell(c++)));
         entity.setPlanNo(commonFunction.getStringValue(row.getCell(c++)));
         // Dates (4-6)
-        entity.setInception(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
-        entity.setExpiry(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
-        entity.setIssueDate(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
+        entity.setInception(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(c++))));
+        entity.setExpiry(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(c++))));
+        entity.setIssueDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(c++))));
         // Branches (7-12)
         entity.setSalesBranchCode(commonFunction.getIntegerValue(row.getCell(c++)));
         entity.setSalesBranchName(commonFunction.getStringValue(row.getCell(c++)));
@@ -552,11 +552,11 @@ public class MainDataReportUploadServiceImpl implements MainDataReportUploadServ
         entity.setPremiumPaymentTerm(commonFunction.getIntegerValue(row.getCell(c++)));
         entity.setModalPremium(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setFrequency(commonFunction.getIntegerValue(row.getCell(c++)));
-        entity.setNextPremium(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
+        entity.setNextPremium(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(c++))));
         // Status & dates (19-22)
         entity.setStatus(commonFunction.getStringValue(row.getCell(c++)));
-        entity.setDate(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
-        entity.setOperationDate(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
+        entity.setDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(c++))));
+        entity.setOperationDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(c++))));
         entity.setReason(commonFunction.getStringValue(row.getCell(c++)));
         // Agent (23-26)
         entity.setAgentCode(commonFunction.getStringValue(row.getCell(c++)));
@@ -568,7 +568,7 @@ public class MainDataReportUploadServiceImpl implements MainDataReportUploadServ
         entity.setTitle(commonFunction.getStringValue(row.getCell(c++)));
         entity.setFullName(commonFunction.getStringValue(row.getCell(c++)));
         entity.setGender(commonFunction.getStringValue(row.getCell(c++)));
-        entity.setDob(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
+        entity.setDob(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(c++))));
         entity.setAae(commonFunction.getIntegerValue(row.getCell(c++)));
         entity.setOccupationMainLife(commonFunction.getStringValue(row.getCell(c++)));
         entity.setSarChoice(commonFunction.getStringValue(row.getCell(c++)));
@@ -595,7 +595,7 @@ public class MainDataReportUploadServiceImpl implements MainDataReportUploadServ
         entity.setSpouseTitle(commonFunction.getStringValue(row.getCell(c++)));
         entity.setSpouseFullName(commonFunction.getStringValue(row.getCell(c++)));
         entity.setSpouseGender(commonFunction.getStringValue(row.getCell(c++)));
-        entity.setSpouseDob(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
+        entity.setSpouseDob(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(c++))));
         entity.setSpouseAge(commonFunction.getIntegerValue(row.getCell(c++)));
         entity.setOccupationSpouse(commonFunction.getStringValue(row.getCell(c++)));
         entity.setSpouseDeathSa(commonFunction.getBigDecimalValue(row.getCell(c++)));
@@ -613,122 +613,122 @@ public class MainDataReportUploadServiceImpl implements MainDataReportUploadServ
         entity.setSpouseInpOccLoadingPercentage(commonFunction.getDoubleValue(row.getCell(c++)));
         // Children 1-5 (NAME, DOB, AGE, HBC, INP SAR, Bonus)
         entity.setChild1Name(commonFunction.getStringValue(row.getCell(c++)));
-        entity.setChild1Dob(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
+        entity.setChild1Dob(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(c++))));
         entity.setChild1Age(commonFunction.getIntegerValue(row.getCell(c++)));
         entity.setChild1Hbc(commonFunction.getIntegerValue(row.getCell(c++)));
         entity.setChild1InpSar(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild1Bonus(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild2Name(commonFunction.getStringValue(row.getCell(c++)));
-        entity.setChild2Dob(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
+        entity.setChild2Dob(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(c++))));
         entity.setChild2Age(commonFunction.getIntegerValue(row.getCell(c++)));
         entity.setChild2Hbc(commonFunction.getStringValue(row.getCell(c++)));
         entity.setChild2InpSar(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild2Bonus(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild3Name(commonFunction.getStringValue(row.getCell(c++)));
-        entity.setChild3Dob(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
+        entity.setChild3Dob(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(c++))));
         entity.setChild3Age(commonFunction.getIntegerValue(row.getCell(c++)));
         entity.setChild3Hbc(commonFunction.getIntegerValue(row.getCell(c++)));
         entity.setChild3InpSar(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild3Bonus(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild4Name(commonFunction.getStringValue(row.getCell(c++)));
-        entity.setChild4Dob(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
+        entity.setChild4Dob(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(c++))));
         entity.setChild4Age(commonFunction.getIntegerValue(row.getCell(c++)));
         entity.setChild4Hbc(commonFunction.getIntegerValue(row.getCell(c++)));
         entity.setChild4InpSar(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild4Bonus(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild5Name(commonFunction.getStringValue(row.getCell(c++)));
-        entity.setChild5Dob(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
+        entity.setChild5Dob(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(c++))));
         entity.setChild5Age(commonFunction.getIntegerValue(row.getCell(c++)));
         entity.setChild5Hbc(commonFunction.getIntegerValue(row.getCell(c++)));
         entity.setChild5InpSar(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild5Bonus(commonFunction.getBigDecimalValue(row.getCell(c++)));
         // Children 6-20 (each: NAME, DOB, AGE, HBC, INP SAR, Bonus)
         entity.setChild6Name(commonFunction.getStringValue(row.getCell(c++)));
-        entity.setChild6Dob(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
+        entity.setChild6Dob(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(c++))));
         entity.setChild6Age(commonFunction.getIntegerValue(row.getCell(c++)));
         entity.setChild6Hbc(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild6InpSar(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild6Bonus(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild7Name(commonFunction.getStringValue(row.getCell(c++)));
-        entity.setChild7Dob(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
+        entity.setChild7Dob(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(c++))));
         entity.setChild7Age(commonFunction.getIntegerValue(row.getCell(c++)));
         entity.setChild7Hbc(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild7InpSar(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild7Bonus(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild8Name(commonFunction.getStringValue(row.getCell(c++)));
-        entity.setChild8Dob(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
+        entity.setChild8Dob(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(c++))));
         entity.setChild8Age(commonFunction.getIntegerValue(row.getCell(c++)));
         entity.setChild8Hbc(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild8InpSar(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild8Bonus(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild9Name(commonFunction.getStringValue(row.getCell(c++)));
-        entity.setChild9Dob(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
+        entity.setChild9Dob(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(c++))));
         entity.setChild9Age(commonFunction.getIntegerValue(row.getCell(c++)));
         entity.setChild9Hbc(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild9InpSar(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild9Bonus(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild10Name(commonFunction.getStringValue(row.getCell(c++)));
-        entity.setChild10Dob(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
+        entity.setChild10Dob(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(c++))));
         entity.setChild10Age(commonFunction.getIntegerValue(row.getCell(c++)));
         entity.setChild10Hbc(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild10InpSar(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild10Bonus(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild11Name(commonFunction.getStringValue(row.getCell(c++)));
-        entity.setChild11Dob(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
+        entity.setChild11Dob(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(c++))));
         entity.setChild11Age(commonFunction.getIntegerValue(row.getCell(c++)));
         entity.setChild11Hbc(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild11InpSar(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild11Bonus(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild12Name(commonFunction.getStringValue(row.getCell(c++)));
-        entity.setChild12Dob(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
+        entity.setChild12Dob(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(c++))));
         entity.setChild12Age(commonFunction.getIntegerValue(row.getCell(c++)));
         entity.setChild12Hbc(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild12InpSar(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild12Bonus(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild13Name(commonFunction.getStringValue(row.getCell(c++)));
-        entity.setChild13Dob(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
+        entity.setChild13Dob(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(c++))));
         entity.setChild13Age(commonFunction.getIntegerValue(row.getCell(c++)));
         entity.setChild13Hbc(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild13InpSar(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild13Bonus(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild14Name(commonFunction.getStringValue(row.getCell(c++)));
-        entity.setChild14Dob(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
+        entity.setChild14Dob(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(c++))));
         entity.setChild14Age(commonFunction.getIntegerValue(row.getCell(c++)));
         entity.setChild14Hbc(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild14InpSar(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild14Bonus(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild15Name(commonFunction.getStringValue(row.getCell(c++)));
-        entity.setChild15Dob(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
+        entity.setChild15Dob(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(c++))));
         entity.setChild15Age(commonFunction.getIntegerValue(row.getCell(c++)));
         entity.setChild15Hbc(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild15InpSar(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild15Bonus(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild16Name(commonFunction.getStringValue(row.getCell(c++)));
-        entity.setChild16Dob(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
+        entity.setChild16Dob(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(c++))));
         entity.setChild16Age(commonFunction.getIntegerValue(row.getCell(c++)));
         entity.setChild16Hbc(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild16InpSar(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild16Bonus(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild17Name(commonFunction.getStringValue(row.getCell(c++)));
-        entity.setChild17Dob(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
+        entity.setChild17Dob(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(c++))));
         entity.setChild17Age(commonFunction.getIntegerValue(row.getCell(c++)));
         entity.setChild17Hbc(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild17InpSar(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild17Bonus(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild18Name(commonFunction.getStringValue(row.getCell(c++)));
-        entity.setChild18Dob(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
+        entity.setChild18Dob(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(c++))));
         entity.setChild18Age(commonFunction.getIntegerValue(row.getCell(c++)));
         entity.setChild18Hbc(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild18InpSar(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild18Bonus(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild19Name(commonFunction.getStringValue(row.getCell(c++)));
-        entity.setChild19Dob(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
+        entity.setChild19Dob(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(c++))));
         entity.setChild19Age(commonFunction.getIntegerValue(row.getCell(c++)));
         entity.setChild19Hbc(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild19InpSar(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild19Bonus(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild20Name(commonFunction.getStringValue(row.getCell(c++)));
-        entity.setChild20Dob(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
+        entity.setChild20Dob(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(c++))));
         entity.setChild20Age(commonFunction.getIntegerValue(row.getCell(c++)));
         entity.setChild20Hbc(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild20InpSar(commonFunction.getBigDecimalValue(row.getCell(c++)));
@@ -736,11 +736,26 @@ public class MainDataReportUploadServiceImpl implements MainDataReportUploadServ
         // Basic Sum Assured, Insurance Coverage Period, Last Payment Date, Last Premium Due Date, Refund Value
         entity.setBasicSumAssured(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setInsuranceCoveragePeriod(commonFunction.getIntegerValue(row.getCell(c++)));
-        entity.setLastPaymentDate(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
-        entity.setLastPremiumDueDate(commonFunction.getDateFromInteger(commonFunction.getStringDateValue(row.getCell(c++))));
+        entity.setLastPaymentDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(c++))));
+        entity.setLastPremiumDueDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(c++))));
         entity.setRefundValue(commonFunction.getBigDecimalValue(row.getCell(c++)));
 
         list.add(entity);
+    }
+
+    private String getStringDateValue(Cell cell) {
+        if (cell == null || cell.getCellType() == CellType.BLANK) return null;
+        try {
+            if (cell.getCellType() == CellType.NUMERIC) {
+                return cell.getStringCellValue();
+            } else if (cell.getCellType() == CellType.STRING) {
+                return cell.getStringCellValue().trim();
+            }
+            return null;
+        } catch (Exception e) {
+            log.error("Error parsing date value from cell: {} cell address: {}", cell.toString(), cell.getAddress());
+            return null;
+        }
     }
 
     // -------------------------------------------------------------------------

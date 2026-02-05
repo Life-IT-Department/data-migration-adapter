@@ -30,6 +30,7 @@ public class CommonFunctionImpl implements CommonFunction {
     @Override
     public LocalDate getDateFromInteger(String date) {
         try {
+            if (date == null) return null;
             String stringDate = date.trim();
             if (stringDate.isEmpty()) return null;
 
@@ -140,6 +141,10 @@ public class CommonFunctionImpl implements CommonFunction {
         if (cell == null || cell.getCellType() == CellType.BLANK) return null;
         try {
             if (cell.getCellType() == CellType.NUMERIC) {
+                if (cell.getLocalDateTimeCellValue() != null) {
+                    return cell.getLocalDateTimeCellValue().toLocalDate().toString();
+                }
+            } else if (cell.getCellType() == CellType.STRING) {
                 return cell.getStringCellValue().trim();
             }
             return null;
@@ -167,19 +172,19 @@ public class CommonFunctionImpl implements CommonFunction {
                 case STRING -> {
                     String timeStr = cell.getStringCellValue().trim();
                     if (timeStr.isEmpty()) yield null;
-                    
+
                     // Try different time formats
                     DateTimeFormatter[] timeFormatters = {
-                        DateTimeFormatter.ofPattern("HH:mm:ss"),
-                        DateTimeFormatter.ofPattern("HH:mm"),
-                        DateTimeFormatter.ofPattern("H:mm:ss"),
-                        DateTimeFormatter.ofPattern("H:mm"),
-                        DateTimeFormatter.ofPattern("hh:mm:ss a"),
-                        DateTimeFormatter.ofPattern("h:mm:ss a"),
-                        DateTimeFormatter.ofPattern("hh:mm a"),
-                        DateTimeFormatter.ofPattern("h:mm a")
+                            DateTimeFormatter.ofPattern("HH:mm:ss"),
+                            DateTimeFormatter.ofPattern("HH:mm"),
+                            DateTimeFormatter.ofPattern("H:mm:ss"),
+                            DateTimeFormatter.ofPattern("H:mm"),
+                            DateTimeFormatter.ofPattern("hh:mm:ss a"),
+                            DateTimeFormatter.ofPattern("h:mm:ss a"),
+                            DateTimeFormatter.ofPattern("hh:mm a"),
+                            DateTimeFormatter.ofPattern("h:mm a")
                     };
-                    
+
                     for (DateTimeFormatter formatter : timeFormatters) {
                         try {
                             yield LocalTime.parse(timeStr, formatter);
