@@ -7,6 +7,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
+
 @Repository
 public interface MainDataReportRepository
         extends JpaRepository<MainDataReportEntity, Long> {
@@ -15,4 +17,6 @@ public interface MainDataReportRepository
     @Transactional
     @Query(value = "TRUNCATE TABLE main_data_report RESTART IDENTITY", nativeQuery = true)
     void truncate();
+
+    Optional<MainDataReportEntity> findByProductCodeAndPolicyNo(String productCode, Integer policyNo);
 }
