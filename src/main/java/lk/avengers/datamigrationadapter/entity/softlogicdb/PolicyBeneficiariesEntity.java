@@ -28,8 +28,8 @@ public class PolicyBeneficiariesEntity {
     @Column(name = "BE_Age")
     private Integer beAge;
 
-    @Column(name = "BE_Sex", length = 1)
-    private String beSex;
+    @Column(name = "BE_Sex", length = 1 ,columnDefinition="char")
+    private Character beSex;
 
     @Column(name = "BE_DOB")
     private LocalDate beDob;
@@ -43,7 +43,7 @@ public class PolicyBeneficiariesEntity {
     @Column(name = "BE_InclusionDate")
     private LocalDate beInclusionDate;
 
-    @Column(name = "BE_Coverage", precision = 18, scale = 2)
+    @Column(name = "BE_Coverage", precision = 18,  scale = 2)
     private BigDecimal beCoverage;
 
     @Column(name = "BE_IsHB")

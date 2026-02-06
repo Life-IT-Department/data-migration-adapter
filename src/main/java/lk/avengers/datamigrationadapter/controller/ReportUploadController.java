@@ -1,10 +1,7 @@
 package lk.avengers.datamigrationadapter.controller;
 
 import lk.avengers.datamigrationadapter.dto.CommonResponseDTO;
-import lk.avengers.datamigrationadapter.service.CashFlowReportUploadService;
-import lk.avengers.datamigrationadapter.service.ContactDetailReportService;
-import lk.avengers.datamigrationadapter.service.MainDataReportUploadService;
-import lk.avengers.datamigrationadapter.service.PosSignatureReportService;
+import lk.avengers.datamigrationadapter.service.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -26,6 +23,7 @@ public class ReportUploadController {
     private final CashFlowReportUploadService cashFlowReportUploadService;
     private final ContactDetailReportService contactDetailReportService;
     private final PosSignatureReportService posSignatureReportService;
+    private final PolicyBeneficiariesMappingService policyBeneficiariesMappingService;
 
     @PostMapping("/cash-flow-report")
     public ResponseEntity<CommonResponseDTO> uploadCashFlow(@RequestParam int year) {
@@ -62,5 +60,11 @@ public class ReportUploadController {
     public ResponseEntity<CommonResponseDTO> uploadMainDataALHReportExcel() {
         log.info("UploadMainDataALLReportExcel API METHOD ACCESSED.");
         return mainDataReportUploadService.uploadMainDataALHReportExcel();
+    }
+
+    @PostMapping("/test")
+    public CommonResponseDTO test() {
+        log.info("Test API METHOD ACCESSED.");
+        return policyBeneficiariesMappingService.mapBeneficiaries();
     }
 }
