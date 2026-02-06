@@ -1,56 +1,53 @@
 package lk.avengers.datamigrationadapter.entity.softlogicdb;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "policy_benefits")
-@Getter
 @Setter
-@AllArgsConstructor
+@Getter
 @NoArgsConstructor
+@AllArgsConstructor
+@Table(name = "policy_benefits")
 public class PolicyBenefitsEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "policy_no", length = 50, nullable = false)
-    private String policyNo;
+    @Column(name = "PB_PolicyNo", length = 30)
+    private String pbPolicyNo;
 
-    @Column(name = "benefit_code", length = 50)
-    private String benefitCode;
+    @Column(name = "PB_BenefitCode", length = 4)
+    private String pbBenefitCode;
 
-    @Column(name = "coverage", precision = 18, scale = 2)
-    private BigDecimal coverage;
+    @Column(name = "PB_Coverage", precision = 18, scale = 2)
+    private BigDecimal pbCoverage;
 
-    @Column(name = "prem_portion", precision = 18, scale = 2)
-    private BigDecimal premPortion;
+    @Column(name = "PB_PremPortion", precision = 18, scale = 2)
+    private BigDecimal pbPremPortion;
 
-    @Column(name = "[option]", length = 50)
-    private String option;
+    @Column(name = "PB_Option", length = 20)
+    private String pbOption;
 
-    @Column(name = "occu_extra", precision = 18, scale = 2)
-    private BigDecimal occuExtra;
+    @Column(name = "PB_OccuExtra", precision = 9, scale = 2)
+    private BigDecimal pbOccuExtra;
 
-    @Column(name = "extra_mortality_rate", precision = 18, scale = 2)
-    private BigDecimal extraMortalityRate;
+    @Column(name = "PB_ExtraMortalityRate", precision = 9, scale = 2)
+    private BigDecimal pbExtraMortalityRate;
 
-    @Column(name = "inclusion_date")
-    private LocalDate inclusionDate;
+    @Column(name = "PB_InclusionDate")
+    private LocalDate pbInclusionDate;
 
-    @Column(name = "expireddate")
-    private LocalDate expiredDate;
+    @Column(name = "PB_expireddate")
+    private LocalDate pbExpiredDate;
 
-    @Column(name = "term")
-    private Integer term;
+    @Column(name = "PB_Term")
+    private Integer pbTerm;
 
-    @Column(name = "extra_premium", precision = 18, scale = 2)
-    private BigDecimal extraPremium;
+    @Column(name = "PB_ExtraPremium", precision = 9, scale = 2)
+    private BigDecimal pbExtraPremium;
 }

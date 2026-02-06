@@ -1,89 +1,191 @@
 package lk.avengers.datamigrationadapter.entity.softlogicdb;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "policy")
 @Getter
 @Setter
-@AllArgsConstructor
 @NoArgsConstructor
+@AllArgsConstructor
+@Table(name = "policy")
 public class PolicyEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "policy_no", nullable = false, length = 50, unique = true)
-    private String policyNo;
+    // Life Assured (LA) fields
+    @Column(name = "LA_PolicyNo", length = 30)
+    private String laPolicyNo;
 
-    @Column(name = "plancode", length = 50)
-    private String planCode;
+    @Column(name = "LA_Title", length = 10)
+    private String laTitle;
 
-    @Column(name = "term")
-    private Integer term;
+    @Column(name = "LA_FirstName", length = 100)
+    private String laFirstName;
 
-    @Column(name = "payment_term")
-    private Integer paymentTerm;
+    @Column(name = "LA_LastName", length = 100)
+    private String laLastName;
 
-    @Column(name = "date_of_proposal")
-    private LocalDate dateOfProposal;
+    @Column(name = "LA_Address", length = 100)
+    private String laAddress;
 
-    @Column(name = "bsa", precision = 18, scale = 2)
-    private BigDecimal bsa;
+    @Column(name = "LA_NIC", length = 20)
+    private String laNic;
 
-    @Column(name = "sum_at_risk", precision = 18, scale = 2)
-    private BigDecimal sumAtRisk;
+    @Column(name = "LA_Sex", length = 1)
+    private String laSex;
 
-    @Column(name = "basic_premium", precision = 18, scale = 2)
-    private BigDecimal basicPremium;
+    @Column(name = "LA_DOB")
+    private LocalDate laDob;
 
-    @Column(name = "premium_type", length = 20)
-    private String premiumType;
+    @Column(name = "LA_ANB")
+    private Integer laAnb;
 
-    @Column(name = "adv_code", length = 50)
-    private String advCode;
+    @Column(name = "LA_NameWithInitials", length = 100)
+    private String laNameWithInitials;
 
-    @Column(name = "begin_date")
-    private LocalDate beginDate;
+    @Column(name = "LA_Phone1", length = 10)
+    private String laPhone1;
 
-    @Column(name = "policy_year")
-    private Integer policyYear;
+    @Column(name = "LA_Phone2", length = 10)
+    private String laPhone2;
 
-    @Column(name = "date_underwritten")
-    private LocalDate dateUnderwritten;
+    @Column(name = "LA_Nationality", length = 20)
+    private String laNationality;
 
-    @Column(name = "premium_due_date")
-    private LocalDate premiumDueDate;
+    @Column(name = "LA_email", length = 30)
+    private String laEmail;
 
-    @Column(name = "mode", length = 20)
-    private String mode;
+    @Column(name = "LA_AgeAdmited", length = 1)
+    private String laAgeAdmitted;
 
-    @Column(name = "policy_status_code", length = 20)
-    private String policyStatusCode;
+    @Column(name = "LA_AddressCity", length = 20)
+    private String laAddressCity;
 
-    @Column(name = "expiration_date")
-    private LocalDate expirationDate;
+    @Column(name = "LA_Occupation", length = 30)
+    private String laOccupation;
 
-    @Column(name = "branch_code", length = 20)
-    private String branchCode;
+    @Column(name = "LA_monthlyIncome", precision = 18, scale = 2)
+    private BigDecimal laMonthlyIncome;
 
-    @Column(name = "premium", precision = 18, scale = 2)
-    private BigDecimal premium;
+    @Column(name = "LA_Ext_natureof_Duties", length = 30)
+    private String laExtNatureOfDuties;
 
-    @Column(name = "illus_matu_value", precision = 18, scale = 2)
-    private BigDecimal illusMatuValue;
+    @Column(name = "LA_Height")
+    private Integer laHeight;
 
-    @Column(name = "admin_fee", precision = 18, scale = 2)
-    private BigDecimal adminFee;
+    @Column(name = "LA_PrefLanguage", length = 1)
+    private String laPrefLanguage;
 
-    @Column(name = "total_fund_balance", precision = 18, scale = 2)
-    private BigDecimal totalFundBalance;
+    @Column(name = "LA_Weight")
+    private Integer laWeight;
+
+    @Column(name = "LA_IsPolicyAssign")
+    private Boolean laIsPolicyAssign = false;
+
+    @Column(name = "LA_ProposalNo", length = 30)
+    private String laProposalNo;
+
+    // Policy (PO) fields
+    @Column(name = "PO_plancode", length = 4)
+    private String poPlanCode;
+
+    @Column(name = "PO_PlanVersion", length = 10)
+    private String poPlanVersion;
+
+    @Column(name = "PO_term")
+    private Integer poTerm;
+
+    @Column(name = "PO_PaymentTerm")
+    private Integer poPaymentTerm;
+
+    @Column(name = "PO_DateofProposal")
+    private LocalDate poDateOfProposal;
+
+    @Column(name = "PO_BSA", precision = 18, scale = 2)
+    private BigDecimal poBsa;
+
+    @Column(name = "PO_SumAtRisk", precision = 18, scale = 2)
+    private BigDecimal poSumAtRisk;
+
+    @Column(name = "PO_BasicPremium", precision = 18, scale = 2)
+    private BigDecimal poBasicPremium;
+
+    @Column(name = "PO_PremiumType", length = 10)
+    private String poPremiumType;
+
+    @Column(name = "PO_AdvCode", length = 10)
+    private String poAdvCode;
+
+    @Column(name = "PO_BeginDate")
+    private LocalDate poBeginDate;
+
+    @Column(name = "PO_PolicyYear")
+    private Integer poPolicyYear;
+
+    @Column(name = "PO_DateUnderwritten")
+    private LocalDate poDateUnderwritten;
+
+    @Column(name = "PO_PremiumDueDate")
+    private LocalDate poPremiumDueDate;
+
+    @Column(name = "PO_Mode", length = 4)
+    private String poMode;
+
+    @Column(name = "PO_PolicyStatusCode", length = 4)
+    private String poPolicyStatusCode;
+
+    @Column(name = "PO_ExpirationDate")
+    private LocalDate poExpirationDate;
+
+    @Column(name = "PO_BranchCode", length = 2)
+    private String poBranchCode;
+
+    @Column(name = "PO_Premium", precision = 18, scale = 2)
+    private BigDecimal poPremium;
+
+    @Column(name = "PO_IllusMatuValue", precision = 18, scale = 2)
+    private BigDecimal poIllusMatuValue;
+
+    @Column(name = "PO_adminFee", precision = 18, scale = 2)
+    private BigDecimal poAdminFee;
+
+    // Spouse (SP) fields
+    @Column(name = "SP_Title", length = 10)
+    private String spTitle;
+
+    @Column(name = "SP_FirstName", length = 100)
+    private String spFirstName;
+
+    @Column(name = "SP_LastName", length = 100)
+    private String spLastName;
+
+    @Column(name = "SP_NIC", length = 20)
+    private String spNic;
+
+    @Column(name = "SP_Sex", length = 1)
+    private String spSex;
+
+    @Column(name = "SP_DOB")
+    private LocalDate spDob;
+
+    @Column(name = "SP_ANB")
+    private Integer spAnb;
+
+    @Column(name = "SP_AgeAdmited")
+    private Boolean spAgeAdmitted;
+
+    @Column(name = "SP_Height")
+    private Integer spHeight;
+
+    @Column(name = "SP_Weight")
+    private Integer spWeight;
+
+    @Column(name = "SP_Occupation", length = 30)
+    private String spOccupation;
 }
