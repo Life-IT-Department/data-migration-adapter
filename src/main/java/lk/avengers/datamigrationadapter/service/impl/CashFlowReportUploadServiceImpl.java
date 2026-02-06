@@ -60,7 +60,7 @@ public class CashFlowReportUploadServiceImpl implements CashFlowReportUploadServ
             CommonResponseDTO commonResponseDTO = new CommonResponseDTO();
             commonResponseDTO.setMessage(e.getMessage());
             commonResponseDTO.setStatus(String.valueOf(HttpStatus.INTERNAL_SERVER_ERROR.value()));
-            return ResponseEntity .internalServerError().body(commonResponseDTO);
+            return ResponseEntity.internalServerError().body(commonResponseDTO);
         }
     }
 
@@ -176,7 +176,7 @@ public class CashFlowReportUploadServiceImpl implements CashFlowReportUploadServ
             // Get the directory path from the configured path
             Path directoryPath;
             Path configuredPath = Paths.get(cashFlowReportPath);
-            
+
             // Check if the configured path is a directory or file
             if (Files.exists(configuredPath) && Files.isDirectory(configuredPath)) {
                 // If it's an existing directory, use it directly
@@ -184,8 +184,8 @@ public class CashFlowReportUploadServiceImpl implements CashFlowReportUploadServ
             } else if (cashFlowReportPath.contains("/") || cashFlowReportPath.contains("\\")) {
                 // If path contains directory separators, check if it's meant to be a directory
                 // or get the parent directory if it's a file path
-                if (configuredPath.toString().endsWith("/") || configuredPath.toString().endsWith("\\") || 
-                    !configuredPath.getFileName().toString().contains(".")) {
+                if (configuredPath.toString().endsWith("/") || configuredPath.toString().endsWith("\\") ||
+                        !configuredPath.getFileName().toString().contains(".")) {
                     // Treat as directory path
                     directoryPath = configuredPath;
                 } else {
@@ -206,10 +206,10 @@ public class CashFlowReportUploadServiceImpl implements CashFlowReportUploadServ
             // - Preceded by non-digit and followed by non-digit  
             // - At the end of filename preceded by non-digit
             Pattern yearPattern = Pattern.compile(".*(?:^|[^\\d])" + year + "(?:[^\\d]|$).*", Pattern.CASE_INSENSITIVE);
-            
+
             log.info("Searching for cash flow files for year {} in directory: {}", year, directoryPath.toAbsolutePath());
             log.info("Using pattern: {}", yearPattern.pattern());
-            
+
             // Find all Excel files in the directory that match the year pattern
             List<Path> matchingFiles = Files.list(directoryPath)
                     .filter(Files::isRegularFile)
@@ -238,15 +238,15 @@ public class CashFlowReportUploadServiceImpl implements CashFlowReportUploadServ
                         })
                         .map(path -> path.getFileName().toString())
                         .collect(Collectors.toList());
-                
-                String debugInfo = allExcelFiles.isEmpty() ? 
-                    "No Excel files found in directory." : 
-                    "Available Excel files: " + String.join(", ", allExcelFiles);
-                
+
+                String debugInfo = allExcelFiles.isEmpty() ?
+                        "No Excel files found in directory." :
+                        "Available Excel files: " + String.join(", ", allExcelFiles);
+
                 throw new ReportException(
                         HttpStatus.NOT_FOUND.value(),
-                        "No cash flow file found for year " + year + " in directory: " + directoryPath.toAbsolutePath() + 
-                        ". " + debugInfo + " Expected filename pattern: contains '" + year + "' as standalone number."
+                        "No cash flow file found for year " + year + " in directory: " + directoryPath.toAbsolutePath() +
+                                ". " + debugInfo + " Expected filename pattern: contains '" + year + "' as standalone number."
                 );
             }
 
@@ -256,15 +256,15 @@ public class CashFlowReportUploadServiceImpl implements CashFlowReportUploadServ
                         .collect(Collectors.joining(", "));
                 throw new ReportException(
                         HttpStatus.CONFLICT.value(),
-                        "Multiple cash flow files found for year " + year + ": " + fileNames + 
-                        ". Please ensure only one file exists for the specified year."
+                        "Multiple cash flow files found for year " + year + ": " + fileNames +
+                                ". Please ensure only one file exists for the specified year."
                 );
             }
 
             // Single file found - return its input stream
             Path selectedFile = matchingFiles.getFirst();
             log.info("Found cash flow file for year {}: {}", year, selectedFile.getFileName());
-            
+
             return Files.newInputStream(selectedFile);
 
         } catch (IOException e) {
@@ -277,7 +277,7 @@ public class CashFlowReportUploadServiceImpl implements CashFlowReportUploadServ
 
     private boolean shouldSkipRow(Row row) {
         return row.getRowNum() == HEADER_ROW_1 || row.getRowNum() == HEADER_ROW_2
-                || row.getRowNum() == HEADER_ROW_3 || row.getRowNum() == HEADER_ROW_4;
+                || row.getRowNum() == HEADER_ROW_3 || row.getRowNum() == HEADER_ROW_4 || isCellBlank(row.getCell(0));
         // return isCellBlank(row.getCell(1)) || isCellBlank(row.getCell(3));
     }
 
