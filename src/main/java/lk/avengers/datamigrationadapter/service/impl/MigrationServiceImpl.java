@@ -68,7 +68,7 @@ public class MigrationServiceImpl implements MigrationService {
 
             if (policyEntity instanceof MainDataReportEntity mainDataReport) {
                 // Use mainDataReport with full type safety
-                processMainDataReport(mainDataReport);
+                processMainDataReport(mainDataReport, policy);
 
             } else if (policyEntity instanceof MainDataALHReportEntity alhReport) {
                 // Use alhReport with full type safety
@@ -89,7 +89,53 @@ public class MigrationServiceImpl implements MigrationService {
     private void processACPPolicy(ACPPolicyEntity acpPolicy) {
     }
 
-    private void processMainDataReport(MainDataReportEntity mainDataReport) {
+    private void processMainDataReport(MainDataReportEntity mainDataReport, String policyNo) {
+        PolicyRequestDTO policyRequestDTO = new PolicyRequestDTO();
+        // ===== Policy (PO) =====
+        policyRequestDTO.setPoPlanCode(getSoftLogicProductCodeMapping(policyNo));
+        policyRequestDTO.setPoPlanVersion(mainDataReport.getPlanNo());
+        policyRequestDTO.setPoTerm(mainDataReport.getTerm());
+        policyRequestDTO.setPoDateOfProposal(mainDataReport.getInception());
+        policyRequestDTO.setPoPaymentTerm(Integer.parseInt(mainDataReport.getPremiumPaymentTerm()));
+        policyRequestDTO.setPoBsa(mainDataReport.getBasicSumAssured());
+        policyRequestDTO.setPoSumAtRisk(mainDataReport.getDthSar());
+        policyRequestDTO.setPoBasicPremium(mainDataReport.getModalPremium());
+        policyRequestDTO.setPoPremiumType("Regular");
+        policyRequestDTO.setPoAdvCode(getAgentCodeMapping(mainDataReport.getAgentCode()));
+        policyRequestDTO.setPoBeginDate(mainDataReport.getInception());
+        policyRequestDTO.setPoPolicyYear(getPolicyYear(mainDataReport.getInception()));
+        policyRequestDTO.setPoDateUnderwritten(mainDataReport.getInception());
+        policyRequestDTO.setPoPremiumDueDate(mainDataReport.getNextPremium());
+        policyRequestDTO.setPoMode(getFrequencyString(mainDataReport.getFrequency()));
+        policyRequestDTO.setPoPolicyStatusCode(getPolicyStatusCode(mainDataReport.getStatus()));
+        policyRequestDTO.setPoExpirationDate(mainDataReport.getExpiry());
+        policyRequestDTO.setPoBranchCode(getBranchCodeMapping(mainDataReport.getSalesBranchCode()));
+        // ===== Life Assured (LA) =====
+        ContactDetailEntity contact = getContactDetailEntity(policyNo);
+        policyRequestDTO.setLaPolicyNo(policyNo);
+        policyRequestDTO.setLaTitle(contact.getTitle());
+        policyRequestDTO.setLaFirstName(contact.getFirstName());
+        policyRequestDTO.setLaLastName(contact.getLastName());
+        policyRequestDTO.setLaAddress(contact.getAddress());
+        policyRequestDTO.setLaNic(contact.getNicNumber());
+        policyRequestDTO.setLaSex(getSexChar(contact.getGender()));
+        policyRequestDTO.setLaDob(contact.getDateOfBirth());
+        policyRequestDTO.setLaPhone1(getTenDigitMobile(contact.getMobile()));
+        policyRequestDTO.setLaPhone2(getOtherTelephoneNumber(contact.getOtherTelephoneNumber()));
+        policyRequestDTO.setLaNationality(contact.getNationality().toUpperCase());
+        policyRequestDTO.setLaEmail(getValidatedEmail(contact.getEmailAddress()));
+        policyRequestDTO.setLaAgeAdmitted(getAdmittedAge(mainDataReport.getInception(),contact.getDateOfBirth()).toString()); //check
+        policyRequestDTO.setLaAddressCity(contact.getCity());
+        policyRequestDTO.setLaOccupation(contact.getOccupation());
+        policyRequestDTO.setLaAnb(Integer.parseInt(policyRequestDTO.getLaAgeAdmitted()));
+        // ===== Spouse (SP) =====
+        policyRequestDTO.setSpTitle(mainDataReport.getSpouseChildTitle());
+        policyRequestDTO.setSpFirstName(mainDataReport.getSpouseChildFullName());
+        policyRequestDTO.setSpSex(getSexChar(mainDataReport.getSpouseChildGender()));
+        policyRequestDTO.setSpDob(mainDataReport.getSpouseChildDob());
+        policyRequestDTO.setSpAnb(getAdmittedAge(mainDataReport.getInception(),mainDataReport.getSpouseChildDob()));
+
+        requestDTOList.add(policyRequestDTO);
     }
 
     private void processALHReport(MainDataALHReportEntity alhReport, String policyNo) {
@@ -122,7 +168,7 @@ public class MigrationServiceImpl implements MigrationService {
         policyRequestDTO.setLaLastName(contact.getLastName());
         policyRequestDTO.setLaAddress(contact.getAddress());
         policyRequestDTO.setLaNic(contact.getNicNumber());
-        policyRequestDTO.setLaSex(getSexChar(contact.getGender())); // check this sex
+        policyRequestDTO.setLaSex(getSexChar(contact.getGender()));
         policyRequestDTO.setLaDob(contact.getDateOfBirth());
         policyRequestDTO.setLaPhone1(getTenDigitMobile(contact.getMobile()));
         policyRequestDTO.setLaPhone2(getOtherTelephoneNumber(contact.getOtherTelephoneNumber()));
