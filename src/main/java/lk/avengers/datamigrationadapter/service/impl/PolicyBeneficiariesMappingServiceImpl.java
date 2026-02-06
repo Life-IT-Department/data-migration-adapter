@@ -52,7 +52,7 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
             mainDataReportRepository.findFirstByProductCodeAndPolicyNo(policyNoSplit[0], Integer.parseInt(policyNoSplit[1]))
                     .ifPresentOrElse(mainDataReportEntity -> {
                         log.info("Main Data Report data found for Policy No: {}", policyNo);
-                        PolicyBeneficiariesEntity spouseDetailsFromMainData = getSpouseDetailsFromMainData(mainDataReportEntity);
+                        PolicyBeneficiariesEntity spouseDetailsFromMainData = getSpouseDetailsFromMainData(mainDataReportEntity, policyNo);
                         List<PolicyBeneficiariesEntity> childrenFromMainData = getChildrenFromMainData(mainDataReportEntity, policyNo);
                         if (spouseDetailsFromMainData != null) {
                             childrenFromMainData.add(spouseDetailsFromMainData);
@@ -67,7 +67,7 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
         mainDataALHReportRepository.findFirstByProductCodeAndPolicyNo(policyNoSplit[0], Integer.parseInt(policyNoSplit[1]))
                 .ifPresentOrElse(mainDataALHReportEntity -> {
                     log.info("Main ALH Data Report data found for Policy No: {}", policyNo);
-                    PolicyBeneficiariesEntity spouseDetailsFromALHMainData = getSpouseDetailsFromALHMainData(mainDataALHReportEntity);
+                    PolicyBeneficiariesEntity spouseDetailsFromALHMainData = getSpouseDetailsFromALHMainData(mainDataALHReportEntity, policyNo);
                     List<PolicyBeneficiariesEntity> childrenFromALHMainData = getChildrenFromALHMainData(mainDataALHReportEntity, policyNo);
                     if (spouseDetailsFromALHMainData != null) {
                         childrenFromALHMainData.add(spouseDetailsFromALHMainData);
@@ -78,11 +78,11 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
                 });
     }
 
-    private PolicyBeneficiariesEntity getSpouseDetailsFromALHMainData(MainDataALHReportEntity mainDataALHReportEntity) {
+    private PolicyBeneficiariesEntity getSpouseDetailsFromALHMainData(MainDataALHReportEntity mainDataALHReportEntity, String policyNo) {
         // Spouse
         if (mainDataALHReportEntity.getSpousePin() != 0) {
             PolicyBeneficiariesEntity policyBeneficiariesEntity = new PolicyBeneficiariesEntity();
-            policyBeneficiariesEntity.setBePolicyNo(String.valueOf(mainDataALHReportEntity.getPolicyNo()));
+            policyBeneficiariesEntity.setBePolicyNo(policyNo);
             policyBeneficiariesEntity.setBeFullName(mainDataALHReportEntity.getSpouseFullName());
             policyBeneficiariesEntity.setBeAge(mainDataALHReportEntity.getSpouseAge());
             policyBeneficiariesEntity.setBeSex(getSex(mainDataALHReportEntity.getSpouseGender()));
@@ -98,11 +98,11 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
         return null;
     }
 
-    private PolicyBeneficiariesEntity getSpouseDetailsFromMainData(MainDataReportEntity mainDataReportEntity) {
+    private PolicyBeneficiariesEntity getSpouseDetailsFromMainData(MainDataReportEntity mainDataReportEntity, String policyNo) {
         // Spouse
         if (mainDataReportEntity.getSpouseChildPin() != 0) {
             PolicyBeneficiariesEntity policyBeneficiariesEntity = new PolicyBeneficiariesEntity();
-            policyBeneficiariesEntity.setBePolicyNo(String.valueOf(mainDataReportEntity.getPolicyNo()));
+            policyBeneficiariesEntity.setBePolicyNo(policyNo);
             policyBeneficiariesEntity.setBeFullName(mainDataReportEntity.getSpouseChildFullName());
             policyBeneficiariesEntity.setBeAge(mainDataReportEntity.getSpouseChildAge());
             policyBeneficiariesEntity.setBeSex(getSex(mainDataReportEntity.getSpouseChildGender()));
@@ -292,7 +292,7 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
         childDtoList.forEach(childDto -> {
             if (childDto.getName() != null && !childDto.getName().isEmpty() && !childDto.getName().isBlank()) {
                 PolicyBeneficiariesEntity policyBeneficiariesEntity = new PolicyBeneficiariesEntity();
-                policyBeneficiariesEntity.setBePolicyNo(policyNumber);
+                policyBeneficiariesEntity.setBePolicyNo(policyNumber.trim());
                 policyBeneficiariesEntity.setBeFullName(childDto.getName());
                 policyBeneficiariesEntity.setBeAge(childDto.getAge());
                 policyBeneficiariesEntity.setBeSex(null);
