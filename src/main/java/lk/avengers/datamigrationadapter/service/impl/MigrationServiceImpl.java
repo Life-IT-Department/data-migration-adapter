@@ -4,7 +4,9 @@ import jakarta.annotation.PostConstruct;
 import lk.avengers.datamigrationadapter.dto.request.PolicyRequestDTO;
 import lk.avengers.datamigrationadapter.dto.response.PolicyNumberResponseDTO;
 import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.*;
+import lk.avengers.datamigrationadapter.entity.softlogicdb.PolicyEntity;
 import lk.avengers.datamigrationadapter.repository.postgresql.reportdb.*;
+import lk.avengers.datamigrationadapter.repository.softlogicdb.PolicyRepository;
 import lk.avengers.datamigrationadapter.service.MigrationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -12,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.Period;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -28,6 +31,7 @@ public class MigrationServiceImpl implements MigrationService {
     private final AdvisorCodeMappingRepository advisorCodeMappingRepository;
     private final BranchCodeMappingRepository branchCodeMappingRepository;
     private final ContactDetailRepository contactDetailRepository;
+    private final PolicyRepository policyRepository;
 
     private final List<String> policyList = List.of("ASP/888636", "SCL/1044031", "ULT/348672", "ULE/402719", "ULE/121830", "ULE/274795",
             "ASP/1082429", "SCL/1098458", "ULP/349597", "ASP/1052257", "ULI/756262", "UPR/378844", "UPS/279539", "ULI/809491", "ULP/406538",
@@ -76,69 +80,151 @@ public class MigrationServiceImpl implements MigrationService {
 
             } else if (policyEntity instanceof ACPPolicyEntity acpPolicy) {
                 // Use acpPolicy with full type safety
-                processACPPolicy(acpPolicy);
+                processACPPolicy(acpPolicy, policy);
 
             } else if (policyEntity == null) {
                 log.error("Policy {} not found in any repository", policy);
             }
 
         });
-
+        if (!requestDTOList.isEmpty()) {
+            List<PolicyEntity> policyEntityList = requestDTOList.stream()
+                    .map(dto -> dto.mapData(PolicyEntity.class))
+                    .toList();
+            log.info("Existing table truncating in MSSQL DB...");
+            policyRepository.truncateTable();
+            log.info("Saving data into MSSQL DB...");
+            policyRepository.saveAll(policyEntityList);
+            log.info("Saved {} policies to the MSSQL DB", policyEntityList.size());
+        }
+        log.info("Migration completed for policy {}", uuid);
     }
 
-    private void processACPPolicy(ACPPolicyEntity acpPolicy) {
+    private void processACPPolicy(ACPPolicyEntity acpPolicy, String policyNo) {
+
+        if (!isEligiblePolicyStatus(acpPolicy.getStatus())) {
+            log.info("Skipping policy {} due to status {}", policyNo, acpPolicy.getStatus());
+            return;
+        }
+
+        PolicyRequestDTO policyRequestDTO = new PolicyRequestDTO();
+        // ===== Policy (PO) =====
+        policyRequestDTO.setPoPlanCode(getSoftLogicProductCodeMapping(policyNo));
+        policyRequestDTO.setPoPlanVersion(acpPolicy.getPlanNo());
+        policyRequestDTO.setPoTerm(acpPolicy.getTerm());
+        policyRequestDTO.setPoDateOfProposal(acpPolicy.getInception());
+        policyRequestDTO.setPoPaymentTerm(acpPolicy.getPremiumPaymentTerm());
+        policyRequestDTO.setPoBsa(acpPolicy.getBasicSumAssured());
+        policyRequestDTO.setPoSumAtRisk(acpPolicy.getDthSar());
+        policyRequestDTO.setPoBasicPremium(acpPolicy.getInsuredModalPremium());
+        policyRequestDTO.setPoPremiumType(getPremiumType(acpPolicy.getPremiumPaymentTerm()));
+        policyRequestDTO.setPoAdvCode(getAgentCodeMapping(acpPolicy.getAgentCode()));
+        policyRequestDTO.setPoBeginDate(acpPolicy.getInception());
+        policyRequestDTO.setPoPolicyYear(getPolicyYear(acpPolicy.getInception()));
+        policyRequestDTO.setPoDateUnderwritten(acpPolicy.getInception());
+        policyRequestDTO.setPoPremiumDueDate(acpPolicy.getNextPremium());
+        policyRequestDTO.setPoMode(getFrequencyString(Integer.parseInt(acpPolicy.getFrequency())));
+        policyRequestDTO.setPoPolicyStatusCode(getPolicyStatusCode(acpPolicy.getStatus(), acpPolicy.getLastPremiumDueDate()));
+        policyRequestDTO.setPoLastPremiumDueDate(acpPolicy.getLastPremiumDueDate());
+        policyRequestDTO.setPoExpirationDate(acpPolicy.getExpiry());
+        policyRequestDTO.setPoBranchCode(getBranchCodeMapping(Integer.parseInt(acpPolicy.getSalesBranchCode())));
+        // ===== Life Assured (LA) =====
+        ContactDetailEntity contact = getContactDetailEntity(policyNo);
+        if (contact != null) {
+            policyRequestDTO.setLaPolicyNo(policyNo);
+            policyRequestDTO.setLaTitle(contact.getTitle());
+            policyRequestDTO.setLaFirstName(contact.getFirstName());
+            policyRequestDTO.setLaLastName(contact.getLastName());
+            policyRequestDTO.setLaAddress(contact.getAddress());
+            policyRequestDTO.setLaNic(contact.getNicNumber());
+            policyRequestDTO.setLaSex(getSexChar(contact.getGender()));
+            policyRequestDTO.setLaDob(contact.getDateOfBirth());
+            policyRequestDTO.setLaPhone1(getTenDigitMobile(contact.getMobile()));
+            policyRequestDTO.setLaPhone2(getOtherTelephoneNumber(contact.getOtherTelephoneNumber()));
+            policyRequestDTO.setLaNationality(contact.getNationality().toUpperCase());
+            policyRequestDTO.setLaEmail(getValidatedEmail(contact.getEmailAddress()));
+            policyRequestDTO.setLaAgeAdmitted(getAdmittedAge(acpPolicy.getInception(), contact.getDateOfBirth()).toString());
+            policyRequestDTO.setLaAddressCity(contact.getCity());
+            policyRequestDTO.setLaOccupation(contact.getOccupation());
+            policyRequestDTO.setLaAnb(Integer.parseInt(policyRequestDTO.getLaAgeAdmitted()));
+        } else {
+            log.error("Contact details not found for policy {}", policyNo);
+        }
+
+        // ===== No Spouse (SP) =====
+
+        requestDTOList.add(policyRequestDTO);
     }
 
     private void processMainDataReport(MainDataReportEntity mainDataReport, String policyNo) {
+
+        if (!isEligiblePolicyStatus(mainDataReport.getStatus())) {
+            log.info("Skipping policy {} due to status {}", policyNo, mainDataReport.getStatus());
+            return;
+        }
+
         PolicyRequestDTO policyRequestDTO = new PolicyRequestDTO();
         // ===== Policy (PO) =====
         policyRequestDTO.setPoPlanCode(getSoftLogicProductCodeMapping(policyNo));
         policyRequestDTO.setPoPlanVersion(mainDataReport.getPlanNo());
         policyRequestDTO.setPoTerm(mainDataReport.getTerm());
         policyRequestDTO.setPoDateOfProposal(mainDataReport.getInception());
-        policyRequestDTO.setPoPaymentTerm(Integer.parseInt(mainDataReport.getPremiumPaymentTerm()));
+        policyRequestDTO.setPoPaymentTerm(mainDataReport.getPremiumPaymentTerm()); // dispute
         policyRequestDTO.setPoBsa(mainDataReport.getBasicSumAssured());
         policyRequestDTO.setPoSumAtRisk(mainDataReport.getDthSar());
         policyRequestDTO.setPoBasicPremium(mainDataReport.getModalPremium());
-        policyRequestDTO.setPoPremiumType("Regular");
+        policyRequestDTO.setPoPremiumType(getPremiumType(mainDataReport.getPremiumPaymentTerm())); // dispute
         policyRequestDTO.setPoAdvCode(getAgentCodeMapping(mainDataReport.getAgentCode()));
         policyRequestDTO.setPoBeginDate(mainDataReport.getInception());
         policyRequestDTO.setPoPolicyYear(getPolicyYear(mainDataReport.getInception()));
         policyRequestDTO.setPoDateUnderwritten(mainDataReport.getInception());
         policyRequestDTO.setPoPremiumDueDate(mainDataReport.getNextPremium());
         policyRequestDTO.setPoMode(getFrequencyString(mainDataReport.getFrequency()));
-        policyRequestDTO.setPoPolicyStatusCode(getPolicyStatusCode(mainDataReport.getStatus()));
+        policyRequestDTO.setPoPolicyStatusCode(getPolicyStatusCode(mainDataReport.getStatus(), mainDataReport.getLastPremiumDueDate()));
+        policyRequestDTO.setPoLastPremiumDueDate(mainDataReport.getLastPremiumDueDate());
         policyRequestDTO.setPoExpirationDate(mainDataReport.getExpiry());
         policyRequestDTO.setPoBranchCode(getBranchCodeMapping(mainDataReport.getSalesBranchCode()));
         // ===== Life Assured (LA) =====
         ContactDetailEntity contact = getContactDetailEntity(policyNo);
-        policyRequestDTO.setLaPolicyNo(policyNo);
-        policyRequestDTO.setLaTitle(contact.getTitle());
-        policyRequestDTO.setLaFirstName(contact.getFirstName());
-        policyRequestDTO.setLaLastName(contact.getLastName());
-        policyRequestDTO.setLaAddress(contact.getAddress());
-        policyRequestDTO.setLaNic(contact.getNicNumber());
-        policyRequestDTO.setLaSex(getSexChar(contact.getGender()));
-        policyRequestDTO.setLaDob(contact.getDateOfBirth());
-        policyRequestDTO.setLaPhone1(getTenDigitMobile(contact.getMobile()));
-        policyRequestDTO.setLaPhone2(getOtherTelephoneNumber(contact.getOtherTelephoneNumber()));
-        policyRequestDTO.setLaNationality(contact.getNationality().toUpperCase());
-        policyRequestDTO.setLaEmail(getValidatedEmail(contact.getEmailAddress()));
-        policyRequestDTO.setLaAgeAdmitted(getAdmittedAge(mainDataReport.getInception(),contact.getDateOfBirth()).toString()); //check
-        policyRequestDTO.setLaAddressCity(contact.getCity());
-        policyRequestDTO.setLaOccupation(contact.getOccupation());
-        policyRequestDTO.setLaAnb(Integer.parseInt(policyRequestDTO.getLaAgeAdmitted()));
+        if (contact != null) {
+            policyRequestDTO.setLaPolicyNo(policyNo);
+            policyRequestDTO.setLaTitle(contact.getTitle());
+            policyRequestDTO.setLaFirstName(contact.getFirstName());
+            policyRequestDTO.setLaLastName(contact.getLastName());
+            policyRequestDTO.setLaAddress(contact.getAddress());
+            policyRequestDTO.setLaNic(contact.getNicNumber());
+            policyRequestDTO.setLaSex(getSexChar(contact.getGender()));
+            policyRequestDTO.setLaDob(contact.getDateOfBirth());
+            policyRequestDTO.setLaPhone1(getTenDigitMobile(contact.getMobile()));
+            policyRequestDTO.setLaPhone2(getOtherTelephoneNumber(contact.getOtherTelephoneNumber()));
+            policyRequestDTO.setLaNationality(contact.getNationality().toUpperCase());
+            policyRequestDTO.setLaEmail(getValidatedEmail(contact.getEmailAddress()));
+            policyRequestDTO.setLaAgeAdmitted(getAdmittedAge(mainDataReport.getInception(), contact.getDateOfBirth()).toString()); //check
+            policyRequestDTO.setLaAddressCity(contact.getCity());
+            policyRequestDTO.setLaOccupation(contact.getOccupation());
+            policyRequestDTO.setLaAnb(Integer.parseInt(policyRequestDTO.getLaAgeAdmitted()));
+            policyRequestDTO.setLaPrefLanguage(getLanguageChar(contact.getLanguagePreference()));
+        } else {
+            log.error("Contact details not found for policy {}", policyNo);
+        }
         // ===== Spouse (SP) =====
-        policyRequestDTO.setSpTitle(mainDataReport.getSpouseChildTitle());
-        policyRequestDTO.setSpFirstName(mainDataReport.getSpouseChildFullName());
-        policyRequestDTO.setSpSex(getSexChar(mainDataReport.getSpouseChildGender()));
-        policyRequestDTO.setSpDob(mainDataReport.getSpouseChildDob());
-        policyRequestDTO.setSpAnb(getAdmittedAge(mainDataReport.getInception(),mainDataReport.getSpouseChildDob()));
-
+        String spouseName = mainDataReport.getSpouseChildFullName();
+        if (spouseName != null && !spouseName.trim().isEmpty()) {
+            policyRequestDTO.setSpTitle(mainDataReport.getSpouseChildTitle());
+            policyRequestDTO.setSpFirstName(mainDataReport.getSpouseChildFullName());
+            policyRequestDTO.setSpSex(getSexChar(mainDataReport.getSpouseChildGender()));
+            policyRequestDTO.setSpDob(mainDataReport.getSpouseChildDob());
+            policyRequestDTO.setSpAnb(getAdmittedAge(mainDataReport.getInception(), mainDataReport.getSpouseChildDob()));
+        }
         requestDTOList.add(policyRequestDTO);
     }
 
     private void processALHReport(MainDataALHReportEntity alhReport, String policyNo) {
+
+        if (!isEligiblePolicyStatus(alhReport.getStatus())) {
+            log.info("Skipping policy {} due to status {}", policyNo, alhReport.getStatus());
+            return;
+        }
 
         PolicyRequestDTO policyRequestDTO = new PolicyRequestDTO();
         // ===== Policy (PO) =====
@@ -146,7 +232,7 @@ public class MigrationServiceImpl implements MigrationService {
         policyRequestDTO.setPoPlanVersion(alhReport.getPlanNo());
         policyRequestDTO.setPoTerm(alhReport.getTerm());
         policyRequestDTO.setPoDateOfProposal(alhReport.getInception());
-        policyRequestDTO.setPoPaymentTerm(alhReport.getPremiumPaymentTerm());
+        policyRequestDTO.setPoPaymentTerm(Integer.toString(alhReport.getPremiumPaymentTerm()));
         policyRequestDTO.setPoBsa(alhReport.getBasicSumAssured());
         policyRequestDTO.setPoSumAtRisk(alhReport.getDthSar());
         policyRequestDTO.setPoBasicPremium(alhReport.getModalPremium());
@@ -157,35 +243,90 @@ public class MigrationServiceImpl implements MigrationService {
         policyRequestDTO.setPoDateUnderwritten(alhReport.getInception());
         policyRequestDTO.setPoPremiumDueDate(alhReport.getNextPremium());
         policyRequestDTO.setPoMode(getFrequencyString(alhReport.getFrequency()));
-        policyRequestDTO.setPoPolicyStatusCode(getPolicyStatusCode(alhReport.getStatus()));
+        policyRequestDTO.setPoPolicyStatusCode(getPolicyStatusCode(alhReport.getStatus(), alhReport.getLastPremiumDueDate()));
+        policyRequestDTO.setPoLastPremiumDueDate(alhReport.getLastPremiumDueDate());
         policyRequestDTO.setPoExpirationDate(alhReport.getExpiry());
         policyRequestDTO.setPoBranchCode(getBranchCodeMapping(alhReport.getSalesBranchCode()));
         // ===== Life Assured (LA) =====
         ContactDetailEntity contact = getContactDetailEntity(policyNo);
-        policyRequestDTO.setLaPolicyNo(policyNo);
-        policyRequestDTO.setLaTitle(contact.getTitle());
-        policyRequestDTO.setLaFirstName(contact.getFirstName());
-        policyRequestDTO.setLaLastName(contact.getLastName());
-        policyRequestDTO.setLaAddress(contact.getAddress());
-        policyRequestDTO.setLaNic(contact.getNicNumber());
-        policyRequestDTO.setLaSex(getSexChar(contact.getGender()));
-        policyRequestDTO.setLaDob(contact.getDateOfBirth());
-        policyRequestDTO.setLaPhone1(getTenDigitMobile(contact.getMobile()));
-        policyRequestDTO.setLaPhone2(getOtherTelephoneNumber(contact.getOtherTelephoneNumber()));
-        policyRequestDTO.setLaNationality(contact.getNationality().toUpperCase());
-        policyRequestDTO.setLaEmail(getValidatedEmail(contact.getEmailAddress()));
-        policyRequestDTO.setLaAgeAdmitted(getAdmittedAge(alhReport.getInception(),contact.getDateOfBirth()).toString()); //check
-        policyRequestDTO.setLaAddressCity(contact.getCity());
-        policyRequestDTO.setLaOccupation(contact.getOccupation());
-        policyRequestDTO.setLaAnb(Integer.parseInt(policyRequestDTO.getLaAgeAdmitted()));
+        if (contact != null) {
+            policyRequestDTO.setLaPolicyNo(policyNo);
+            policyRequestDTO.setLaTitle(contact.getTitle());
+            policyRequestDTO.setLaFirstName(contact.getFirstName());
+            policyRequestDTO.setLaLastName(contact.getLastName());
+            policyRequestDTO.setLaAddress(contact.getAddress());
+            policyRequestDTO.setLaNic(contact.getNicNumber());
+            policyRequestDTO.setLaSex(getSexChar(contact.getGender()));
+            policyRequestDTO.setLaDob(contact.getDateOfBirth());
+            policyRequestDTO.setLaPhone1(getTenDigitMobile(contact.getMobile()));
+            policyRequestDTO.setLaPhone2(getOtherTelephoneNumber(contact.getOtherTelephoneNumber()));
+            policyRequestDTO.setLaNationality(contact.getNationality().toUpperCase());
+            policyRequestDTO.setLaEmail(getValidatedEmail(contact.getEmailAddress()));
+            policyRequestDTO.setLaAgeAdmitted(getAdmittedAge(alhReport.getInception(), contact.getDateOfBirth()).toString()); //check
+            policyRequestDTO.setLaAddressCity(contact.getCity());
+            policyRequestDTO.setLaOccupation(contact.getOccupation());
+            policyRequestDTO.setLaAnb(Integer.parseInt(policyRequestDTO.getLaAgeAdmitted()));
+            policyRequestDTO.setLaPrefLanguage(getLanguageChar(contact.getLanguagePreference()));
+        } else {
+            log.error("Contact details not found for policy {}", policyNo);
+        }
         // ===== Spouse (SP) =====
-        policyRequestDTO.setSpTitle(alhReport.getSpouseTitle());
-        policyRequestDTO.setSpFirstName(alhReport.getSpouseFullName());
-        policyRequestDTO.setSpSex(getSexChar(alhReport.getSpouseGender()));
-        policyRequestDTO.setSpDob(alhReport.getSpouseDob());
-        policyRequestDTO.setSpAnb(getAdmittedAge(alhReport.getInception(),alhReport.getSpouseDob()));
+        String spouseName = alhReport.getSpouseFullName();
+        if (spouseName != null && !spouseName.trim().isEmpty()) {
+            policyRequestDTO.setSpTitle(alhReport.getSpouseTitle());
+            policyRequestDTO.setSpFirstName(alhReport.getSpouseFullName());
+            policyRequestDTO.setSpSex(getSexChar(alhReport.getSpouseGender()));
+            policyRequestDTO.setSpDob(alhReport.getSpouseDob());
+            policyRequestDTO.setSpAnb(getAdmittedAge(alhReport.getInception(), alhReport.getSpouseDob()));
+
+        }
 
         requestDTOList.add(policyRequestDTO);
+    }
+
+    private boolean isEligiblePolicyStatus(String status) {
+
+        if (status == null) {
+            return false;
+        }
+
+        return "In Force".equalsIgnoreCase(status)
+                || "Lapsed".equalsIgnoreCase(status);
+    }
+
+
+    private String getLanguageChar(String languagePreference) {
+        if (languagePreference == null || languagePreference.isBlank()) {
+            return "N";
+        }
+        return switch (languagePreference.trim().toLowerCase()) {
+            case "english" -> "E";
+            case "sinhala" -> "S";
+            case "tamil" -> "T";
+            default -> "N";
+        };
+    }
+
+
+    private String getPremiumType(String premiumPaymentTerm) {
+        if (premiumPaymentTerm == null || premiumPaymentTerm.isBlank()) {
+            return "None";
+        }
+
+        // SP → Single
+        if (premiumPaymentTerm.equalsIgnoreCase("SP")) {
+            return "Single";
+        }
+
+        // Any numeric value → Regular (10, 10.0, 15.0)
+        try {
+            Double.parseDouble(premiumPaymentTerm);
+            return "Regular";
+        } catch (NumberFormatException e) {
+            // Not a number
+        }
+
+        return "None";
     }
 
     private String getTenDigitMobile(String mobile) {
@@ -228,7 +369,6 @@ public class MigrationServiceImpl implements MigrationService {
 
         return Period.between(dateOfBirth, inception).getYears();
     }
-
 
 
     private String getValidatedEmail(String emailAddress) {
@@ -284,17 +424,24 @@ public class MigrationServiceImpl implements MigrationService {
                 .orElse(null);
     }
 
-    private String getPolicyStatusCode(String status) {
-        if (status == null || status.trim().isEmpty()) {
-            return null;
+    private String getPolicyStatusCode(String status, LocalDate lastPremiumDueDate) {
+        if (status == null || lastPremiumDueDate == null) {
+            return "NONE";
         }
 
-        return switch (status.trim().toUpperCase()) {
-            case "In Force" -> "INFC";
-            case "Cancelled" -> "CNLD";
-            case "Surrended" -> "SRND";
-            default -> null;
-        };
+        switch (status.trim().toUpperCase()) {
+            case "IN FORCE":
+                return "INFC";
+
+            case "LAPSED":
+                LocalDate today = LocalDate.now();
+                return lastPremiumDueDate.isBefore(today.minusMonths(7))
+                        ? "ALAP"
+                        : "TLAP";
+
+            default:
+                return "NONE";
+        }
     }
 
     private String getFrequencyString(Integer frequency) {

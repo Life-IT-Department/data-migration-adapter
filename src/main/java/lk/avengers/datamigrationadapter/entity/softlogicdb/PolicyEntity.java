@@ -58,16 +58,16 @@ public class PolicyEntity {
     @Column(name = "LA_Nationality", length = 20)
     private String laNationality;
 
-    @Column(name = "LA_email", length = 30)
+    @Column(name = "LA_email", length = 100) // changed to 100 from 30
     private String laEmail;
 
-    @Column(name = "LA_AgeAdmited", length = 1)
+    @Column(name = "LA_AgeAdmited", length = 4) // changed to 4 from 1
     private String laAgeAdmitted;
 
-    @Column(name = "LA_AddressCity", length = 20)
+    @Column(name = "LA_AddressCity", length = 100) // changed to 100 from 20
     private String laAddressCity;
 
-    @Column(name = "LA_Occupation", length = 30)
+    @Column(name = "LA_Occupation", length = 100) // changed to 100 from 30
     private String laOccupation;
 
     @Column(name = "LA_monthlyIncome", precision = 18, scale = 2)
@@ -102,7 +102,7 @@ public class PolicyEntity {
     private Integer poTerm;
 
     @Column(name = "PO_PaymentTerm")
-    private Integer poPaymentTerm;
+    private String poPaymentTerm; // changed to string from int due to "SP"
 
     @Column(name = "PO_DateofProposal")
     private LocalDate poDateOfProposal;
@@ -139,6 +139,9 @@ public class PolicyEntity {
 
     @Column(name = "PO_PolicyStatusCode", length = 4)
     private String poPolicyStatusCode;
+
+    @Column(name = "PO_LastPremiumDueDate")
+    private LocalDate poLastPremiumDueDate; // added additionally to the given.
 
     @Column(name = "PO_ExpirationDate")
     private LocalDate poExpirationDate;

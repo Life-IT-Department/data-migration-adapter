@@ -1,6 +1,7 @@
 package lk.avengers.datamigrationadapter.dto.request;
 
 import lombok.*;
+import org.springframework.beans.BeanUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -16,7 +17,7 @@ public class PolicyRequestDTO {
     private String poPlanCode;
     private String poPlanVersion;
     private Integer poTerm;
-    private Integer poPaymentTerm;
+    private String poPaymentTerm;
     private LocalDate poDateOfProposal;
     private BigDecimal poBsa;
     private BigDecimal poSumAtRisk;
@@ -29,6 +30,7 @@ public class PolicyRequestDTO {
     private LocalDate poPremiumDueDate;
     private String poMode;
     private String poPolicyStatusCode;
+    private LocalDate poLastPremiumDueDate;
     private LocalDate poExpirationDate;
     private String poBranchCode;
     private BigDecimal poPremium;
@@ -73,4 +75,10 @@ public class PolicyRequestDTO {
     private Integer spHeight;
     private Integer spWeight;
     private String spOccupation;
+
+    public <E> E mapData(Class<E> receiverClass) {
+        E receiver = BeanUtils.instantiateClass(receiverClass);
+        BeanUtils.copyProperties(this, receiver);
+        return receiver;
+    }
 }
