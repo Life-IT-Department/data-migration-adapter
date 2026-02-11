@@ -1,10 +1,7 @@
 package lk.avengers.datamigrationadapter.entity.softlogicdb;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -15,6 +12,7 @@ import java.time.LocalDate;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class ClaimEntity {
 
     @Id
@@ -24,7 +22,7 @@ public class ClaimEntity {
     @Column(name = "policy_no", length = 50, nullable = false)
     private String policyNo;
 
-    @Column(name = "claim_no", length = 50, nullable = false)
+    @Column(name = "claim_no")
     private String claimNo;
 
     @Column(name = "claim_type", length = 50)
@@ -37,7 +35,7 @@ public class ClaimEntity {
     private LocalDate dateOfIntimation;
 
     @Column(name = "patient_admitted")
-    private Boolean patientAdmitted;
+    private String patientAdmitted;
 
     @Column(name = "relationship", length = 50)
     private String relationship;
@@ -78,7 +76,7 @@ public class ClaimEntity {
     @Column(name = "pay_mode", length = 50)
     private String payMode;
 
-    @Column(name = "comments", length = 500)
+    @Column(name = "comments", columnDefinition = "TEXT")
     private String comments;
 
     @Column(name = "pay_ins", length = 100)
@@ -101,4 +99,13 @@ public class ClaimEntity {
 
     @Column(name = "cheque_no", length = 50)
     private String chequeNo;
+
+    @Column(name = "total_previous_claims")
+    private Integer totalPreviousClaims;
+
+    @Column(name = "total_amount_previous_claims")
+    private BigDecimal totalAmountPreviousClaims;
+
+    @Column(name = "rider", length = 200)
+    private String rider;
 }
