@@ -29,7 +29,9 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
     private final static String SPOUSE_TYPE = "Spouse";
     private final static String CHILD_TYPE = "Child";
 
-    private final static List<String> policyList = List.of("ASP/888636", "SCL/1044031", "ULT/348672", "ULE/402719", "ULE/121830", "ULE/274795",
+
+
+    private final List<String> policyList = List.of("ASP/888636", "SCL/1044031", "ULT/348672", "ULE/402719", "ULE/121830", "ULE/274795",
             "ASP/1082429", "SCL/1098458", "ULP/349597", "ASP/1052257", "ULI/756262", "UPR/378844", "UPS/279539", "ULI/809491", "ULP/406538",
             "ULE/400218", "ULE/398701", "ULE/197178", "ULV/714360", "ULV/700310", "UPS/428565", "ASP/1104355", "SCL/1104348", "ULP/198457",
             "ULI/828517", "SCL/900886", "SCL/1013747", "ULI/441816", "ULC/863654", "ULA/242859", "SCL/953141", "SCL/953703", "SCL/960278",
@@ -40,7 +42,11 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
             "ULE/358945", "SCL/963207", "SCL/964239", "SCL/924845", "SCL/945246", "SCL/897066", "SCL/908210", "SCL/919498", "SCL/926923",
             "ULT/326371", "ULT/323410", "ULT/323436", "ULT/326355", "ULT/322214", "ULT/325084", "ULT/322370", "ULT/326835", "ULT/326298",
             "ULT/327387", "ULT/323527", "ULT/325217", "ULT/325464", "ULT/325498", "ULT/326959", "ULT/325704", "ULT/326124", "SCL/838805",
-            "SCL/834408", "SCL/873695", "SCL/846311", "SCL/893719");
+            "SCL/834408", "SCL/873695", "SCL/846311", "SCL/893719", "SCL/1002906", "SCL/1082510", "SCL/859140", "SCL/905034", "SCL/974022",
+            "SCL/974303", "SCL/974386", "SCL/992735", "SCL/992792", "SCL/992891", "SCL/994475", "SCL/1005792", "SCL/1005990", "SCL/1006303",
+            "SCL/1048123", "SCL/1055102", "SCL/1055169", "SCL/1070424", "SCL/1071018", "SCL/1089275", "SCL/1089309", "SCL/1081926", "SCL/1005768",
+            "SCL/935254", "SCL/935395", "SCL/935486", "SCL/935510","ULF/527879", "UPR/215038", "ULP/321661", "SCL/1038926", "UPR/399550","SCL/900753", "ULV/451021", "ULV/571323", "UPR/126334", "SCL/988394");
+
 
     @Transactional(transactionManager = "softlogicPlatformTransactionManager")
     @Override
@@ -49,6 +55,7 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
         CommonResponseDTO commonResponse = new CommonResponseDTO();
         policyList.forEach(policyNo -> {
             String[] policyNoSplit = policyNo.trim().split("/");
+
             mainDataReportRepository.findFirstByProductCodeAndPolicyNo(policyNoSplit[0], Integer.parseInt(policyNoSplit[1]))
                     .ifPresentOrElse(mainDataReportEntity -> {
                         log.info("Main Data Report data found for Policy No: {}", policyNo);
@@ -69,6 +76,7 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
                     log.info("Main ALH Data Report data found for Policy No: {}", policyNo);
                     PolicyBeneficiariesEntity spouseDetailsFromALHMainData = getSpouseDetailsFromALHMainData(mainDataALHReportEntity, policyNo);
                     List<PolicyBeneficiariesEntity> childrenFromALHMainData = getChildrenFromALHMainData(mainDataALHReportEntity, policyNo);
+
                     if (spouseDetailsFromALHMainData != null) {
                         childrenFromALHMainData.add(spouseDetailsFromALHMainData);
                     }
@@ -111,7 +119,7 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
             policyBeneficiariesEntity.setBeType(SPOUSE_TYPE);
             policyBeneficiariesEntity.setBeInclusionDate(null);
             policyBeneficiariesEntity.setBeCoverage(null);
-            java.math.BigDecimal spouseHbSa = mainDataReportEntity.getSpouseChildHbSa();
+            java.math.BigDecimal spouseHbSa = mainDataReportEntity.getSpouseChildHb_Sa();
             policyBeneficiariesEntity.setBeIsHb(spouseHbSa != null && spouseHbSa.compareTo(java.math.BigDecimal.ZERO) != 0);
             return policyBeneficiariesEntity;
         }
@@ -127,31 +135,31 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
                 .name(mainDataReportEntity.getChild1Name())
                 .dob(mainDataReportEntity.getChild1Dob())
                 .age(mainDataReportEntity.getChild1Age())
-                .childHbc(mainDataReportEntity.getChild2Hbc())
+                .childHbc(String.valueOf(mainDataReportEntity.getChild2Hbc_()))
                 .build());
         childDtoList.add(ChildDto.builder()
                 .name(mainDataReportEntity.getChild2Name())
                 .dob(mainDataReportEntity.getChild2Dob())
                 .age(mainDataReportEntity.getChild2Age())
-                .childHbc(mainDataReportEntity.getChild2Hbc())
+                .childHbc(String.valueOf(mainDataReportEntity.getChild2Hbc_()))
                 .build());
         childDtoList.add(ChildDto.builder()
                 .name(mainDataReportEntity.getChild3Name())
                 .dob(mainDataReportEntity.getChild3Dob())
                 .age(mainDataReportEntity.getChild3Age())
-                .childHbc(String.valueOf(mainDataReportEntity.getChild3Hbc()))
+                .childHbc(String.valueOf(mainDataReportEntity.getChild3Hbc_()))
                 .build());
         childDtoList.add(ChildDto.builder()
                 .name(mainDataReportEntity.getChild4Name())
                 .dob(mainDataReportEntity.getChild4Dob())
                 .age(mainDataReportEntity.getChild4Age())
-                .childHbc(String.valueOf(mainDataReportEntity.getChild4Hbc()))
+                .childHbc(String.valueOf(mainDataReportEntity.getChild4Hbc_()))
                 .build());
         childDtoList.add(ChildDto.builder()
                 .name(mainDataReportEntity.getChild5Name())
                 .dob(mainDataReportEntity.getChild5Dob())
                 .age(mainDataReportEntity.getChild5Age())
-                .childHbc(String.valueOf(mainDataReportEntity.getChild5Hbc()))
+                .childHbc(String.valueOf(mainDataReportEntity.getChild5Hbc_()))
                 .build());
 
         setDataToPolicyBeneficiariesList(childDtoList, policyNumber, beneficiariesEntityList);
@@ -167,31 +175,31 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
                 .name(mainDataALHReportEntity.getChild1Name())
                 .dob(mainDataALHReportEntity.getChild1Dob())
                 .age(mainDataALHReportEntity.getChild1Age())
-                .childHbc(String.valueOf(mainDataALHReportEntity.getChild1Hbc()))
+                .childHbc(String.valueOf(mainDataALHReportEntity.getChild1Hbc_()))
                 .build());
         childDtoList.add(ChildDto.builder()
                 .name(mainDataALHReportEntity.getChild2Name())
                 .dob(mainDataALHReportEntity.getChild2Dob())
                 .age(mainDataALHReportEntity.getChild2Age())
-                .childHbc(mainDataALHReportEntity.getChild2Hbc())
+                .childHbc(String.valueOf(mainDataALHReportEntity.getChild2Hbc_()))
                 .build());
         childDtoList.add(ChildDto.builder()
                 .name(mainDataALHReportEntity.getChild3Name())
                 .dob(mainDataALHReportEntity.getChild3Dob())
                 .age(mainDataALHReportEntity.getChild3Age())
-                .childHbc(String.valueOf(mainDataALHReportEntity.getChild3Hbc().intValue()))
+                .childHbc(String.valueOf(mainDataALHReportEntity.getChild3Hbc_().intValue()))
                 .build());
         childDtoList.add(ChildDto.builder()
                 .name(mainDataALHReportEntity.getChild4Name())
                 .dob(mainDataALHReportEntity.getChild4Dob())
                 .age(mainDataALHReportEntity.getChild4Age())
-                .childHbc(String.valueOf(mainDataALHReportEntity.getChild4Hbc().intValue()))
+                .childHbc(String.valueOf(mainDataALHReportEntity.getChild4Hbc_().intValue()))
                 .build());
         childDtoList.add(ChildDto.builder()
                 .name(mainDataALHReportEntity.getChild5Name())
                 .dob(mainDataALHReportEntity.getChild5Dob())
                 .age(mainDataALHReportEntity.getChild5Age())
-                .childHbc(String.valueOf(mainDataALHReportEntity.getChild5Hbc().intValue()))
+                .childHbc(String.valueOf(mainDataALHReportEntity.getChild5Hbc_().intValue()))
                 .build());
         childDtoList.add(ChildDto.builder()
                 .name(mainDataALHReportEntity.getChild6Name())

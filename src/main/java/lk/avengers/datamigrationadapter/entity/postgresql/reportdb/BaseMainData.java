@@ -76,29 +76,29 @@ public abstract class BaseMainData {
     private String sarChoice;
     @Column(name = "number_of_riders_taken")
     private Integer numberOfRidersTaken;
-    //SUB
+    //DTH
     @Column(name = "sub_dth")
-    private Integer subDth;
+    private Integer subDth_;
     @Column(name = "sub_rate_mil_dth")
-    private BigDecimal subRateMilDth;
-    @Column(name = "dth_occupational_loading_percent")
-    private Double dthOccupationalLoadingPercent;
+    private BigDecimal subRateMilDth_;
+   // @Column(name = "dth_occupational_loading_percent")
+    //private Double dth_OccupationalLoadingPercent;
     //
     private LocalDate date;
     // DTH
     @Column(name = "dth_sar")
-    private BigDecimal dthSar;
+    private BigDecimal dth_Sar;
     @Column(name = "dth_occupational_loading_percentage")
-    private Double dthOccLoadingPercentage;
+    private Double dth_OccLoadingPercentage;
     // COMMON HB (Hospital Benefit?)
     @Column(name = "hb_sa")
-    private BigDecimal hbSa;
+    private BigDecimal hb_Sa;
     @Column(name = "sub_hb")
-    private BigDecimal subHb;
+    private BigDecimal subHb_;
     @Column(name = "sub_rate_mil_hb")
-    private BigDecimal subRateMilHb;
+    private BigDecimal subRateMilHb_;
     @Column(name = "hb_occupational_loading_percentage")
-    private Double hbOccupationalLoadingPercentage;
+    private Double hb_OccupationalLoadingPercentage;
     // --- COMMON Financial Summary ---
     @Column(name = "basic_sum_assured")
     private BigDecimal basicSumAssured;
@@ -118,7 +118,7 @@ public abstract class BaseMainData {
     @Column(name = "child1_age")
     private Integer child1Age;
     @Column(name = "child1_hbc")
-    private Integer child1Hbc;
+    private Integer child1Hbc_;
     @Column(name = "child2_name")
     private String child2Name;
     @Column(name = "child2_dob")
@@ -126,7 +126,7 @@ public abstract class BaseMainData {
     @Column(name = "child2_age")
     private Integer child2Age;
     @Column(name = "child2_hbc")
-    private String child2Hbc;
+    private Integer child2Hbc_;
     @Column(name = "child3_name")
     private String child3Name;
     @Column(name = "child3_dob")
@@ -134,7 +134,7 @@ public abstract class BaseMainData {
     @Column(name = "child3_age")
     private Integer child3Age;
     @Column(name = "child3_hbc")
-    private Integer child3Hbc;
+    private Integer child3Hbc_;
     @Column(name = "child4_name")
     private String child4Name;
     @Column(name = "child4_dob")
@@ -142,7 +142,7 @@ public abstract class BaseMainData {
     @Column(name = "child4_age")
     private Integer child4Age;
     @Column(name = "child4_hbc")
-    private Integer child4Hbc;
+    private Integer child4Hbc_;
     @Column(name = "child5_name")
     private String child5Name;
     @Column(name = "child5_dob")
@@ -150,7 +150,7 @@ public abstract class BaseMainData {
     @Column(name = "child5_age")
     private Integer child5Age;
     @Column(name = "child5_hbc")
-    private Integer child5Hbc;
+    private Integer child5Hbc_;
     //
     @Column(name = "operation_date")
     private LocalDate operationDate;

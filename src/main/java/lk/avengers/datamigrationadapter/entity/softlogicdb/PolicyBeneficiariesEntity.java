@@ -14,7 +14,7 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PolicyBeneficiariesEntity {
-
+//TODO check column names and types
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

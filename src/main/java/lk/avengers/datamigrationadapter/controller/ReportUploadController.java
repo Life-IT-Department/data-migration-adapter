@@ -24,6 +24,7 @@ public class ReportUploadController {
     private final ContactDetailReportService contactDetailReportService;
     private final PosSignatureReportService posSignatureReportService;
     private final PolicyBeneficiariesMappingService policyBeneficiariesMappingService;
+    private final PolicyBenefitMappingService policyBenefitMappingService;
 
     @PostMapping("/cash-flow-report")
     public ResponseEntity<CommonResponseDTO> uploadCashFlow(@RequestParam int year) {
@@ -67,4 +68,12 @@ public class ReportUploadController {
         log.info("Test API METHOD ACCESSED.");
         return policyBeneficiariesMappingService.mapBeneficiaries();
     }
+
+    @PostMapping("/test2")
+    public CommonResponseDTO test2() {
+        log.info("Test2 API METHOD ACCESSED.");
+        return policyBenefitMappingService.processBenefitCodeMapping();
+    }
+
+
 }

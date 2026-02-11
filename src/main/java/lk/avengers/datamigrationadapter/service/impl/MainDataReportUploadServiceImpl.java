@@ -24,7 +24,6 @@ import org.springframework.stereotype.Service;
 import java.io.InputStream;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
@@ -36,7 +35,6 @@ public class MainDataReportUploadServiceImpl implements MainDataReportUploadServ
 
     private static final int BATCH_SIZE = 1000;
     private static final int HEADER_ROW_1 = 0;
-    private static final int HEADER_ROW_2 = 1;
 
     private final BatchProcessService genisysBatchService;
     private final ResourceLoader resourceLoader;
@@ -268,7 +266,6 @@ public class MainDataReportUploadServiceImpl implements MainDataReportUploadServ
     // -------------------------------------------------------------------------
 
     private void mapExcelRowsToMainDataReportEntity(Row row, List<MainDataReportEntity> list) {
-        HashMap<Integer, String> dateMap = new HashMap<>();
         int col = 0;
         MainDataReportEntity entity = MainDataReportEntity.builder()
                 // id - auto generated, skip
@@ -311,102 +308,97 @@ public class MainDataReportUploadServiceImpl implements MainDataReportUploadServ
                 .aae(commonFunction.getIntegerValue(row.getCell(col++)))
                 .sarChoice(commonFunction.getStringValue(row.getCell(col++)))
                 .numberOfRidersTaken(commonFunction.getIntegerValue(row.getCell(col++)))
-                .dthSar(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .subDth(commonFunction.getIntegerValue(row.getCell(col++)))
-                .subRateMilDth(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .dthOccupationalLoadingPercent(commonFunction.getDoubleValue(row.getCell(col++)))
-                .accdSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .subAccd(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .subRateMilAccd(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .accdOccupationalLoadingPercent(commonFunction.getDoubleValue(row.getCell(col++)))
-                .accpSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .subAccp(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .subRateMilAccp(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .accpOccupationalLoadingPercent(commonFunction.getDoubleValue(row.getCell(col++)))
-                .acctSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .subAcct(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .subRateMilAcct(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .acctOccupationalLoadingPercent(commonFunction.getDoubleValue(row.getCell(col++)))
+                .dth_Sar(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subDth_(commonFunction.getIntegerValue(row.getCell(col++)))
+                .subRateMilDth_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .dth_OccLoadingPercentage(commonFunction.getDoubleValue(row.getCell(col++)))
+                .accd_Sa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subAccd_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subRateMilAccd_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .accd_OccupationalLoadingPercent(commonFunction.getDoubleValue(row.getCell(col++)))
+                .accp_Sa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subAccp_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subRateMilAccp_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .accp_OccupationalLoadingPercent(commonFunction.getDoubleValue(row.getCell(col++)))
+                .acct_Sa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subAcct_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subRateMilAcct_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .acct_OccupationalLoadingPercent(commonFunction.getDoubleValue(row.getCell(col++)))
                 // CILL
-                .cillSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .subCill(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .subRateMilCill(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .cillOccupationalLoadingPercentage(commonFunction.getDoubleValue(row.getCell(col++)))
+                .cill_Sa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subCill_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subRateMilCill_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .cill_OccupationalLoadingPercentage(commonFunction.getDoubleValue(row.getCell(col++)))
                 // CILX
-                .cilxSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .subCilx(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .subRateMilCilx(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .cilxOccupationalLoadingPercentage(commonFunction.getDoubleValue(row.getCell(col++)))
+                .cilx_Sa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subCilx_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subRateMilCilx_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .cilx_OccupationalLoadingPercentage(commonFunction.getDoubleValue(row.getCell(col++)))
                 // FIB
-                .fibSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .subFib(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .subRateMilFib(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .fibOccupationalLoadingPercentage(commonFunction.getDoubleValue(row.getCell(col++)))
+                .fib_Sa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subFib_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subRateMilFib_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .fib_OccupationalLoadingPercentage(commonFunction.getDoubleValue(row.getCell(col++)))
                 // FIBT
-                .fibtSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .subFibt(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .subRateMilFibt(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .fibtOccupationalLoadingPercentage(commonFunction.getDoubleValue(row.getCell(col++)))
+                .fibt_Sa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subFibt_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subRateMilFibt_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .fibt_OccupationalLoadingPercentage(commonFunction.getDoubleValue(row.getCell(col++)))
                 // FSEB
-                .fsebSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .subFseb(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .subRateMilFseb(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .fsebOccupationalLoadingPercentage(commonFunction.getDoubleValue(row.getCell(col++)))
-                // HB
-                .hbSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .subHb(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .subRateMilHb(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .hbOccupationalLoadingPercentage(commonFunction.getDoubleValue(row.getCell(col++)))
+                .fseb_Sa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subFseb_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subRateMilFseb_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .fseb_OccupationalLoadingPercentage(commonFunction.getDoubleValue(row.getCell(col++)))
                 // LEB
-                .lebSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .subLeb(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .subRateMilLeb(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .lebOccupationalLoadingPercentage(commonFunction.getDoubleValue(row.getCell(col++)))
+                .leb_Sa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subLeb_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subRateMilLeb_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .leb_OccupationalLoadingPercentage(commonFunction.getDoubleValue(row.getCell(col++)))
                 // PTD
-                .ptdSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .subPtd(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .subRateMilPtd(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .ptdOccupationalLoadingPercentage(commonFunction.getDoubleValue(row.getCell(col++)))
+                .ptd_Sa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subPtd_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subRateMilPtd_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .ptd_OccupationalLoadingPercentage(commonFunction.getDoubleValue(row.getCell(col++)))
                 // TILL
-                .tillSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .subTill(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .subRateMilTill(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .tillOccupationalLoadingPercentage(commonFunction.getDoubleValue(row.getCell(col++)))
+                .till_Sa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subTill_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subRateMilTill_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .till_OccupationalLoadingPercentage(commonFunction.getDoubleValue(row.getCell(col++)))
                 // TR
-                .trSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .subTr(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .subRateMilTr(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .trOccupationalLoadingPercentage(commonFunction.getDoubleValue(row.getCell(col++)))
+                .tr_Sa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subTr_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subRateMilTr_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .tr_OccupationalLoadingPercentage(commonFunction.getDoubleValue(row.getCell(col++)))
                 // WOPA
-                .wopaSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .subWopa(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .subRateMilWopa(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .wopaOccupationalLoadingPercentage(commonFunction.getDoubleValue(row.getCell(col++)))
+                .wopa_Sa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subWopa_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subRateMilWopa_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .wopa_OccupationalLoadingPercentage(commonFunction.getDoubleValue(row.getCell(col++)))
                 // WOPC
-                .wopcSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .subWopc(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .subRateMilWopc(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .wopcOccupationalLoadingPercentage(commonFunction.getDoubleValue(row.getCell(col++)))
+                .wopc_Sa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subWopc_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subRateMilWopc_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .wopc_OccupationalLoadingPercentage(commonFunction.getDoubleValue(row.getCell(col++)))
                 // WOPD
-                .wopdSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .subWopd(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .subRateMilWopd(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .wopdOccupationalLoadingPercentage(commonFunction.getDoubleValue(row.getCell(col++)))
+                .wopd_Sa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subWopd_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subRateMilWopd_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .wopd_OccupationalLoadingPercentage(commonFunction.getDoubleValue(row.getCell(col++)))
                 // FSEBA
-                .fsebaSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .subFseba(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .subRateMilFseba(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .fsebaOccupationalLoadingPercentage(commonFunction.getDoubleValue(row.getCell(col++)))
+                .fseba_Sa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subFseba_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subRateMilFseba_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .fseba_OccupationalLoadingPercentage(commonFunction.getDoubleValue(row.getCell(col++)))
                 // HBA
-                .hbaSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .subHba(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .subRateMilHba(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .hbaOccupationalLoadingPercentage(commonFunction.getDoubleValue(row.getCell(col++)))
+                .hba_Sa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subHba_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subRateMilHba_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .hba_OccupationalLoadingPercentage(commonFunction.getDoubleValue(row.getCell(col++)))
                 // HBAC
-                .hbacSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .subHbac(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .subRateMilHbac(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .hbacOccupationalLoadingPercentage(commonFunction.getDoubleValue(row.getCell(col++)))
+                .hbac_Sa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subHbac_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subRateMilHbac_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .hbac_OccupationalLoadingPercentage(commonFunction.getDoubleValue(row.getCell(col++)))
                 // Spouse/Child
                 .spouseChildPin(commonFunction.getIntegerValue(row.getCell(col++)))
                 .spouseChildTitle(commonFunction.getStringValue(row.getCell(col++)))
@@ -414,80 +406,80 @@ public class MainDataReportUploadServiceImpl implements MainDataReportUploadServ
                 .spouseChildGender(commonFunction.getStringValue(row.getCell(col++)))
                 .spouseChildDob(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
                 .spouseChildAge(commonFunction.getIntegerValue(row.getCell(col++)))
-                .spouseDeathSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .spouseSubDeath(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .spouseSubRateMilDeath(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .spouseDeathOccupationalLoadingPercent(commonFunction.getDoubleValue(row.getCell(col++)))
-                .spouseChildAccdSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .spouseChildSubAccd(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .spouseChildSubRateMilAccd(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .spouseChildAccdOccupationalLoadingPercent(commonFunction.getDoubleValue(row.getCell(col++)))
-                .spouseChildAccpSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .spouseChildSubAccp(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .spouseChildSubRateMilAccp(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .spouseChildAccpOccupationalLoadingPercent(commonFunction.getDoubleValue(row.getCell(col++)))
-                .spouseChildAcctSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .spouseChildSubAcct(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .spouseChildSubRateMilAcct(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .spouseChildAcctOccupationalLoadingPercent(commonFunction.getDoubleValue(row.getCell(col++)))
-                .spouseChildCillSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .spouseChildSubCill(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .spouseChildSubRateMilCill(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .spouseChildCillOccupationalLoadingPercent(commonFunction.getDoubleValue(row.getCell(col++)))
-                .spouseChildCilxSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .spouseChildSubCilx(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .spouseChildSubRateMilCilx(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .spouseChildCilxOccupationalLoadingPercent(commonFunction.getDoubleValue(row.getCell(col++)))
-                .spouseChildLebSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .spouseChildSubLeb(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .spouseChildSubRateMilLeb(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .spouseChildLebOccupationalLoadingPercent(commonFunction.getDoubleValue(row.getCell(col++)))
-                .spouseChildPtdSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .spouseChildSubPtd(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .spouseChildSubRateMilPtd(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .spouseChildPtdOccupationalLoadingPercent(commonFunction.getDoubleValue(row.getCell(col++)))
-                .spouseChildTillSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .spouseChildSubTill(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .spouseChildSubRateMilTill(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .spouseChildTillOccupationalLoadingPercent(commonFunction.getDoubleValue(row.getCell(col++)))
-                .spouseChildHbSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .spouseChildSubHb(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .spouseChildSubRateMilHb(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .spouseChildHbOccupationalLoadingPercent(commonFunction.getDoubleValue(row.getCell(col++)))
-                .spouseChildPpdSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .spouseChildSubPpd(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .spouseChildSubRateMilPpd(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .spouseChildPpdOccupationalLoadingPercent(commonFunction.getDoubleValue(row.getCell(col++)))
-                .spouseHbaSa(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .spouseSubHba(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .spouseSubRateMilHba(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .spouseHbaOccupationalLoadingPercent(commonFunction.getDoubleValue(row.getCell(col++)))
+                .spouseDeath_Sa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseSubDeath_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseSubRateMilDeath_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseDeath_OccupationalLoadingPercent(commonFunction.getDoubleValue(row.getCell(col++)))
+                .spouseChildAccd_Sa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildSubAccd_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildSubRateMilAccd_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildAccd_OccupationalLoadingPercent(commonFunction.getDoubleValue(row.getCell(col++)))
+                .spouseChildAccp_Sa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildSubAccp_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildSubRateMilAccp_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildAccp_OccupationalLoadingPercent(commonFunction.getDoubleValue(row.getCell(col++)))
+                .spouseChildAcct_Sa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildSubAcct_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildSubRateMilAcct_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildAcct_OccupationalLoadingPercent(commonFunction.getDoubleValue(row.getCell(col++)))
+                .spouseChildCill_Sa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildSubCill_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildSubRateMilCill_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildCill_OccupationalLoadingPercent(commonFunction.getDoubleValue(row.getCell(col++)))
+                .spouseChildCilx_Sa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildSubCilx_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildSubRateMilCilx_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildCilx_OccupationalLoadingPercent(commonFunction.getDoubleValue(row.getCell(col++)))
+                .spouseChildLeb_Sa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildSubLeb_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildSubRateMilLeb_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildLeb_OccupationalLoadingPercent(commonFunction.getDoubleValue(row.getCell(col++)))
+                .spouseChildPtd_Sa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildSubPtd_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildSubRateMilPtd_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildPtd_OccupationalLoadingPercent(commonFunction.getDoubleValue(row.getCell(col++)))
+                .spouseChildTill_Sa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildSubTill_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildSubRateMilTill_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildTill_OccupationalLoadingPercent(commonFunction.getDoubleValue(row.getCell(col++)))
+                .spouseChildHb_Sa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildSubHb_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildSubRateMilHb_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildHb_OccupationalLoadingPercent(commonFunction.getDoubleValue(row.getCell(col++)))
+                .spouseChildPpd_Sa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildSubPpd_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildSubRateMilPpd_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseChildPpd_OccupationalLoadingPercent(commonFunction.getDoubleValue(row.getCell(col++)))
+                .spouseHba_Sa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseSubHba_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseSubRateMilHba_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseHba_OccupationalLoadingPercent(commonFunction.getDoubleValue(row.getCell(col++)))
                 // Children 1..5
                 .child1Name(commonFunction.getStringValue(row.getCell(col++)))
                 .child1Dob(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
                 .child1Age(commonFunction.getIntegerValue(row.getCell(col++)))
-                .child1Hbc(commonFunction.getIntegerValue(row.getCell(col++)))
-                .child1Hbcac(commonFunction.getIntegerValue(row.getCell(col++)))
+                .child1Hbc_(commonFunction.getIntegerValue(row.getCell(col++)))
+                .child1Hbcac_(commonFunction.getIntegerValue(row.getCell(col++)))
                 .child2Name(commonFunction.getStringValue(row.getCell(col++)))
                 .child2Dob(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
                 .child2Age(commonFunction.getIntegerValue(row.getCell(col++)))
-                .child2Hbc(commonFunction.getStringValue(row.getCell(col++)))
-                .child2Hbcac(commonFunction.getStringValue(row.getCell(col++)))
+                .child2Hbc_(commonFunction.getIntegerValue(row.getCell(col++)))
+                .child2Hbcac_(commonFunction.getStringValue(row.getCell(col++)))
                 .child3Name(commonFunction.getStringValue(row.getCell(col++)))
                 .child3Dob(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
                 .child3Age(commonFunction.getIntegerValue(row.getCell(col++)))
-                .child3Hbc(commonFunction.getIntegerValue(row.getCell(col++)))
-                .child3Hbcac(commonFunction.getIntegerValue(row.getCell(col++)))
+                .child3Hbc_(commonFunction.getIntegerValue(row.getCell(col++)))
+                .child3Hbcac_(commonFunction.getIntegerValue(row.getCell(col++)))
                 .child4Name(commonFunction.getStringValue(row.getCell(col++)))
                 .child4Dob(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
                 .child4Age(commonFunction.getIntegerValue(row.getCell(col++)))
-                .child4Hbc(commonFunction.getIntegerValue(row.getCell(col++)))
-                .child4Hbcac(commonFunction.getIntegerValue(row.getCell(col++)))
+                .child4Hbc_(commonFunction.getIntegerValue(row.getCell(col++)))
+                .child4Hbcac_(commonFunction.getIntegerValue(row.getCell(col++)))
                 .child5Name(commonFunction.getStringValue(row.getCell(col++)))
                 .child5Dob(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
                 .child5Age(commonFunction.getIntegerValue(row.getCell(col++)))
-                .child5Hbc(commonFunction.getIntegerValue(row.getCell(col++)))
-                .child5Hbcac(commonFunction.getIntegerValue(row.getCell(col++)))
+                .child5Hbc_(commonFunction.getIntegerValue(row.getCell(col++)))
+                .child5Hbcac_(commonFunction.getIntegerValue(row.getCell(col++)))
                 // Financial Summary
                 .basicSumAssured(commonFunction.getBigDecimalValue(row.getCell(col++)))
                 .interestRate(commonFunction.getDoubleValue(row.getCell(col++)))
@@ -574,15 +566,15 @@ public class MainDataReportUploadServiceImpl implements MainDataReportUploadServ
         entity.setSarChoice(commonFunction.getStringValue(row.getCell(c++)));
         entity.setNumberOfRidersTaken(commonFunction.getIntegerValue(row.getCell(c++)));
         // DTH (36-39)
-        entity.setDthSar(commonFunction.getBigDecimalValue(row.getCell(c++)));
-        entity.setSubDth(commonFunction.getIntegerValue(row.getCell(c++)));
-        entity.setSubRateMilDth(commonFunction.getBigDecimalValue(row.getCell(c++)));
-        entity.setDthOccupationalLoadingPercent(commonFunction.getDoubleValue(row.getCell(c++)));
+        entity.setDth_Sar(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setSubDth_(commonFunction.getIntegerValue(row.getCell(c++)));
+        entity.setSubRateMilDth_(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setDth_OccLoadingPercentage(commonFunction.getDoubleValue(row.getCell(c++)));
         // HB (40-43)
-        entity.setHbSa(commonFunction.getBigDecimalValue(row.getCell(c++)));
-        entity.setSubHb(commonFunction.getBigDecimalValue(row.getCell(c++)));
-        entity.setSubRateMilHb(commonFunction.getBigDecimalValue(row.getCell(c++)));
-        entity.setHbOccupationalLoadingPercentage(commonFunction.getDoubleValue(row.getCell(c++)));
+        entity.setHb_Sa(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setSubHb_(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setSubRateMilHb_(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setHb_OccupationalLoadingPercentage(commonFunction.getDoubleValue(row.getCell(c++)));
         // INP (44-47)
         entity.setInpSar(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setSubInp(commonFunction.getBigDecimalValue(row.getCell(c++)));
@@ -615,31 +607,31 @@ public class MainDataReportUploadServiceImpl implements MainDataReportUploadServ
         entity.setChild1Name(commonFunction.getStringValue(row.getCell(c++)));
         entity.setChild1Dob(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(c++))));
         entity.setChild1Age(commonFunction.getIntegerValue(row.getCell(c++)));
-        entity.setChild1Hbc(commonFunction.getIntegerValue(row.getCell(c++)));
+        entity.setChild1Hbc_(commonFunction.getIntegerValue(row.getCell(c++)));
         entity.setChild1InpSar(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild1Bonus(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild2Name(commonFunction.getStringValue(row.getCell(c++)));
         entity.setChild2Dob(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(c++))));
         entity.setChild2Age(commonFunction.getIntegerValue(row.getCell(c++)));
-        entity.setChild2Hbc(commonFunction.getStringValue(row.getCell(c++)));
+        entity.setChild2Hbc_(commonFunction.getIntegerValue(row.getCell(c++)));
         entity.setChild2InpSar(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild2Bonus(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild3Name(commonFunction.getStringValue(row.getCell(c++)));
         entity.setChild3Dob(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(c++))));
         entity.setChild3Age(commonFunction.getIntegerValue(row.getCell(c++)));
-        entity.setChild3Hbc(commonFunction.getIntegerValue(row.getCell(c++)));
+        entity.setChild3Hbc_(commonFunction.getIntegerValue(row.getCell(c++)));
         entity.setChild3InpSar(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild3Bonus(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild4Name(commonFunction.getStringValue(row.getCell(c++)));
         entity.setChild4Dob(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(c++))));
         entity.setChild4Age(commonFunction.getIntegerValue(row.getCell(c++)));
-        entity.setChild4Hbc(commonFunction.getIntegerValue(row.getCell(c++)));
+        entity.setChild4Hbc_(commonFunction.getIntegerValue(row.getCell(c++)));
         entity.setChild4InpSar(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild4Bonus(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild5Name(commonFunction.getStringValue(row.getCell(c++)));
         entity.setChild5Dob(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(c++))));
         entity.setChild5Age(commonFunction.getIntegerValue(row.getCell(c++)));
-        entity.setChild5Hbc(commonFunction.getIntegerValue(row.getCell(c++)));
+        entity.setChild5Hbc_(commonFunction.getIntegerValue(row.getCell(c++)));
         entity.setChild5InpSar(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setChild5Bonus(commonFunction.getBigDecimalValue(row.getCell(c++)));
         // Children 6-20 (each: NAME, DOB, AGE, HBC, INP SAR, Bonus)

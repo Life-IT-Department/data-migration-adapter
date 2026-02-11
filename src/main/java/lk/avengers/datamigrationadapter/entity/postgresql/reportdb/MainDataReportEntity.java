@@ -27,167 +27,167 @@ public class MainDataReportEntity extends BaseMainData {
     @Column(name = "status_date")
     private LocalDate statusDate;
     @Column(name = "accd_sa")
-    private BigDecimal accdSa;
+    private BigDecimal accd_Sa;
     @Column(name = "sub_accd")
-    private BigDecimal subAccd;
+    private BigDecimal subAccd_;
     @Column(name = "sub_rate_mil_accd")
-    private BigDecimal subRateMilAccd;
+    private BigDecimal subRateMilAccd_;
     @Column(name = "accd_occupational_loading_percent")
-    private Double accdOccupationalLoadingPercent;
+    private Double accd_OccupationalLoadingPercent;
 
     @Column(name = "accp_sa")
-    private BigDecimal accpSa;
+    private BigDecimal accp_Sa;
     @Column(name = "sub_accp")
-    private BigDecimal subAccp;
+    private BigDecimal subAccp_;
     @Column(name = "sub_rate_mil_accp")
-    private BigDecimal subRateMilAccp;
+    private BigDecimal subRateMilAccp_;
     @Column(name = "accp_occupational_loading_percent")
-    private Double accpOccupationalLoadingPercent;
+    private Double accp_OccupationalLoadingPercent;
 
     @Column(name = "acct_sa")
-    private BigDecimal acctSa;
+    private BigDecimal acct_Sa;
     @Column(name = "sub_acct")
-    private BigDecimal subAcct;
+    private BigDecimal subAcct_;
     @Column(name = "sub_rate_mil_acct")
-    private BigDecimal subRateMilAcct;
+    private BigDecimal subRateMilAcct_;
     @Column(name = "acct_occupational_loading_percent")
-    private Double acctOccupationalLoadingPercent;
+    private Double acct_OccupationalLoadingPercent;
 
     // CILL
     @Column(name = "cill_sa")
-    private BigDecimal cillSa;
+    private BigDecimal cill_Sa;
     @Column(name = "sub_cill")
-    private BigDecimal subCill;
+    private BigDecimal subCill_;
     @Column(name = "sub_rate_mil_cill")
-    private BigDecimal subRateMilCill;
+    private BigDecimal subRateMilCill_;
     @Column(name = "cill_occupational_loading_percentage")
-    private Double cillOccupationalLoadingPercentage;
+    private Double cill_OccupationalLoadingPercentage;
     // CILX
     @Column(name = "cilx_sa")
-    private BigDecimal cilxSa;
+    private BigDecimal cilx_Sa;
     @Column(name = "sub_cilx")
-    private BigDecimal subCilx;
+    private BigDecimal subCilx_;
     @Column(name = "sub_rate_mil_cilx")
-    private BigDecimal subRateMilCilx;
+    private BigDecimal subRateMilCilx_;
     @Column(name = "cilx_occupational_loading_percentage")
-    private Double cilxOccupationalLoadingPercentage;
+    private Double cilx_OccupationalLoadingPercentage;
     // FIB
     @Column(name = "fib_sa")
-    private BigDecimal fibSa;
+    private BigDecimal fib_Sa;
     @Column(name = "sub_fib")
-    private BigDecimal subFib;
+    private BigDecimal subFib_;
     @Column(name = "sub_rate_mil_fib")
-    private BigDecimal subRateMilFib;
+    private BigDecimal subRateMilFib_;
     @Column(name = "fib_occupational_loading_percentage")
-    private Double fibOccupationalLoadingPercentage;
+    private Double fib_OccupationalLoadingPercentage;
     // FIBT
     @Column(name = "fibt_sa")
-    private BigDecimal fibtSa;
+    private BigDecimal fibt_Sa;
     @Column(name = "sub_fibt")
-    private BigDecimal subFibt;
+    private BigDecimal subFibt_;
     @Column(name = "sub_rate_mil_fibt")
-    private BigDecimal subRateMilFibt;
+    private BigDecimal subRateMilFibt_;
     @Column(name = "fibt_occupational_loading_percentage")
-    private Double fibtOccupationalLoadingPercentage;
+    private Double fibt_OccupationalLoadingPercentage;
     // FSEB
     @Column(name = "fseb_sa")
-    private BigDecimal fsebSa;
+    private BigDecimal fseb_Sa;
     @Column(name = "sub_fseb")
-    private BigDecimal subFseb;
+    private BigDecimal subFseb_;
     @Column(name = "sub_rate_mil_fseb")
-    private BigDecimal subRateMilFseb;
+    private BigDecimal subRateMilFseb_;
     @Column(name = "fseb_occupational_loading_percentage")
-    private Double fsebOccupationalLoadingPercentage;
+    private Double fseb_OccupationalLoadingPercentage;
     // LEB
     @Column(name = "leb_sa")
-    private BigDecimal lebSa;
+    private BigDecimal leb_Sa;
     @Column(name = "sub_leb")
-    private BigDecimal subLeb;
+    private BigDecimal subLeb_;
     @Column(name = "sub_rate_mil_leb")
-    private BigDecimal subRateMilLeb;
+    private BigDecimal subRateMilLeb_;
     @Column(name = "leb_occupational_loading_percentage")
-    private Double lebOccupationalLoadingPercentage;
+    private Double leb_OccupationalLoadingPercentage;
     // PTD
     @Column(name = "ptd_sa")
-    private BigDecimal ptdSa;
+    private BigDecimal ptd_Sa;
     @Column(name = "sub_ptd")
-    private BigDecimal subPtd;
+    private BigDecimal subPtd_;
     @Column(name = "sub_rate_mil_ptd")
-    private BigDecimal subRateMilPtd;
+    private BigDecimal subRateMilPtd_;
     @Column(name = "ptd_occupational_loading_percentage")
-    private Double ptdOccupationalLoadingPercentage;
+    private Double ptd_OccupationalLoadingPercentage;
     // TILL
     @Column(name = "till_sa")
-    private BigDecimal tillSa;
+    private BigDecimal till_Sa;
     @Column(name = "sub_till")
-    private BigDecimal subTill;
+    private BigDecimal subTill_;
     @Column(name = "sub_rate_mil_till")
-    private BigDecimal subRateMilTill;
+    private BigDecimal subRateMilTill_;
     @Column(name = "till_occupational_loading_percentage")
-    private Double tillOccupationalLoadingPercentage;
+    private Double till_OccupationalLoadingPercentage;
     // TR
     @Column(name = "tr_sa")
-    private BigDecimal trSa;
+    private BigDecimal tr_Sa;
     @Column(name = "sub_tr")
-    private BigDecimal subTr;
+    private BigDecimal subTr_;
     @Column(name = "sub_rate_mil_tr")
-    private BigDecimal subRateMilTr;
+    private BigDecimal subRateMilTr_;
     @Column(name = "tr_occupational_loading_percentage")
-    private Double trOccupationalLoadingPercentage;
+    private Double tr_OccupationalLoadingPercentage;
     // WOPA
     @Column(name = "wopa_sa")
-    private BigDecimal wopaSa;
+    private BigDecimal wopa_Sa;
     @Column(name = "sub_wopa")
-    private BigDecimal subWopa;
+    private BigDecimal subWopa_;
     @Column(name = "sub_rate_mil_wopa")
-    private BigDecimal subRateMilWopa;
+    private BigDecimal subRateMilWopa_;
     @Column(name = "wopa_occupational_loading_percentage")
-    private Double wopaOccupationalLoadingPercentage;
+    private Double wopa_OccupationalLoadingPercentage;
     // WOPC
     @Column(name = "wopc_sa")
-    private BigDecimal wopcSa;
+    private BigDecimal wopc_Sa;
     @Column(name = "sub_wopc")
-    private BigDecimal subWopc;
+    private BigDecimal subWopc_;
     @Column(name = "sub_rate_mil_wopc")
-    private BigDecimal subRateMilWopc;
+    private BigDecimal subRateMilWopc_;
     @Column(name = "wopc_occupational_loading_percentage")
-    private Double wopcOccupationalLoadingPercentage;
+    private Double wopc_OccupationalLoadingPercentage;
     // WOPD
     @Column(name = "wopd_sa")
-    private BigDecimal wopdSa;
+    private BigDecimal wopd_Sa;
     @Column(name = "sub_wopd")
-    private BigDecimal subWopd;
+    private BigDecimal subWopd_;
     @Column(name = "sub_rate_mil_wopd")
-    private BigDecimal subRateMilWopd;
+    private BigDecimal subRateMilWopd_;
     @Column(name = "wopd_occupational_loading_percentage")
-    private Double wopdOccupationalLoadingPercentage;
+    private Double wopd_OccupationalLoadingPercentage;
     // FSEBA
     @Column(name = "fseba_sa")
-    private BigDecimal fsebaSa;
+    private BigDecimal fseba_Sa;
     @Column(name = "sub_fseba")
-    private BigDecimal subFseba;
+    private BigDecimal subFseba_;
     @Column(name = "sub_rate_mil_fseba")
-    private BigDecimal subRateMilFseba;
+    private BigDecimal subRateMilFseba_;
     @Column(name = "fseba_occupational_loading_percentage")
-    private Double fsebaOccupationalLoadingPercentage;
+    private Double fseba_OccupationalLoadingPercentage;
     // HBA
     @Column(name = "hba_sa")
-    private BigDecimal hbaSa;
+    private BigDecimal hba_Sa;
     @Column(name = "sub_hba")
-    private BigDecimal subHba;
+    private BigDecimal subHba_;
     @Column(name = "sub_rate_mil_hba")
-    private BigDecimal subRateMilHba;
+    private BigDecimal subRateMilHba_;
     @Column(name = "hba_occupational_loading_percentage")
-    private Double hbaOccupationalLoadingPercentage;
+    private Double hba_OccupationalLoadingPercentage;
     // HBAC
     @Column(name = "hbac_sa")
-    private BigDecimal hbacSa;
+    private BigDecimal hbac_Sa;
     @Column(name = "sub_hbac")
-    private BigDecimal subHbac;
+    private BigDecimal subHbac_;
     @Column(name = "sub_rate_mil_hbac")
-    private BigDecimal subRateMilHbac;
+    private BigDecimal subRateMilHbac_;
     @Column(name = "hbac_occupational_loading_percentage")
-    private Double hbacOccupationalLoadingPercentage;
+    private Double hbac_OccupationalLoadingPercentage;
     // Spouse/Child
     @Column(name = "spouse_child_pin")
     private Integer spouseChildPin;
@@ -201,113 +201,125 @@ public class MainDataReportEntity extends BaseMainData {
     private LocalDate spouseChildDob;
     @Column(name = "spouse_child_age")
     private Integer spouseChildAge;
+    //spouse Death
     @Column(name = "spouse_death_sa")
-    private BigDecimal spouseDeathSa;
+    private BigDecimal spouseDeath_Sa;
     @Column(name = "spouse_sub_death")
-    private BigDecimal spouseSubDeath;
+    private BigDecimal spouseSubDeath_;
     @Column(name = "spouse_sub_rate_mil_death")
-    private BigDecimal spouseSubRateMilDeath;
+    private BigDecimal spouseSubRateMilDeath_;
     @Column(name = "spouse_death_occupational_loading_percent")
-    private Double spouseDeathOccupationalLoadingPercent;
+    private Double spouseDeath_OccupationalLoadingPercent;
+
     @Column(name = "spouse_child_accd_sa")
-    private BigDecimal spouseChildAccdSa;
+    private BigDecimal spouseChildAccd_Sa;
     @Column(name = "spouse_child_sub_accd")
-    private BigDecimal spouseChildSubAccd;
+    private BigDecimal spouseChildSubAccd_;
     @Column(name = "spouse_child_sub_rate_mil_accd")
-    private BigDecimal spouseChildSubRateMilAccd;
+    private BigDecimal spouseChildSubRateMilAccd_;
     @Column(name = "spouse_child_accd_occupational_loading_percent")
-    private Double spouseChildAccdOccupationalLoadingPercent;
+    private Double spouseChildAccd_OccupationalLoadingPercent;
+
     @Column(name = "spouse_child_accp_sa")
-    private BigDecimal spouseChildAccpSa;
+    private BigDecimal spouseChildAccp_Sa;
     @Column(name = "spouse_child_sub_accp")
-    private BigDecimal spouseChildSubAccp;
+    private BigDecimal spouseChildSubAccp_;
     @Column(name = "spouse_child_sub_rate_mil_accp")
-    private BigDecimal spouseChildSubRateMilAccp;
+    private BigDecimal spouseChildSubRateMilAccp_;
     @Column(name = "spouse_child_accp_occupational_loading_percent")
-    private Double spouseChildAccpOccupationalLoadingPercent;
+    private Double spouseChildAccp_OccupationalLoadingPercent;
+
     @Column(name = "spouse_child_acct_sa")
-    private BigDecimal spouseChildAcctSa;
+    private BigDecimal spouseChildAcct_Sa;
     @Column(name = "spouse_child_sub_acct")
-    private BigDecimal spouseChildSubAcct;
+    private BigDecimal spouseChildSubAcct_;
     @Column(name = "spouse_child_sub_rate_mil_acct")
-    private BigDecimal spouseChildSubRateMilAcct;
+    private BigDecimal spouseChildSubRateMilAcct_;
     @Column(name = "spouse_child_acct_occupational_loading_percent")
-    private Double spouseChildAcctOccupationalLoadingPercent;
+    private Double spouseChildAcct_OccupationalLoadingPercent;
+
     @Column(name = "spouse_child_cill_sa")
-    private BigDecimal spouseChildCillSa;
+    private BigDecimal spouseChildCill_Sa;
     @Column(name = "spouse_child_sub_cill")
-    private BigDecimal spouseChildSubCill;
+    private BigDecimal spouseChildSubCill_;
     @Column(name = "spouse_child_sub_rate_mil_cill")
-    private BigDecimal spouseChildSubRateMilCill;
+    private BigDecimal spouseChildSubRateMilCill_;
     @Column(name = "spouse_child_cill_occupational_loading_percent")
-    private Double spouseChildCillOccupationalLoadingPercent;
+    private Double spouseChildCill_OccupationalLoadingPercent;
+
     @Column(name = "spouse_child_cilx_sa")
-    private BigDecimal spouseChildCilxSa;
+    private BigDecimal spouseChildCilx_Sa;
     @Column(name = "spouse_child_sub_cilx")
-    private BigDecimal spouseChildSubCilx;
+    private BigDecimal spouseChildSubCilx_;
     @Column(name = "spouse_child_sub_rate_mil_cilx")
-    private BigDecimal spouseChildSubRateMilCilx;
+    private BigDecimal spouseChildSubRateMilCilx_;
     @Column(name = "spouse_child_cilx_occupational_loading_percent")
-    private Double spouseChildCilxOccupationalLoadingPercent;
+    private Double spouseChildCilx_OccupationalLoadingPercent;
+
     @Column(name = "spouse_child_leb_sa")
-    private BigDecimal spouseChildLebSa;
+    private BigDecimal spouseChildLeb_Sa;
     @Column(name = "spouse_child_sub_leb")
-    private BigDecimal spouseChildSubLeb;
+    private BigDecimal spouseChildSubLeb_;
     @Column(name = "spouse_child_sub_rate_mil_leb")
-    private BigDecimal spouseChildSubRateMilLeb;
+    private BigDecimal spouseChildSubRateMilLeb_;
     @Column(name = "spouse_child_leb_occupational_loading_percent")
-    private Double spouseChildLebOccupationalLoadingPercent;
+    private Double spouseChildLeb_OccupationalLoadingPercent;
+
     @Column(name = "spouse_child_ptd_sa")
-    private BigDecimal spouseChildPtdSa;
+    private BigDecimal spouseChildPtd_Sa;
     @Column(name = "spouse_child_sub_ptd")
-    private BigDecimal spouseChildSubPtd;
+    private BigDecimal spouseChildSubPtd_;
     @Column(name = "spouse_child_sub_rate_mil_ptd")
-    private BigDecimal spouseChildSubRateMilPtd;
+    private BigDecimal spouseChildSubRateMilPtd_;
     @Column(name = "spouse_child_ptd_occupational_loading_percent")
-    private Double spouseChildPtdOccupationalLoadingPercent;
+    private Double spouseChildPtd_OccupationalLoadingPercent;
+
     @Column(name = "spouse_child_till_sa")
-    private BigDecimal spouseChildTillSa;
+    private BigDecimal spouseChildTill_Sa;
     @Column(name = "spouse_child_sub_till")
-    private BigDecimal spouseChildSubTill;
+    private BigDecimal spouseChildSubTill_;
     @Column(name = "spouse_child_sub_rate_mil_till")
-    private BigDecimal spouseChildSubRateMilTill;
+    private BigDecimal spouseChildSubRateMilTill_;
     @Column(name = "spouse_child_till_occupational_loading_percent")
-    private Double spouseChildTillOccupationalLoadingPercent;
+    private Double spouseChildTill_OccupationalLoadingPercent;
+
     @Column(name = "spouse_child_hb_sa")
-    private BigDecimal spouseChildHbSa;
+    private BigDecimal spouseChildHb_Sa;
     @Column(name = "spouse_child_sub_hb")
-    private BigDecimal spouseChildSubHb;
+    private BigDecimal spouseChildSubHb_;
     @Column(name = "spouse_child_sub_rate_mil_hb")
-    private BigDecimal spouseChildSubRateMilHb;
+    private BigDecimal spouseChildSubRateMilHb_;
     @Column(name = "spouse_child_hb_occupational_loading_percent")
-    private Double spouseChildHbOccupationalLoadingPercent;
+    private Double spouseChildHb_OccupationalLoadingPercent;
+
     @Column(name = "spouse_child_ppd_sa")
-    private BigDecimal spouseChildPpdSa;
+    private BigDecimal spouseChildPpd_Sa;
     @Column(name = "spouse_child_sub_ppd")
-    private BigDecimal spouseChildSubPpd;
+    private BigDecimal spouseChildSubPpd_;
     @Column(name = "spouse_child_sub_rate_mil_ppd")
-    private BigDecimal spouseChildSubRateMilPpd;
+    private BigDecimal spouseChildSubRateMilPpd_;
     @Column(name = "spouse_child_ppd_occupational_loading_percent")
-    private Double spouseChildPpdOccupationalLoadingPercent;
+    private Double spouseChildPpd_OccupationalLoadingPercent;
+
     @Column(name = "spouse_hba_sa")
-    private BigDecimal spouseHbaSa;
+    private BigDecimal spouseHba_Sa;
     @Column(name = "spouse_sub_hba")
-    private BigDecimal spouseSubHba;
+    private BigDecimal spouseSubHba_;
     @Column(name = "spouse_sub_rate_mil_hba")
-    private BigDecimal spouseSubRateMilHba;
+    private BigDecimal spouseSubRateMilHba_;
     @Column(name = "spouse_hba_occupational_loading_percent")
-    private Double spouseHbaOccupationalLoadingPercent;
+    private Double spouseHba_OccupationalLoadingPercent;
     // Children
     @Column(name = "child1_hbcac")
-    private Integer child1Hbcac;
+    private Integer child1Hbcac_;
     @Column(name = "child2_hbcac")
-    private String child2Hbcac;
+    private String child2Hbcac_;
     @Column(name = "child3_hbcac")
-    private Integer child3Hbcac;
+    private Integer child3Hbcac_;
     @Column(name = "child4_hbcac")
-    private Integer child4Hbcac;
+    private Integer child4Hbcac_;
     @Column(name = "child5_hbcac")
-    private Integer child5Hbcac;
+    private Integer child5Hbcac_;
     // --- Financial Summary ---
     @Column(name = "interest_rate")
     private Double interestRate;

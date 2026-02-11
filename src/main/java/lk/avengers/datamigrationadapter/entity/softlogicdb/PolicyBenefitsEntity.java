@@ -13,14 +13,13 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @Table(name = "policy_benefits")
 public class PolicyBenefitsEntity {
-
+    //TODO check column names and types
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(name = "PB_PolicyNo", length = 30)
     private String pbPolicyNo;
-
     @Column(name = "PB_BenefitCode", length = 4)
     private String pbBenefitCode;
 
