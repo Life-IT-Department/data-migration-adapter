@@ -49,12 +49,6 @@ public class MigrationServiceImpl implements MigrationService {
             "SCL/1048123", "SCL/1055102", "SCL/1055169", "SCL/1070424", "SCL/1071018", "SCL/1089275", "SCL/1089309", "SCL/1081926", "SCL/1005768",
             "SCL/935254", "SCL/935395", "SCL/935486", "SCL/935510","ULF527879", "UPR215038", "ULP321661", "SCL1038926", "UPR399550","SCL900753", "ULV451021", "ULV571323", "UPR126334", "SCL988394");
 
-    List<String> policyList2 = List.of(
-            "ULF527879", "UPR215038", "ULP321661", "SCL1038926", "UPR399550",
-            "SCL900753", "ULV451021", "ULV571323", "UPR126334", "SCL988394");
-
-
-
     private List<ProductCodeMappingEntity> productCodeMappingList;
     private List<AdvisorCodeMappingEntity> advisorCodeMappingList;
     private List<BranchCodeMappingEntity> branchCodeMappingList;
@@ -180,7 +174,7 @@ public class MigrationServiceImpl implements MigrationService {
         policyRequestDTO.setPoDateOfProposal(mainDataReport.getInception());
         policyRequestDTO.setPoPaymentTerm(mainDataReport.getPremiumPaymentTerm()); // dispute
         policyRequestDTO.setPoBsa(mainDataReport.getBasicSumAssured());
-        policyRequestDTO.setPoSumAtRisk(mainDataReport.getDthSar());
+        policyRequestDTO.setPoSumAtRisk(mainDataReport.getDth_Sar());
         policyRequestDTO.setPoBasicPremium(mainDataReport.getModalPremium());
         policyRequestDTO.setPoPremiumType(getPremiumType(mainDataReport.getPremiumPaymentTerm())); // dispute
         policyRequestDTO.setPoAdvCode(getAgentCodeMapping(mainDataReport.getAgentCode()));
@@ -243,7 +237,7 @@ public class MigrationServiceImpl implements MigrationService {
         policyRequestDTO.setPoDateOfProposal(alhReport.getInception());
         policyRequestDTO.setPoPaymentTerm(Integer.toString(alhReport.getPremiumPaymentTerm()));
         policyRequestDTO.setPoBsa(alhReport.getBasicSumAssured());
-        policyRequestDTO.setPoSumAtRisk(alhReport.getDthSar());
+        policyRequestDTO.setPoSumAtRisk(alhReport.getDth_Sar());
         policyRequestDTO.setPoBasicPremium(alhReport.getModalPremium());
         policyRequestDTO.setPoPremiumType("Regular");
         policyRequestDTO.setPoAdvCode(getAgentCodeMapping(alhReport.getAgentCode()));

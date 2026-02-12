@@ -28,7 +28,6 @@ public class ReportUploadController {
     private final PaidClaimsReportService paidClaimsReportService;
     private final RejectedClaimReportService rejectedClaimReportService;
     private final OutstandingClaimReportService outstandingClaimReportService;
-    private final ClaimsMappingService claimsMappingService;
 
     @PostMapping("/cash-flow-report")
     public ResponseEntity<CommonResponseDTO> uploadCashFlow(@RequestParam int year) {
@@ -89,11 +88,5 @@ public class ReportUploadController {
     public CommonResponseDTO test2() {
         log.info("Test2 API METHOD ACCESSED.");
         return policyBenefitMappingService.processBenefitCodeMapping();
-    }
-
-    @GetMapping("/migrate-claims")
-    public ResponseEntity<CommonResponseDTO> migrateClaimsData(){
-        log.info("MIGRATE CLAIMS METHOD ACCESSED");
-        return claimsMappingService.mapClaimsData();
     }
 }

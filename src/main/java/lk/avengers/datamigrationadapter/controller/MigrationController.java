@@ -1,13 +1,12 @@
 package lk.avengers.datamigrationadapter.controller;
 
+import lk.avengers.datamigrationadapter.dto.CommonResponseDTO;
+import lk.avengers.datamigrationadapter.service.ClaimsMappingService;
 import lk.avengers.datamigrationadapter.service.MigrationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @Slf4j
 @RestController
@@ -16,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class MigrationController {
 
     public final MigrationService  migrationService;
+    private final ClaimsMappingService claimsMappingService;
 
     @PostMapping("/policy")
     public ResponseEntity<String> migratePolicyData(@RequestHeader String uuid) {
@@ -24,6 +24,12 @@ public class MigrationController {
        migrationService.migratePolicyData(uuid);
 
         return ResponseEntity.ok("Policy data migration successfully.") ;
+    }
+
+    @GetMapping("/claims")
+    public ResponseEntity<CommonResponseDTO> migrateClaimsData(){
+        log.info("MIGRATE CLAIMS METHOD ACCESSED");
+        return claimsMappingService.mapClaimsData();
     }
 
 }
