@@ -12,7 +12,7 @@ public interface PolicyRepository extends JpaRepository<PolicyEntity, Long> {
 
     @Modifying
     @Transactional
-    @Query(value = "TRUNCATE TABLE policy; DBCC CHECKIDENT ('policy', RESEED, 0)", nativeQuery = true)
+    @Query(value = "TRUNCATE TABLE policy; DBCC CHECKIDENT ('policy', RESEED, 1)", nativeQuery = true)
     void truncateTable();
 
 }

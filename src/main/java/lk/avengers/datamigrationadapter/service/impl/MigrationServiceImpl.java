@@ -44,7 +44,16 @@ public class MigrationServiceImpl implements MigrationService {
             "ULE/358945", "SCL/963207", "SCL/964239", "SCL/924845", "SCL/945246", "SCL/897066", "SCL/908210", "SCL/919498", "SCL/926923",
             "ULT/326371", "ULT/323410", "ULT/323436", "ULT/326355", "ULT/322214", "ULT/325084", "ULT/322370", "ULT/326835", "ULT/326298",
             "ULT/327387", "ULT/323527", "ULT/325217", "ULT/325464", "ULT/325498", "ULT/326959", "ULT/325704", "ULT/326124", "SCL/838805",
-            "SCL/834408", "SCL/873695", "SCL/846311", "SCL/893719");
+            "SCL/834408", "SCL/873695", "SCL/846311", "SCL/893719", "SCL/1002906", "SCL/1082510", "SCL/859140", "SCL/905034", "SCL/974022",
+            "SCL/974303", "SCL/974386", "SCL/992735", "SCL/992792", "SCL/992891", "SCL/994475", "SCL/1005792", "SCL/1005990", "SCL/1006303",
+            "SCL/1048123", "SCL/1055102", "SCL/1055169", "SCL/1070424", "SCL/1071018", "SCL/1089275", "SCL/1089309", "SCL/1081926", "SCL/1005768",
+            "SCL/935254", "SCL/935395", "SCL/935486", "SCL/935510","ULF527879", "UPR215038", "ULP321661", "SCL1038926", "UPR399550","SCL900753", "ULV451021", "ULV571323", "UPR126334", "SCL988394");
+
+    List<String> policyList2 = List.of(
+            "ULF527879", "UPR215038", "ULP321661", "SCL1038926", "UPR399550",
+            "SCL900753", "ULV451021", "ULV571323", "UPR126334", "SCL988394");
+
+
 
     private List<ProductCodeMappingEntity> productCodeMappingList;
     private List<AdvisorCodeMappingEntity> advisorCodeMappingList;
@@ -526,28 +535,78 @@ public class MigrationServiceImpl implements MigrationService {
     }
 
 
+//    private PolicyNumberResponseDTO extractPolicyNumber(String policyRef) {
+//
+//        if (policyRef == null || !policyRef.contains("/")) {
+//            throw new IllegalArgumentException("Invalid policy reference: " + policyRef);
+//        }
+//
+//        String[] parts = policyRef.split("/");
+//
+//        if (parts.length != 2) {
+//            throw new IllegalArgumentException("Invalid policy reference format: " + policyRef);
+//        }
+//
+//        String productCode = parts[0].trim();
+//        int policyNo;
+//
+//        try {
+//            policyNo = Integer.parseInt(parts[1].trim());
+//        } catch (NumberFormatException e) {
+//            throw new IllegalArgumentException("Invalid policy number: " + parts[1], e);
+//        }
+//
+//        return new PolicyNumberResponseDTO(productCode, policyNo);
+//    }
+
     private PolicyNumberResponseDTO extractPolicyNumber(String policyRef) {
 
-        if (policyRef == null || !policyRef.contains("/")) {
-            throw new IllegalArgumentException("Invalid policy reference: " + policyRef);
+        if (policyRef == null || policyRef.isBlank()) {
+            throw new IllegalArgumentException("Policy reference cannot be null or empty");
         }
 
-        String[] parts = policyRef.split("/");
+        policyRef = policyRef.trim();
 
-        if (parts.length != 2) {
-            throw new IllegalArgumentException("Invalid policy reference format: " + policyRef);
-        }
-
-        String productCode = parts[0].trim();
+        String productCode;
         int policyNo;
 
-        try {
-            policyNo = Integer.parseInt(parts[1].trim());
-        } catch (NumberFormatException e) {
-            throw new IllegalArgumentException("Invalid policy number: " + parts[1], e);
+        // Case 1: Format with slash (ASP/1082429)
+        if (policyRef.contains("/")) {
+
+            String[] parts = policyRef.split("/");
+
+            if (parts.length != 2) {
+                throw new IllegalArgumentException("Invalid policy reference format: " + policyRef);
+            }
+
+            productCode = parts[0].trim();
+
+            try {
+                policyNo = Integer.parseInt(parts[1].trim());
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("Invalid policy number: " + parts[1], e);
+            }
+
+        }
+        // Case 2: Format without slash (ULF527879)
+        else {
+
+            // Expect: 3 letters + digits
+            if (!policyRef.matches("[A-Z]{3}\\d+")) {
+                throw new IllegalArgumentException("Invalid policy reference format: " + policyRef);
+            }
+
+            productCode = policyRef.substring(0, 3);
+
+            try {
+                policyNo = Integer.parseInt(policyRef.substring(3));
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("Invalid policy number: " + policyRef, e);
+            }
         }
 
         return new PolicyNumberResponseDTO(productCode, policyNo);
     }
+
 
 }
