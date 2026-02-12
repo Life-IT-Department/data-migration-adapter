@@ -1,7 +1,6 @@
 package lk.avengers.datamigrationadapter.repository.postgresql.reportdb;
 
 import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.MainDataALHReportEntity;
-import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.MainDataReportEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -19,6 +18,5 @@ public interface MainDataALHReportRepository
     @Query(value = "TRUNCATE TABLE main_data_alh_report RESTART IDENTITY", nativeQuery = true)
     void truncate();
 
-    Optional<MainDataALHReportEntity> findFirstByProductCodeAndPolicyNo(String productCode, int policyNo);
-
+    Optional<MainDataALHReportEntity> findByProductCodeAndPolicyNo(String productCode, Integer policyNo);
 }
