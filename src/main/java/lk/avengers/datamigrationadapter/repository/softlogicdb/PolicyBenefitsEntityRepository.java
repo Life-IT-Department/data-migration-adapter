@@ -5,5 +5,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface PolicyBeneficiariesEntityRepository extends JpaRepository<PolicyBenefitsEntity, Long> {
+public interface PolicyBenefitsEntityRepository extends JpaRepository<PolicyBenefitsEntity, Long> {
 }

@@ -3,6 +3,7 @@ package lk.avengers.datamigrationadapter.dto;
 import lombok.Builder;
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Data
@@ -12,5 +13,6 @@ public class ChildDto {
     private LocalDate dob;
     private Integer age;
     private String childHbc;
+    private BigDecimal childInpSar;
 
 }

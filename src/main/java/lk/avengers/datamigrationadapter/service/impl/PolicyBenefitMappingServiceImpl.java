@@ -1,16 +1,18 @@
 package lk.avengers.datamigrationadapter.service.impl;
 
 import jakarta.persistence.Column;
+import lk.avengers.datamigrationadapter.dto.ChildDto;
 import lk.avengers.datamigrationadapter.dto.CommonResponseDTO;
 import lk.avengers.datamigrationadapter.dto.RiderCoverColumnDTO;
 import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.BenefitCodeMapperEntity;
+import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.MainDataALHReportEntity;
 import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.MainDataReportEntity;
 import lk.avengers.datamigrationadapter.entity.softlogicdb.PolicyBenefitsEntity;
 import lk.avengers.datamigrationadapter.repository.postgresql.reportdb.ACPPolicyRepository;
 import lk.avengers.datamigrationadapter.repository.postgresql.reportdb.BenefitCodeMapperRepository;
 import lk.avengers.datamigrationadapter.repository.postgresql.reportdb.MainDataALHReportRepository;
 import lk.avengers.datamigrationadapter.repository.postgresql.reportdb.MainDataReportRepository;
-import lk.avengers.datamigrationadapter.repository.softlogicdb.PolicyBeneficiariesEntityRepository;
+import lk.avengers.datamigrationadapter.repository.softlogicdb.PolicyBenefitsEntityRepository;
 import lk.avengers.datamigrationadapter.service.PolicyBenefitMappingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,7 +35,7 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
     private final MainDataReportRepository mainDataReportRepository;
     private final MainDataALHReportRepository mainDataALHReportRepository;
     private final ACPPolicyRepository acpPolicyRepository;
-    private final PolicyBeneficiariesEntityRepository policyBeneficiariesEntityRepository;
+    private final PolicyBenefitsEntityRepository policyBenefitsEntityRepository;
 
     private final static List<String> policyList = List.of("ASP/888636", "SCL/1044031", "ULT/348672", "ULE/402719", "ULE/121830", "ULE/274795",
             "ASP/1082429", "SCL/1098458", "ULP/349597", "ASP/1052257", "ULI/756262", "UPR/378844", "UPS/279539", "ULI/809491", "ULP/406538",
@@ -75,8 +77,8 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
 
             policyHolderBenefitFieldNamesInMainDataEntityClassList.get().addAll(fieldNamesInMainDataEntityClassList
                     .stream()
-                   .filter(fieldName -> !fieldName.trim().toLowerCase().contains("Spouse".toLowerCase()))
-                   .filter(fieldName -> !fieldName.trim().toLowerCase().contains("Child".toLowerCase()))
+                    .filter(fieldName -> !fieldName.trim().toLowerCase().contains("Spouse".toLowerCase()))
+                    .filter(fieldName -> !fieldName.trim().toLowerCase().contains("Child".toLowerCase()))
                     .filter(fieldName -> fieldName.trim().toLowerCase().contains(benefitCodeMapperEntity.getAllianzBenefitCode().concat("_").toLowerCase().trim()))
                     .toList());
 
@@ -99,7 +101,7 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
                     .filter(name -> name.toLowerCase().trim().contains(benefitCodeMapperEntity.getAllianzBenefitCode().replaceFirst("^Spouse-", "").concat("_").toLowerCase().trim()))
                     .toList();
 
-            if(!filterList.isEmpty() && !benefitCodeMapperEntity.getAllianzBenefitCode().startsWith("Spouse")){
+            if (!filterList.isEmpty() && !benefitCodeMapperEntity.getAllianzBenefitCode().startsWith("Spouse")) {
                 RiderCoverColumnDTO riderCoverColumnDTO = RiderCoverColumnDTO.builder()
                         .coverName(filterList.stream().filter(name -> name.toLowerCase().contains("_sa")).findFirst().orElse(null))
                         .coverPerMilRate(filterList.stream().filter(name -> name.toLowerCase().contains("mil")).findFirst().orElse(null))
@@ -108,7 +110,7 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
                 policyHolderBenefitMap.put(benefitCodeMapperEntity.getSoftlogicBenefitCode(), riderCoverColumnDTO);
             }
 
-            if(!spouseFilterList.isEmpty() && benefitCodeMapperEntity.getAllianzBenefitCode().startsWith("Spouse")){
+            if (!spouseFilterList.isEmpty() && benefitCodeMapperEntity.getAllianzBenefitCode().startsWith("Spouse")) {
                 RiderCoverColumnDTO spouseRiderCoverColumnDTO = RiderCoverColumnDTO.builder()
                         .coverName(spouseFilterList.stream().filter(name -> name.toLowerCase().contains("_sa")).findFirst().orElse(null))
                         .coverPerMilRate(spouseFilterList.stream().filter(name -> name.toLowerCase().contains("mil")).findFirst().orElse(null))
@@ -128,12 +130,12 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
                         log.info("Main Data Report data found for Policy No: {}", policyNo);
 
                         policyHolderBenefitMap.forEach((key, value) -> {
-                            if(value.getCoverName() != null){
+                            if (value.getCoverName() != null) {
                                 Object specificFieldValue = getSpecificFieldValue(mainDataReportEntity, value.getCoverName());
                                 log.info("Specific field value for benefit code: {} and field: {} is: {}", key, value.getCoverName(), specificFieldValue);
                                 PolicyBenefitsEntity benefitsEntity = new PolicyBenefitsEntity();
 
-                                if(toBigDecimal(specificFieldValue).compareTo(BigDecimal.ZERO) > 0){
+                                if (toBigDecimal(specificFieldValue).compareTo(BigDecimal.ZERO) > 0) {
 
                                     BigDecimal perMilRate = toBigDecimal(getSpecificFieldValue(mainDataReportEntity, value.getCoverPerMilRate()));
                                     BigDecimal occupationExtraRate = toBigDecimal(getSpecificFieldValue(mainDataReportEntity, value.getCoverOccupationExtraRate()));
@@ -151,14 +153,14 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
                                 }
                             }
                         });
-                        
+
                         spouseBenefitMap.forEach((key, value) -> {
-                            if(value.getCoverName() != null){
+                            if (value.getCoverName() != null) {
                                 Object specificFieldValue = getSpecificFieldValue(mainDataReportEntity, value.getCoverName());
                                 log.info("Specific field value for benefit code: {} and field: {} is: {}", key, value.getCoverName(), specificFieldValue);
                                 PolicyBenefitsEntity benefitsEntity = new PolicyBenefitsEntity();
 
-                                if(toBigDecimal(specificFieldValue).compareTo(BigDecimal.ZERO) > 0){
+                                if (toBigDecimal(specificFieldValue).compareTo(BigDecimal.ZERO) > 0) {
 
                                     BigDecimal perMilRate = toBigDecimal(getSpecificFieldValue(mainDataReportEntity, value.getCoverPerMilRate()));
                                     BigDecimal occupationExtraRate = toBigDecimal(getSpecificFieldValue(mainDataReportEntity, value.getCoverOccupationExtraRate()));
@@ -176,11 +178,10 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
                                 }
                             }
                         });
-//                    }, () -> getDetailsFromALHMainData(policyNo, policyNoSplit));
-                    }, () -> log.info("No Main Data Report data found for Policy No: {}", policyNo));
+                    }, () -> getDetailsFromALHMainData(policyNo, policyNoSplit, benefitCodeMapperEntityList));
 
-            if(mainDataReportEntityVal.get().getChild1Name() != null){
-                if(mainDataReportEntityVal.get().getChild1Hbc_() != 0){
+            if (mainDataReportEntityVal.get().getChild1Name() != null) {
+                if (mainDataReportEntityVal.get().getChild1Hbc_() != 0) {
                     PolicyBenefitsEntity policyBenefitsEntity = new PolicyBenefitsEntity();
 
                     policyBenefitsEntity.setPbPolicyNo(policyNo);
@@ -196,8 +197,8 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
 
             }
 
-            if(mainDataReportEntityVal.get().getChild2Name() != null){
-                if(mainDataReportEntityVal.get().getChild2Hbc_() != 0){
+            if (mainDataReportEntityVal.get().getChild2Name() != null) {
+                if (mainDataReportEntityVal.get().getChild2Hbc_() != 0) {
                     PolicyBenefitsEntity policyBenefitsEntity = new PolicyBenefitsEntity();
 
                     policyBenefitsEntity.setPbPolicyNo(policyNo);
@@ -212,8 +213,8 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
                 }
             }
 
-            if(mainDataReportEntityVal.get().getChild3Name() != null){
-                if(mainDataReportEntityVal.get().getChild3Hbc_() != 0){
+            if (mainDataReportEntityVal.get().getChild3Name() != null) {
+                if (mainDataReportEntityVal.get().getChild3Hbc_() != 0) {
                     PolicyBenefitsEntity policyBenefitsEntity = new PolicyBenefitsEntity();
 
                     policyBenefitsEntity.setPbPolicyNo(policyNo);
@@ -228,8 +229,8 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
                 }
             }
 
-            if(mainDataReportEntityVal.get().getChild4Name() != null){
-                if(mainDataReportEntityVal.get().getChild4Hbc_() != 0){
+            if (mainDataReportEntityVal.get().getChild4Name() != null) {
+                if (mainDataReportEntityVal.get().getChild4Hbc_() != 0) {
                     PolicyBenefitsEntity policyBenefitsEntity = new PolicyBenefitsEntity();
 
                     policyBenefitsEntity.setPbPolicyNo(policyNo);
@@ -244,8 +245,8 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
                 }
             }
 
-            if(mainDataReportEntityVal.get().getChild5Name() != null){
-                if(mainDataReportEntityVal.get().getChild5Hbc_() != 0){
+            if (mainDataReportEntityVal.get().getChild5Name() != null) {
+                if (mainDataReportEntityVal.get().getChild5Hbc_() != 0) {
                     PolicyBenefitsEntity policyBenefitsEntity = new PolicyBenefitsEntity();
 
                     policyBenefitsEntity.setPbPolicyNo(policyNo);
@@ -262,25 +263,327 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
 
         });
 
-        policyBeneficiariesEntityRepository.saveAll(policyBenefitsEntityList);
+        policyBenefitsEntityRepository.saveAll(policyBenefitsEntityList);
 
         return new CommonResponseDTO();
 
     }
 
-    private void getDetailsFromALHMainData(String policyNo, String[] policyNoSplit) {
+    private void getDetailsFromALHMainData(String policyNo, String[] policyNoSplit,List<BenefitCodeMapperEntity> benefitCodeMapperEntityList) {
+        List<PolicyBenefitsEntity> policyBenefitsEntityList = new ArrayList<>();
+
         mainDataALHReportRepository.findFirstByProductCodeAndPolicyNo(policyNoSplit[0], Integer.parseInt(policyNoSplit[1]))
                 .ifPresentOrElse(mainDataALHReportEntity -> {
+                    //TODO remove this
+                    mainDataALHReportEntity.setDth_OccLoadingPercentage(0.0);
                     log.info("Main ALH Data Report data found for Policy No: {}", policyNo);
-                    //     PolicyBeneficiariesEntity spouseDetailsFromALHMainData = getSpouseDetailsFromALHMainData(mainDataALHReportEntity, policyNo);
-                    //     List<PolicyBeneficiariesEntity> childrenFromALHMainData = getChildrenFromALHMainData(mainDataALHReportEntity, policyNo);
-//                    if (spouseDetailsFromALHMainData != null) {
-//                        childrenFromALHMainData.add(spouseDetailsFromALHMainData);
-//                    }
-//                    policyBeneficiariesRepository.saveAll(childrenFromALHMainData);
-                }, () -> {
-                    log.warn("No Main Data ALH Report data found for Policy No: {}", policyNo);
-                });
+                    benefitCodeMapperEntityList.forEach(benefitCodeMapperEntity -> {
+                        if (benefitCodeMapperEntity.getAllianzBenefitCode().equalsIgnoreCase("Spouse-DTHAC")) {
+                            benefitCodeMapperEntity.setAllianzBenefitCode("Spouse-DTH");
+                        }
+                    });
+                    if (mainDataALHReportEntity.getDth_Sar().compareTo(BigDecimal.ZERO) > 0) {
+                        PolicyBenefitsEntity policyBenefitsEntity = getPolicyBenefitForALHData(policyNo, benefitCodeMapperEntityList, mainDataALHReportEntity, "DTH");
+                        if (policyBenefitsEntity != null) {
+                            policyBenefitsEntity.setPbOccuExtra(BigDecimal.valueOf(mainDataALHReportEntity.getDth_OccLoadingPercentage()));
+                            policyBenefitsEntity.setPbExtraMortalityRate(mainDataALHReportEntity.getSubRateMilDth_());
+                            policyBenefitsEntity.setPbCoverage(mainDataALHReportEntity.getDth_Sar());
+                            policyBenefitsEntityList.add(policyBenefitsEntity);
+                        } else {
+                            log.warn("No DTH benefit code found in benefit code mapper table for policy no: {}", policyNo);
+                        }
+                    }
+
+                    if (mainDataALHReportEntity.getHb_Sa().compareTo(BigDecimal.ZERO) > 0) {
+                        PolicyBenefitsEntity policyBenefitsEntity = getPolicyBenefitForALHData(policyNo, benefitCodeMapperEntityList, mainDataALHReportEntity, "HB");
+                        if (policyBenefitsEntity != null) {
+                            policyBenefitsEntity.setPbOccuExtra(BigDecimal.valueOf(mainDataALHReportEntity.getHb_OccupationalLoadingPercentage()));
+                            policyBenefitsEntity.setPbExtraMortalityRate(mainDataALHReportEntity.getSubRateMilDth_());
+                            policyBenefitsEntity.setPbCoverage(mainDataALHReportEntity.getHb_Sa());
+                            policyBenefitsEntityList.add(policyBenefitsEntity);
+                        } else {
+                            log.warn("No HB benefit code found in benefit code mapper table for policy no: {}", policyNo);
+                        }
+                    }
+
+                    if (mainDataALHReportEntity.getInpSar().compareTo(BigDecimal.ZERO) > 0) {
+                        PolicyBenefitsEntity policyBenefitsEntity = getPolicyBenefitForALHData(policyNo, benefitCodeMapperEntityList, mainDataALHReportEntity, "INP");
+                        if (policyBenefitsEntity != null) {
+                            policyBenefitsEntity.setPbOccuExtra(BigDecimal.valueOf(mainDataALHReportEntity.getInpOccLoadingPercentage()));
+                            policyBenefitsEntity.setPbExtraMortalityRate(mainDataALHReportEntity.getSubRateMilInp());
+                            policyBenefitsEntity.setPbCoverage(mainDataALHReportEntity.getInpSar());
+                            policyBenefitsEntityList.add(policyBenefitsEntity);
+                        } else {
+                            log.warn("No INP benefit code found in benefit code mapper table for policy no: {}", policyNo);
+                        }
+                    }
+
+                    if (mainDataALHReportEntity.getSpousePin() != null && mainDataALHReportEntity.getSpousePin() != 0) {
+                        setSpouseBenefitsFromALHData(policyNo, benefitCodeMapperEntityList, mainDataALHReportEntity, policyBenefitsEntityList);
+                    }
+
+                    ChildDto child1Dto = ChildDto.builder()
+                            .name(mainDataALHReportEntity.getChild1Name())
+                            .childHbc(Double.toString(mainDataALHReportEntity.getChild1Hbc_()))
+                            .childInpSar(mainDataALHReportEntity.getChild1InpSar())
+                            .build();
+
+                    setChildBenefitsFromALHData(policyNo, benefitCodeMapperEntityList, child1Dto, mainDataALHReportEntity, policyBenefitsEntityList);
+
+                    // Child 2
+                    ChildDto child2Dto = ChildDto.builder()
+                            .name(mainDataALHReportEntity.getChild2Name())
+                            .childHbc(Double.toString(mainDataALHReportEntity.getChild2Hbc_()))
+                            .childInpSar(mainDataALHReportEntity.getChild2InpSar())
+                            .build();
+                    setChildBenefitsFromALHData(policyNo, benefitCodeMapperEntityList, child2Dto, mainDataALHReportEntity, policyBenefitsEntityList);
+
+// Child 3
+                    ChildDto child3Dto = ChildDto.builder()
+                            .name(mainDataALHReportEntity.getChild3Name())
+                            .childHbc(Double.toString(mainDataALHReportEntity.getChild3Hbc_()))
+                            .childInpSar(mainDataALHReportEntity.getChild3InpSar())
+                            .build();
+                    setChildBenefitsFromALHData(policyNo, benefitCodeMapperEntityList, child3Dto, mainDataALHReportEntity, policyBenefitsEntityList);
+
+// Child 4
+                    ChildDto child4Dto = ChildDto.builder()
+                            .name(mainDataALHReportEntity.getChild4Name())
+                            .childHbc(Double.toString(mainDataALHReportEntity.getChild4Hbc_()))
+                            .childInpSar(mainDataALHReportEntity.getChild4InpSar())
+                            .build();
+                    setChildBenefitsFromALHData(policyNo, benefitCodeMapperEntityList, child4Dto, mainDataALHReportEntity, policyBenefitsEntityList);
+
+// Child 5
+                    ChildDto child5Dto = ChildDto.builder()
+                            .name(mainDataALHReportEntity.getChild5Name())
+                            .childHbc(Double.toString(mainDataALHReportEntity.getChild5Hbc_()))
+                            .childInpSar(mainDataALHReportEntity.getChild5InpSar())
+                            .build();
+                    setChildBenefitsFromALHData(policyNo, benefitCodeMapperEntityList, child5Dto, mainDataALHReportEntity, policyBenefitsEntityList);
+
+// Child 6
+                    ChildDto child6Dto = ChildDto.builder()
+                            .name(mainDataALHReportEntity.getChild6Name())
+                            .childHbc(mainDataALHReportEntity.getChild6Hbc().toPlainString())
+                            .childInpSar(mainDataALHReportEntity.getChild6InpSar())
+                            .build();
+                    setChildBenefitsFromALHData(policyNo, benefitCodeMapperEntityList, child6Dto, mainDataALHReportEntity, policyBenefitsEntityList);
+
+// Child 7
+                    ChildDto child7Dto = ChildDto.builder()
+                            .name(mainDataALHReportEntity.getChild7Name())
+                            .childHbc(mainDataALHReportEntity.getChild7Hbc().toPlainString())
+                            .childInpSar(mainDataALHReportEntity.getChild7InpSar())
+                            .build();
+                    setChildBenefitsFromALHData(policyNo, benefitCodeMapperEntityList, child7Dto, mainDataALHReportEntity, policyBenefitsEntityList);
+
+// Child 8
+                    ChildDto child8Dto = ChildDto.builder()
+                            .name(mainDataALHReportEntity.getChild8Name())
+                            .childHbc(mainDataALHReportEntity.getChild8Hbc().toPlainString())
+                            .childInpSar(mainDataALHReportEntity.getChild8InpSar())
+                            .build();
+                    setChildBenefitsFromALHData(policyNo, benefitCodeMapperEntityList, child8Dto, mainDataALHReportEntity, policyBenefitsEntityList);
+
+// Child 9
+                    ChildDto child9Dto = ChildDto.builder()
+                            .name(mainDataALHReportEntity.getChild9Name())
+                            .childHbc(mainDataALHReportEntity.getChild9Hbc().toPlainString())
+                            .childInpSar(mainDataALHReportEntity.getChild9InpSar())
+                            .build();
+                    setChildBenefitsFromALHData(policyNo, benefitCodeMapperEntityList, child9Dto, mainDataALHReportEntity, policyBenefitsEntityList);
+
+// Child 10
+                    ChildDto child10Dto = ChildDto.builder()
+                            .name(mainDataALHReportEntity.getChild10Name())
+                            .childHbc(mainDataALHReportEntity.getChild10Hbc().toPlainString())
+                            .childInpSar(mainDataALHReportEntity.getChild10InpSar())
+                            .build();
+                    setChildBenefitsFromALHData(policyNo, benefitCodeMapperEntityList, child10Dto, mainDataALHReportEntity, policyBenefitsEntityList);
+
+// Child 11
+                    ChildDto child11Dto = ChildDto.builder()
+                            .name(mainDataALHReportEntity.getChild11Name())
+                            .childHbc(mainDataALHReportEntity.getChild11Hbc().toPlainString())
+                            .childInpSar(mainDataALHReportEntity.getChild11InpSar())
+                            .build();
+                    setChildBenefitsFromALHData(policyNo, benefitCodeMapperEntityList, child11Dto, mainDataALHReportEntity, policyBenefitsEntityList);
+
+// Child 12
+                    ChildDto child12Dto = ChildDto.builder()
+                            .name(mainDataALHReportEntity.getChild12Name())
+                            .childHbc(mainDataALHReportEntity.getChild12Hbc().toPlainString())
+                            .childInpSar(mainDataALHReportEntity.getChild12InpSar())
+                            .build();
+                    setChildBenefitsFromALHData(policyNo, benefitCodeMapperEntityList, child12Dto, mainDataALHReportEntity, policyBenefitsEntityList);
+
+// Child 13
+                    ChildDto child13Dto = ChildDto.builder()
+                            .name(mainDataALHReportEntity.getChild13Name())
+                            .childHbc(mainDataALHReportEntity.getChild13Hbc().toPlainString())
+                            .childInpSar(mainDataALHReportEntity.getChild13InpSar())
+                            .build();
+                    setChildBenefitsFromALHData(policyNo, benefitCodeMapperEntityList, child13Dto, mainDataALHReportEntity, policyBenefitsEntityList);
+
+// Child 14
+                    ChildDto child14Dto = ChildDto.builder()
+                            .name(mainDataALHReportEntity.getChild14Name())
+                            .childHbc(mainDataALHReportEntity.getChild14Hbc().toPlainString())
+                            .childInpSar(mainDataALHReportEntity.getChild14InpSar())
+                            .build();
+                    setChildBenefitsFromALHData(policyNo, benefitCodeMapperEntityList, child14Dto, mainDataALHReportEntity, policyBenefitsEntityList);
+
+// Child 15
+                    ChildDto child15Dto = ChildDto.builder()
+                            .name(mainDataALHReportEntity.getChild15Name())
+                            .childHbc(mainDataALHReportEntity.getChild15Hbc().toPlainString())
+                            .childInpSar(mainDataALHReportEntity.getChild15InpSar())
+                            .build();
+                    setChildBenefitsFromALHData(policyNo, benefitCodeMapperEntityList, child15Dto, mainDataALHReportEntity, policyBenefitsEntityList);
+
+// Child 16
+                    ChildDto child16Dto = ChildDto.builder()
+                            .name(mainDataALHReportEntity.getChild16Name())
+                            .childHbc(mainDataALHReportEntity.getChild16Hbc().toPlainString())
+                            .childInpSar(mainDataALHReportEntity.getChild16InpSar())
+                            .build();
+                    setChildBenefitsFromALHData(policyNo, benefitCodeMapperEntityList, child16Dto, mainDataALHReportEntity, policyBenefitsEntityList);
+
+// Child 17
+                    ChildDto child17Dto = ChildDto.builder()
+                            .name(mainDataALHReportEntity.getChild17Name())
+                            .childHbc(mainDataALHReportEntity.getChild17Hbc().toPlainString())
+                            .childInpSar(mainDataALHReportEntity.getChild17InpSar())
+                            .build();
+                    setChildBenefitsFromALHData(policyNo, benefitCodeMapperEntityList, child17Dto, mainDataALHReportEntity, policyBenefitsEntityList);
+
+// Child 18
+                    ChildDto child18Dto = ChildDto.builder()
+                            .name(mainDataALHReportEntity.getChild18Name())
+                            .childHbc(mainDataALHReportEntity.getChild18Hbc().toPlainString())
+                            .childInpSar(mainDataALHReportEntity.getChild18InpSar())
+                            .build();
+                    setChildBenefitsFromALHData(policyNo, benefitCodeMapperEntityList, child18Dto, mainDataALHReportEntity, policyBenefitsEntityList);
+
+// Child 19
+                    ChildDto child19Dto = ChildDto.builder()
+                            .name(mainDataALHReportEntity.getChild19Name())
+                            .childHbc(mainDataALHReportEntity.getChild19Hbc().toPlainString())
+                            .childInpSar(mainDataALHReportEntity.getChild19InpSar())
+                            .build();
+                    setChildBenefitsFromALHData(policyNo, benefitCodeMapperEntityList, child19Dto, mainDataALHReportEntity, policyBenefitsEntityList);
+
+// Child 20
+                    ChildDto child20Dto = ChildDto.builder()
+                            .name(mainDataALHReportEntity.getChild20Name())
+                            .childHbc(mainDataALHReportEntity.getChild20Hbc().toPlainString())
+                            .childInpSar(mainDataALHReportEntity.getChild20InpSar())
+                            .build();
+                    setChildBenefitsFromALHData(policyNo, benefitCodeMapperEntityList, child20Dto, mainDataALHReportEntity, policyBenefitsEntityList);
+
+                    policyBenefitsEntityRepository.saveAll(policyBenefitsEntityList);
+                }, () -> log.warn("No Main Data ALH Report data found for Policy No: {}", policyNo));
+    }
+
+    private void setChildBenefitsFromALHData(String policyNo, List<BenefitCodeMapperEntity> benefitCodeMapperEntityList, ChildDto childDto, MainDataALHReportEntity mainDataALHReportEntity,
+                                             List<PolicyBenefitsEntity> policyBenefitsEntityList) {
+
+        if (childDto.getName() != null && !childDto.getName().isBlank() && !childDto.getName().isEmpty()) {
+
+            if (childDto.getChildHbc() != null && Double.parseDouble(childDto.getChildHbc()) != 0.0) {
+                benefitCodeMapperEntityList.stream()
+                        .filter(benefitCodeMapperEntity -> benefitCodeMapperEntity.getAllianzBenefitCode().equalsIgnoreCase("Child-HBC"))
+                        .findFirst()
+                        .ifPresentOrElse(benefitCodeMapperEntity -> {
+                            PolicyBenefitsEntity policyBenefitsEntity = new PolicyBenefitsEntity();
+                            policyBenefitsEntity.setPbPolicyNo(policyNo);
+                            policyBenefitsEntity.setPbBenefitCode(benefitCodeMapperEntity.getSoftlogicBenefitCode());
+                            policyBenefitsEntity.setPbCoverage(new BigDecimal(childDto.getChildHbc()));
+                            policyBenefitsEntity.setPbTerm(mainDataALHReportEntity.getTerm());
+                            policyBenefitsEntity.setPbExtraPremium(BigDecimal.ZERO);
+                            policyBenefitsEntityList.add(policyBenefitsEntity);
+
+                        }, () -> log.warn("No Child-HBC benefit code found in benefit code mapper table for policy no: {}", policyNo));
+
+
+            }
+
+            if (childDto.getChildInpSar() != null && childDto.getChildInpSar().compareTo(BigDecimal.ZERO) > 0) {
+                benefitCodeMapperEntityList.stream()
+                        .filter(benefitCodeMapperEntity -> benefitCodeMapperEntity.getAllianzBenefitCode().equalsIgnoreCase("Child-INP"))
+                        .findFirst()
+                        .ifPresentOrElse(benefitCodeMapperEntity -> {
+                            PolicyBenefitsEntity policyBenefitsEntity = new PolicyBenefitsEntity();
+                            policyBenefitsEntity.setPbPolicyNo(policyNo);
+                            policyBenefitsEntity.setPbBenefitCode(benefitCodeMapperEntity.getSoftlogicBenefitCode());
+                            policyBenefitsEntity.setPbCoverage(childDto.getChildInpSar());
+                            policyBenefitsEntity.setPbTerm(mainDataALHReportEntity.getTerm());
+                            policyBenefitsEntity.setPbExtraPremium(BigDecimal.ZERO);
+                            policyBenefitsEntityList.add(policyBenefitsEntity);
+
+                        }, () -> log.warn("No Child-INP benefit code found in benefit code mapper table for policy no: {}", policyNo));
+
+
+            }
+
+
+        }
+    }
+
+    private void setSpouseBenefitsFromALHData(String policyNo, List<BenefitCodeMapperEntity> benefitCodeMapperEntityList, MainDataALHReportEntity mainDataALHReportEntity, List<PolicyBenefitsEntity> policyBenefitsEntityList) {
+        if (mainDataALHReportEntity.getSpouseDeathSa().compareTo(BigDecimal.ZERO) > 0) {
+            PolicyBenefitsEntity policyBenefitsEntity = getPolicyBenefitForALHData(policyNo, benefitCodeMapperEntityList, mainDataALHReportEntity, "Spouse-DTH");
+            if (policyBenefitsEntity != null) {
+                policyBenefitsEntity.setPbOccuExtra(BigDecimal.valueOf(mainDataALHReportEntity.getSpouseDeathOccLoadingPercentage()));
+                policyBenefitsEntity.setPbExtraMortalityRate(mainDataALHReportEntity.getSpouseSubRateMilDeath());
+                policyBenefitsEntity.setPbCoverage(mainDataALHReportEntity.getSpouseDeathSa());
+                policyBenefitsEntityList.add(policyBenefitsEntity);
+            } else {
+                log.warn("No Spouse-DTH benefit code found in benefit code mapper table for policy no: {}", policyNo);
+            }
+        }
+
+        if (mainDataALHReportEntity.getSpouseHbSa().compareTo(BigDecimal.ZERO) > 0) {
+            PolicyBenefitsEntity policyBenefitsEntity = getPolicyBenefitForALHData(policyNo, benefitCodeMapperEntityList, mainDataALHReportEntity, "Spouse-HB");
+            if (policyBenefitsEntity != null) {
+                policyBenefitsEntity.setPbOccuExtra(BigDecimal.valueOf(mainDataALHReportEntity.getSpouseHbOccLoadingPercentage()));
+                policyBenefitsEntity.setPbExtraMortalityRate(mainDataALHReportEntity.getSpouseSubRateMilHb());
+                policyBenefitsEntity.setPbCoverage(mainDataALHReportEntity.getSpouseHbSa());
+                policyBenefitsEntityList.add(policyBenefitsEntity);
+            } else {
+                log.warn("No Spouse-HB benefit code found in benefit code mapper table for policy no: {}", policyNo);
+            }
+        }
+
+        if (mainDataALHReportEntity.getSpouseInpSar().compareTo(BigDecimal.ZERO) > 0) {
+            PolicyBenefitsEntity policyBenefitsEntity = getPolicyBenefitForALHData(policyNo, benefitCodeMapperEntityList, mainDataALHReportEntity, "Spouse-INP");
+            if (policyBenefitsEntity != null) {
+                policyBenefitsEntity.setPbOccuExtra(BigDecimal.valueOf(mainDataALHReportEntity.getSpouseInpOccLoadingPercentage()));
+                policyBenefitsEntity.setPbExtraMortalityRate(mainDataALHReportEntity.getSpouseSubRateMilInp());
+                policyBenefitsEntity.setPbCoverage(mainDataALHReportEntity.getSpouseInpSar());
+                policyBenefitsEntityList.add(policyBenefitsEntity);
+            } else {
+                log.warn("No INP benefit code found in benefit code mapper table for policy no: {}", policyNo);
+            }
+        }
+    }
+
+    private PolicyBenefitsEntity getPolicyBenefitForALHData(String policyNo, List<BenefitCodeMapperEntity> benefitCodeMapperEntityList,
+                                                            MainDataALHReportEntity mainDataALHReportEntity, String allianzBenefitCode) {
+        AtomicReference<PolicyBenefitsEntity> benefitsEntity = new AtomicReference<>();
+
+        benefitCodeMapperEntityList.stream()
+                .filter(benefitCodeMapperEntity -> benefitCodeMapperEntity.getAllianzBenefitCode().equalsIgnoreCase(allianzBenefitCode))
+                .findFirst().ifPresentOrElse(benefitCodeMapperEntity -> {
+                    benefitsEntity.set(PolicyBenefitsEntity.builder()
+                            .pbPolicyNo(policyNo.trim())
+                            .pbBenefitCode(benefitCodeMapperEntity.getSoftlogicBenefitCode())
+                            .pbTerm(mainDataALHReportEntity.getTerm())
+                            .pbExtraPremium(BigDecimal.ZERO)
+                            .build());
+                }, () -> log.warn("No {} benefit code found in benefit code mapper table for policy no: {}", allianzBenefitCode, policyNo));
+        return benefitsEntity.get();
     }
 
     private List<String> getFieldNamesInClass(Class<?> clazz) {
@@ -329,7 +632,7 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
         return result.get();
     }
 
-    private   BigDecimal toBigDecimal(Object value) {
+    private BigDecimal toBigDecimal(Object value) {
         if (value == null) {
             return BigDecimal.ZERO; // Or return null if you prefer
         }
