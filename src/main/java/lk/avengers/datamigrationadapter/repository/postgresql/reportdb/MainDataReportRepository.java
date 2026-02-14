@@ -18,5 +18,5 @@ public interface MainDataReportRepository
     @Query(value = "TRUNCATE TABLE main_data_report RESTART IDENTITY", nativeQuery = true)
     void truncate();
 
-    Optional<MainDataReportEntity> findByProductCodeAndPolicyNo(String productCode, Integer policyNo);
+    Optional<MainDataReportEntity> findFirstByProductCodeAndPolicyNo(String productCode, Integer policyNo);
 }

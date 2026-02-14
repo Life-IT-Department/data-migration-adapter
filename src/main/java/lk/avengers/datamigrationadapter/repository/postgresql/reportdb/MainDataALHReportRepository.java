@@ -18,5 +18,5 @@ public interface MainDataALHReportRepository
     @Query(value = "TRUNCATE TABLE main_data_alh_report RESTART IDENTITY", nativeQuery = true)
     void truncate();
 
-    Optional<MainDataALHReportEntity> findByProductCodeAndPolicyNo(String productCode, Integer policyNo);
+    Optional<MainDataALHReportEntity> findFirstByProductCodeAndPolicyNo(String productCode, Integer policyNo);
 }

@@ -1,29 +1,28 @@
 package lk.avengers.datamigrationadapter.service.impl;
 
 import jakarta.annotation.PostConstruct;
-import lk.avengers.datamigrationadapter.dto.request.PolicyRequestDTO;
+import lk.avengers.datamigrationadapter.dto.MigrPolicyDataDTO;
 import lk.avengers.datamigrationadapter.dto.response.PolicyNumberResponseDTO;
 import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.*;
-import lk.avengers.datamigrationadapter.entity.softlogicdb.PolicyEntity;
+import lk.avengers.datamigrationadapter.entity.softlogicdb.MigrPolicyData;
 import lk.avengers.datamigrationadapter.repository.postgresql.reportdb.*;
-import lk.avengers.datamigrationadapter.repository.softlogicdb.PolicyRepository;
-import lk.avengers.datamigrationadapter.service.MigrationService;
+import lk.avengers.datamigrationadapter.repository.softlogicdb.MigrPolicyRepository;
+import lk.avengers.datamigrationadapter.service.MigrationMigrService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.Period;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
-public class MigrationServiceImpl implements MigrationService {
-
+@Slf4j
+public class MigrationMigrServiceImpl implements MigrationMigrService {
     private final MainDataReportRepository mainDataReportRepository;
     private final MainDataALHReportRepository mainDataALHReportRepository;
     private final ACPPolicyRepository acpPolicyRepository;
@@ -31,9 +30,9 @@ public class MigrationServiceImpl implements MigrationService {
     private final AdvisorCodeMappingRepository advisorCodeMappingRepository;
     private final BranchCodeMappingRepository branchCodeMappingRepository;
     private final ContactDetailRepository contactDetailRepository;
-    private final PolicyRepository policyRepository;
+    private final MigrPolicyRepository policyRepository;
 
-//    private final List<String> policyList = List.of("ASP/888636", "SCL/1044031", "ULT/348672", "ULE/402719", "ULE/121830", "ULE/274795",
+    //    private final List<String> policyList = List.of("ASP/888636", "SCL/1044031", "ULT/348672", "ULE/402719", "ULE/121830", "ULE/274795",
 //            "ASP/1082429", "SCL/1098458", "ULP/349597", "ASP/1052257", "ULI/756262", "UPR/378844", "UPS/279539", "ULI/809491", "ULP/406538",
 //            "ULE/400218", "ULE/398701", "ULE/197178", "ULV/714360", "ULV/700310", "UPS/428565", "ASP/1104355", "SCL/1104348", "ULP/198457",
 //            "ULI/828517", "SCL/900886", "SCL/1013747", "ULI/441816", "ULC/863654", "ULA/242859", "SCL/953141", "SCL/953703", "SCL/960278",
@@ -44,11 +43,12 @@ public class MigrationServiceImpl implements MigrationService {
 //            "ULE/358945", "SCL/963207", "SCL/964239", "SCL/924845", "SCL/945246", "SCL/897066", "SCL/908210", "SCL/919498", "SCL/926923",
 //            "ULT/326371", "ULT/323410", "ULT/323436", "ULT/326355", "ULT/322214", "ULT/325084", "ULT/322370", "ULT/326835", "ULT/326298",
 //            "ULT/327387", "ULT/323527", "ULT/325217", "ULT/325464", "ULT/325498", "ULT/326959", "ULT/325704", "ULT/326124", "SCL/838805",
-//            "SCL/834408", "SCL/873695", "SCL/846311", "SCL/893719", "SCL/1002906", "SCL/1082510", "SCL/859140", "SCL/905034", "SCL/974022",
+//            "SCL/834408", "SCL/873695", "SCL/846311", "
+//            , "SCL/1002906", "SCL/1082510", "SCL/859140", "SCL/905034", "SCL/974022",
 //            "SCL/974303", "SCL/974386", "SCL/992735", "SCL/992792", "SCL/992891", "SCL/994475", "SCL/1005792", "SCL/1005990", "SCL/1006303",
 //            "SCL/1048123", "SCL/1055102", "SCL/1055169", "SCL/1070424", "SCL/1071018", "SCL/1089275", "SCL/1089309", "SCL/1081926", "SCL/1005768",
 //            "SCL/935254", "SCL/935395", "SCL/935486", "SCL/935510","ULF527879", "UPR215038", "ULP321661", "SCL1038926", "UPR399550","SCL900753", "ULV451021", "ULV571323", "UPR126334", "SCL988394");
-private final List<String> policyList = List.of("ASP/888636", "SCL/1044031", "ULT/348672", "ULE/402719", "ULE/121830", "ULE/274795",
+    private final List<String> policyList = List.of("ASP/888636", "SCL/1044031", "ULT/348672", "ULE/402719", "ULE/121830", "ULE/274795",
             "ASP/1082429", "SCL/1098458", "ULP/349597", "ASP/1052257", "ULI/756262", "UPS/279539", "ULI/809491", "ULP/406538",
             "ULE/400218", "ULE/398701", "ULV/714360", "ULV/700310", "UPS/428565", "ASP/1104355", "SCL/1104348", "ULP/198457",
             "ULI/828517", "SCL/900886", "SCL/1013747", "ULI/441816", "ULC/863654", "ULA/242859", "SCL/953141", "SCL/953703", "SCL/960278",
@@ -62,7 +62,7 @@ private final List<String> policyList = List.of("ASP/888636", "SCL/1044031", "UL
             "SCL/834408", "SCL/873695", "SCL/846311", "SCL/1002906", "SCL/1082510", "SCL/859140", "SCL/905034", "SCL/974022",
             "SCL/974303", "SCL/974386", "SCL/992735", "SCL/992792", "SCL/992891", "SCL/994475", "SCL/1005792", "SCL/1005990", "SCL/1006303",
             "SCL/1048123", "SCL/1055102", "SCL/1055169", "SCL/1071018", "SCL/1089275", "SCL/1089309", "SCL/1081926", "SCL/1005768",
-            "SCL/935254", "SCL/935395", "SCL/935486", "SCL/935510","ULF527879", "UPR215038", "ULP321661", "SCL1038926", "UPR399550","SCL900753", "ULV451021", "ULV571323", "UPR126334", "SCL988394");
+            "SCL/935254", "SCL/935395", "SCL/935486", "SCL/935510","ULF527879", "UPR215038", "ULP321661", "SCL1038926", "ULV451021", "ULV571323", "UPR126334", "SCL988394");
 
     private List<ProductCodeMappingEntity> productCodeMappingList;
     private List<AdvisorCodeMappingEntity> advisorCodeMappingList;
@@ -79,11 +79,10 @@ private final List<String> policyList = List.of("ASP/888636", "SCL/1044031", "UL
         log.info("Loaded {} BRANCH_CODE_MAPPING records", branchCodeMappingList.size());
     }
 
-    private final List<PolicyRequestDTO> requestDTOList = new ArrayList<>();
+    private final List<MigrPolicyDataDTO> requestDTOList = new ArrayList<>();
 
     @Override
-    public void migratePolicyData(String uuid) {
-
+    public void migratePolicyData() {
 
         policyList.forEach(policy -> {
             Object policyEntity = findPolicyInRepositories(policy);
@@ -106,8 +105,8 @@ private final List<String> policyList = List.of("ASP/888636", "SCL/1044031", "UL
 
         });
         if (!requestDTOList.isEmpty()) {
-            List<PolicyEntity> policyEntityList = requestDTOList.stream()
-                    .map(dto -> dto.mapData(PolicyEntity.class))
+            List<MigrPolicyData> policyEntityList = requestDTOList.stream()
+                    .map(dto -> dto.mapData(MigrPolicyData.class))
                     .toList();
             log.info("Existing table truncating in MSSQL DB...");
             policyRepository.truncateTable();
@@ -115,7 +114,7 @@ private final List<String> policyList = List.of("ASP/888636", "SCL/1044031", "UL
             policyRepository.saveAll(policyEntityList);
             log.info("Saved {} policies to the MSSQL DB", policyEntityList.size());
         }
-        log.info("Migration completed for policy {}", uuid);
+        log.info("Migration completed for policy {}");
     }
 
     private void processACPPolicy(ACPPolicyEntity acpPolicy, String policyNo) {
@@ -125,13 +124,13 @@ private final List<String> policyList = List.of("ASP/888636", "SCL/1044031", "UL
             return;
         }
 
-        PolicyRequestDTO policyRequestDTO = new PolicyRequestDTO();
+        MigrPolicyDataDTO policyRequestDTO = new MigrPolicyDataDTO();
         // ===== Policy (PO) =====
         policyRequestDTO.setPoPlanCode(getSoftLogicProductCodeMapping(policyNo));
         policyRequestDTO.setPoPlanVersion(acpPolicy.getPlanNo());
         policyRequestDTO.setPoTerm(acpPolicy.getTerm());
         policyRequestDTO.setPoDateOfProposal(acpPolicy.getInception());
-        policyRequestDTO.setPoPaymentTerm(acpPolicy.getPremiumPaymentTerm());
+        policyRequestDTO.setPoPaymentTerm(setPaymentTerm(acpPolicy.getPremiumPaymentTerm()));
         policyRequestDTO.setPoBsa(acpPolicy.getBasicSumAssured());
         policyRequestDTO.setPoSumAtRisk(acpPolicy.getDthSar());
         policyRequestDTO.setPoBasicPremium(acpPolicy.getInsuredModalPremium());
@@ -143,9 +142,11 @@ private final List<String> policyList = List.of("ASP/888636", "SCL/1044031", "UL
         policyRequestDTO.setPoPremiumDueDate(acpPolicy.getNextPremium());
         policyRequestDTO.setPoMode(getFrequencyString(Integer.parseInt(acpPolicy.getFrequency())));
         policyRequestDTO.setPoPolicyStatusCode(getPolicyStatusCode(acpPolicy.getStatus(), acpPolicy.getLastPremiumDueDate()));
-        policyRequestDTO.setPoLastPremiumDueDate(acpPolicy.getLastPremiumDueDate());
         policyRequestDTO.setPoExpirationDate(acpPolicy.getExpiry());
         policyRequestDTO.setPoBranchCode(getBranchCodeMapping(Integer.parseInt(acpPolicy.getSalesBranchCode())));
+        policyRequestDTO.setPoPremium(acpPolicy.getInsuredModalPremium());
+        policyRequestDTO.setPoAdminFee(BigDecimal.ZERO);
+        policyRequestDTO.setPoIllusMatuValue(BigDecimal.ZERO);
         // ===== Life Assured (LA) =====
         ContactDetailEntity contact = getContactDetailEntity(policyNo);
         if (contact != null) {
@@ -161,10 +162,14 @@ private final List<String> policyList = List.of("ASP/888636", "SCL/1044031", "UL
             policyRequestDTO.setLaPhone2(getOtherTelephoneNumber(contact.getOtherTelephoneNumber()));
             policyRequestDTO.setLaNationality(contact.getNationality().toUpperCase());
             policyRequestDTO.setLaEmail(getValidatedEmail(contact.getEmailAddress()));
-            policyRequestDTO.setLaAgeAdmitted(getAdmittedAge(acpPolicy.getInception(), contact.getDateOfBirth()).toString());
+            policyRequestDTO.setLaAgeAdmitted(false);
             policyRequestDTO.setLaAddressCity(contact.getCity());
             policyRequestDTO.setLaOccupation(contact.getOccupation());
-            policyRequestDTO.setLaAnb(Integer.parseInt(policyRequestDTO.getLaAgeAdmitted()));
+            policyRequestDTO.setLaAnb(Integer.parseInt(getAdmittedAge(acpPolicy.getInception(), contact.getDateOfBirth()).toString()));
+            policyRequestDTO.setLaNameWithInitials(getNameWithInitials(contact.getFirstName(), contact.getLastName()));
+            policyRequestDTO.setLaIsPolicyAssign(false);
+            policyRequestDTO.setLaWeight(0);
+            policyRequestDTO.setLaHeight(0);
         } else {
             log.error("Contact details not found for policy {}", policyNo);
         }
@@ -174,6 +179,65 @@ private final List<String> policyList = List.of("ASP/888636", "SCL/1044031", "UL
         requestDTOList.add(policyRequestDTO);
     }
 
+    public String getNameWithInitials(String firstName, String lastName) {
+
+        if (firstName == null) firstName = "";
+        if (lastName == null) lastName = "";
+
+        firstName = firstName.trim();
+        lastName = lastName.trim();
+
+        if (lastName.isEmpty()) {
+            return "";
+        }
+
+        StringBuilder initials = new StringBuilder();
+
+        for (String word : firstName.split("\\s+")) {
+            if (!word.isBlank()) {
+                initials.append(Character.toUpperCase(word.charAt(0))).append(".");
+            }
+        }
+
+        String[] lastNameParts = lastName.split("\\s+");
+
+        if (lastNameParts.length == 1) {
+            return initials + lastNameParts[0];
+        }
+
+        for (int i = 0; i < lastNameParts.length - 1; i++) {
+            if (!lastNameParts[i].isBlank()) {
+                initials.append(Character.toUpperCase(lastNameParts[i].charAt(0))).append(".");
+            }
+        }
+
+        String finalSurname = lastNameParts[lastNameParts.length - 1];
+
+        return initials + " " + finalSurname;
+    }
+
+    private Integer setPaymentTerm(String paymentTerm) {
+
+        if (paymentTerm == null || paymentTerm.isBlank()) {
+            return null; // or throw exception depending on your logic
+        }
+
+        paymentTerm = paymentTerm.trim();
+
+        if (paymentTerm.equalsIgnoreCase("SP")) {
+            return 1;
+        }
+
+        try {
+            // Parse as BigDecimal to support decimals
+            BigDecimal value = new BigDecimal(paymentTerm);
+            return value.intValue();  // removes decimal part safely
+        } catch (NumberFormatException ex) {
+            throw new IllegalArgumentException(
+                    "Invalid payment term: " + paymentTerm, ex);
+        }
+    }
+
     private void processMainDataReport(MainDataReportEntity mainDataReport, String policyNo) {
 
         if (!isEligiblePolicyStatus(mainDataReport.getStatus())) {
@@ -181,13 +245,13 @@ private final List<String> policyList = List.of("ASP/888636", "SCL/1044031", "UL
             return;
         }
 
-        PolicyRequestDTO policyRequestDTO = new PolicyRequestDTO();
+        MigrPolicyDataDTO policyRequestDTO = new MigrPolicyDataDTO();
         // ===== Policy (PO) =====
         policyRequestDTO.setPoPlanCode(getSoftLogicProductCodeMapping(policyNo));
         policyRequestDTO.setPoPlanVersion(mainDataReport.getPlanNo());
         policyRequestDTO.setPoTerm(mainDataReport.getTerm());
         policyRequestDTO.setPoDateOfProposal(mainDataReport.getInception());
-        policyRequestDTO.setPoPaymentTerm(mainDataReport.getPremiumPaymentTerm()); // dispute
+        policyRequestDTO.setPoPaymentTerm(setPaymentTerm(mainDataReport.getPremiumPaymentTerm())); // dispute
         policyRequestDTO.setPoBsa(mainDataReport.getBasicSumAssured());
         policyRequestDTO.setPoSumAtRisk(mainDataReport.getDth_Sar());
         policyRequestDTO.setPoBasicPremium(mainDataReport.getModalPremium());
@@ -199,9 +263,11 @@ private final List<String> policyList = List.of("ASP/888636", "SCL/1044031", "UL
         policyRequestDTO.setPoPremiumDueDate(mainDataReport.getNextPremium());
         policyRequestDTO.setPoMode(getFrequencyString(mainDataReport.getFrequency()));
         policyRequestDTO.setPoPolicyStatusCode(getPolicyStatusCode(mainDataReport.getStatus(), mainDataReport.getLastPremiumDueDate()));
-        policyRequestDTO.setPoLastPremiumDueDate(mainDataReport.getLastPremiumDueDate());
         policyRequestDTO.setPoExpirationDate(mainDataReport.getExpiry());
         policyRequestDTO.setPoBranchCode(getBranchCodeMapping(mainDataReport.getSalesBranchCode()));
+        policyRequestDTO.setPoPremium(mainDataReport.getModalPremium());
+        policyRequestDTO.setPoAdminFee(BigDecimal.ZERO);
+        policyRequestDTO.setPoIllusMatuValue(BigDecimal.ZERO);
         // ===== Life Assured (LA) =====
         ContactDetailEntity contact = getContactDetailEntity(policyNo);
         if (contact != null) {
@@ -217,11 +283,15 @@ private final List<String> policyList = List.of("ASP/888636", "SCL/1044031", "UL
             policyRequestDTO.setLaPhone2(getOtherTelephoneNumber(contact.getOtherTelephoneNumber()));
             policyRequestDTO.setLaNationality(contact.getNationality().toUpperCase());
             policyRequestDTO.setLaEmail(getValidatedEmail(contact.getEmailAddress()));
-            policyRequestDTO.setLaAgeAdmitted(getAdmittedAge(mainDataReport.getInception(), contact.getDateOfBirth()).toString()); //check
+            policyRequestDTO.setLaAgeAdmitted(false);
             policyRequestDTO.setLaAddressCity(contact.getCity());
             policyRequestDTO.setLaOccupation(contact.getOccupation());
-            policyRequestDTO.setLaAnb(Integer.parseInt(policyRequestDTO.getLaAgeAdmitted()));
+            policyRequestDTO.setLaAnb(Integer.parseInt(getAdmittedAge(mainDataReport.getInception(), contact.getDateOfBirth()).toString()));
             policyRequestDTO.setLaPrefLanguage(getLanguageChar(contact.getLanguagePreference()));
+            policyRequestDTO.setLaNameWithInitials(getNameWithInitials(contact.getFirstName(), contact.getLastName()));
+            policyRequestDTO.setLaIsPolicyAssign(false);
+            policyRequestDTO.setLaWeight(0);
+            policyRequestDTO.setLaHeight(0);
         } else {
             log.error("Contact details not found for policy {}", policyNo);
         }
@@ -244,13 +314,13 @@ private final List<String> policyList = List.of("ASP/888636", "SCL/1044031", "UL
             return;
         }
 
-        PolicyRequestDTO policyRequestDTO = new PolicyRequestDTO();
+        MigrPolicyDataDTO policyRequestDTO = new MigrPolicyDataDTO();
         // ===== Policy (PO) =====
         policyRequestDTO.setPoPlanCode(getSoftLogicProductCodeMapping(policyNo));
         policyRequestDTO.setPoPlanVersion(alhReport.getPlanNo());
         policyRequestDTO.setPoTerm(alhReport.getTerm());
         policyRequestDTO.setPoDateOfProposal(alhReport.getInception());
-        policyRequestDTO.setPoPaymentTerm(Integer.toString(alhReport.getPremiumPaymentTerm()));
+        policyRequestDTO.setPoPaymentTerm(alhReport.getPremiumPaymentTerm());
         policyRequestDTO.setPoBsa(alhReport.getBasicSumAssured());
         policyRequestDTO.setPoSumAtRisk(alhReport.getDth_Sar());
         policyRequestDTO.setPoBasicPremium(alhReport.getModalPremium());
@@ -262,9 +332,11 @@ private final List<String> policyList = List.of("ASP/888636", "SCL/1044031", "UL
         policyRequestDTO.setPoPremiumDueDate(alhReport.getNextPremium());
         policyRequestDTO.setPoMode(getFrequencyString(alhReport.getFrequency()));
         policyRequestDTO.setPoPolicyStatusCode(getPolicyStatusCode(alhReport.getStatus(), alhReport.getLastPremiumDueDate()));
-        policyRequestDTO.setPoLastPremiumDueDate(alhReport.getLastPremiumDueDate());
         policyRequestDTO.setPoExpirationDate(alhReport.getExpiry());
         policyRequestDTO.setPoBranchCode(getBranchCodeMapping(alhReport.getSalesBranchCode()));
+        policyRequestDTO.setPoPremium(alhReport.getModalPremium());
+        policyRequestDTO.setPoAdminFee(BigDecimal.ZERO);
+        policyRequestDTO.setPoIllusMatuValue(BigDecimal.ZERO);
         // ===== Life Assured (LA) =====
         ContactDetailEntity contact = getContactDetailEntity(policyNo);
         if (contact != null) {
@@ -280,11 +352,15 @@ private final List<String> policyList = List.of("ASP/888636", "SCL/1044031", "UL
             policyRequestDTO.setLaPhone2(getOtherTelephoneNumber(contact.getOtherTelephoneNumber()));
             policyRequestDTO.setLaNationality(contact.getNationality().toUpperCase());
             policyRequestDTO.setLaEmail(getValidatedEmail(contact.getEmailAddress()));
-            policyRequestDTO.setLaAgeAdmitted(getAdmittedAge(alhReport.getInception(), contact.getDateOfBirth()).toString()); //check
+            policyRequestDTO.setLaAgeAdmitted(false);
             policyRequestDTO.setLaAddressCity(contact.getCity());
             policyRequestDTO.setLaOccupation(contact.getOccupation());
-            policyRequestDTO.setLaAnb(Integer.parseInt(policyRequestDTO.getLaAgeAdmitted()));
+            policyRequestDTO.setLaAnb(Integer.parseInt(getAdmittedAge(alhReport.getInception(), contact.getDateOfBirth()).toString()));
             policyRequestDTO.setLaPrefLanguage(getLanguageChar(contact.getLanguagePreference()));
+            policyRequestDTO.setLaNameWithInitials(getNameWithInitials(contact.getFirstName(), contact.getLastName()));
+            policyRequestDTO.setLaIsPolicyAssign(false);
+            policyRequestDTO.setLaWeight(0);
+            policyRequestDTO.setLaHeight(0);
         } else {
             log.error("Contact details not found for policy {}", policyNo);
         }
@@ -616,6 +692,7 @@ private final List<String> policyList = List.of("ASP/888636", "SCL/1044031", "UL
 
         return new PolicyNumberResponseDTO(productCode, policyNo);
     }
+
 
 
 }

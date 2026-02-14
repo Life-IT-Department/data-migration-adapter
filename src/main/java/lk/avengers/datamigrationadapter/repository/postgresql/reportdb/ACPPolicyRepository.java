@@ -18,5 +18,5 @@ public interface ACPPolicyRepository extends JpaRepository<ACPPolicyEntity, Long
     @Query(value = "TRUNCATE TABLE acp_policy RESTART IDENTITY CASCADE", nativeQuery = true)
     void truncateTable();
 
-    Optional<ACPPolicyEntity> findByProductCodeAndPolicyNo(String productCode, String policyNo);
+    Optional<ACPPolicyEntity> findFirstByProductCodeAndPolicyNo(String productCode, String policyNo);
 }
