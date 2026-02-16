@@ -32,7 +32,7 @@ public class MainExcelReader {
         try (InputStream is = new FileInputStream(file);
              Workbook workbook = new XSSFWorkbook(is)) {
 
-            Sheet sheet = workbook.getSheet("POC_3");
+            Sheet sheet = workbook.getSheet("POC_4");
 
             for (Row row : sheet) {
 

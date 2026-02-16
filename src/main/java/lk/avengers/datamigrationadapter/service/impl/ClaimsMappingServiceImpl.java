@@ -1,15 +1,9 @@
 package lk.avengers.datamigrationadapter.service.impl;
 
 import lk.avengers.datamigrationadapter.dto.CommonResponseDTO;
-import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.DeclaredClaimEntity;
-import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.OutstandingClaimEntity;
-import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.PaidClaimEntity;
-import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.RejectedClaimEntity;
+import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.*;
 import lk.avengers.datamigrationadapter.entity.softlogicdb.ClaimEntity;
-import lk.avengers.datamigrationadapter.repository.postgresql.reportdb.DeclaredClaimReportRepository;
-import lk.avengers.datamigrationadapter.repository.postgresql.reportdb.OutstandingClaimRepository;
-import lk.avengers.datamigrationadapter.repository.postgresql.reportdb.PaidClaimReportRepository;
-import lk.avengers.datamigrationadapter.repository.postgresql.reportdb.RejectedClaimRepository;
+import lk.avengers.datamigrationadapter.repository.postgresql.reportdb.*;
 import lk.avengers.datamigrationadapter.repository.softlogicdb.ClaimEntityRepository;
 import lk.avengers.datamigrationadapter.service.ClaimsMappingService;
 import lk.avengers.datamigrationadapter.util.MainExcelReader;
@@ -34,6 +28,7 @@ public class ClaimsMappingServiceImpl implements ClaimsMappingService {
     private final RejectedClaimRepository rejectedClaimRepository;
     private final ClaimEntityRepository claimEntityRepository;
     private final DeclaredClaimReportRepository declaredClaimReportRepository;
+    private final ClosedClaimsReportRepository closedClaimsReportRepository;
 
     private final MainExcelReader mainExcelReader;
 
@@ -56,6 +51,7 @@ public class ClaimsMappingServiceImpl implements ClaimsMappingService {
                 List<OutstandingClaimEntity> outstandingClaimEntityList = outstandingClaimRepository.findByPolicyNumber(policyNo);
                 List<RejectedClaimEntity> rejectedClaimEntityList = rejectedClaimRepository.findByPolicy(policyNo.replaceFirst("/", ""));
                 List<DeclaredClaimEntity> declaredClaimEntityList = declaredClaimReportRepository.findByPolicyNo(policyNo);
+                List<ClosedClaimReportEntity> closedClaimReportEntityList = closedClaimsReportRepository.findByPolicyNo(policyNo);
 
                 if(!paidClaimEntityList.isEmpty()){
                     paidClaimEntityList.forEach(paidClaimEntity -> claimEntityList.add(
@@ -142,6 +138,24 @@ public class ClaimsMappingServiceImpl implements ClaimsMappingService {
                                     .comments(declaredClaimEntity.getClaimDescription())
                                     .policyYear(declaredClaimEntity.getUnderwritingYear())
                                     .build()
+                    ));
+                }
+
+                if(!closedClaimReportEntityList.isEmpty()){
+                    closedClaimReportEntityList.forEach(closedClaimReportEntity -> claimEntityList.add(
+                            ClaimEntity.builder()
+                                    .policyNo(policyNo)
+                                    .claimNo(closedClaimReportEntity.getClaimNo())
+                                    .claimType(closedClaimReportEntity.getTypeOfClaim())
+                                    .dateOfEvent(closedClaimReportEntity.getOccurrenceDate())
+                                    .dateOfIntimation(closedClaimReportEntity.getDeclarationDate())
+                                    .patientAdmitted(closedClaimReportEntity.getPolicyHolder())
+                                    .totalClaimAmount(BigDecimal.valueOf(closedClaimReportEntity.getClaimAmount()))
+                                    .totalSettledAmount(BigDecimal.valueOf(closedClaimReportEntity.getClaimAmount()))
+                                    .claimStatus(CLOSED)
+                                    .comments(closedClaimReportEntity.getRemarks())
+                                    .build()
+
                     ));
                 }
             });

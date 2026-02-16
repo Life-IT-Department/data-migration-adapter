@@ -18,6 +18,7 @@ import java.time.LocalDate;
 import java.time.Period;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 @Service
@@ -513,19 +514,16 @@ public class MigrationMigrServiceImpl implements MigrationMigrService {
             return "NONE";
         }
 
-        switch (status.trim().toUpperCase()) {
-            case "IN FORCE":
-                return "INFC";
-
-            case "LAPSED":
+        return switch (status.trim().toUpperCase()) {
+            case "IN FORCE" -> "INFC";
+            case "LAPSED" -> {
                 LocalDate today = LocalDate.now();
-                return lastPremiumDueDate.isBefore(today.minusMonths(7))
+                yield lastPremiumDueDate.isBefore(today.minusMonths(7))
                         ? "ALAP"
                         : "TLAP";
-
-            default:
-                return "NONE";
-        }
+            }
+            default -> "NONE";
+        };
     }
 
     private String getFrequencyString(Integer frequency) {
@@ -551,13 +549,36 @@ public class MigrationMigrServiceImpl implements MigrationMigrService {
 
 
     private String getAgentCodeMapping(String agentCode) {
-        if (agentCode == null || agentCode.isEmpty()) {
+        if (agentCode == null || agentCode.isBlank()) {
+            return null;
+        }
+        List<String> advCodes = advisorCodeMappingList.stream()
+                .filter(m -> agentCode.equalsIgnoreCase(m.getCode()))
+                .map(AdvisorCodeMappingEntity::getAdvCode)
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toList();
+
+        if (advCodes.isEmpty()) {
             return null;
         }
 
-        return advisorCodeMappingList.stream()
-                .filter(mapping -> agentCode.equalsIgnoreCase(mapping.getCode()))
-                .map(AdvisorCodeMappingEntity::getAdvCode)
+        if (advCodes.size() == 1) {
+            return advCodes.getFirst();
+        }
+
+        return advCodes.stream()
+                .filter(code -> {
+                    String numericPart = code.replaceAll("^[^0-9]+", "");
+                    if (numericPart.isEmpty()) return false;
+
+                    try {
+                        return Integer.parseInt(numericPart) > 100;
+                    } catch (NumberFormatException e) {
+                        return false;
+                    }
+                })
                 .findFirst()
                 .orElse(null);
     }

@@ -29,6 +29,7 @@ public class ReportUploadController {
     private final RejectedClaimReportService rejectedClaimReportService;
     private final OutstandingClaimReportService outstandingClaimReportService;
     private final DeclaredClaimReportService declaredClaimReportService;
+    private final ClosedClaimReportService closedClaimReportService;
 
     @PostMapping("/cash-flow-report")
     public ResponseEntity<CommonResponseDTO> uploadCashFlow(@RequestParam int year) {
@@ -83,6 +84,12 @@ public class ReportUploadController {
     public ResponseEntity<CommonResponseDTO> uploadDeclaredClaimsReportExcel() {
         log.info("UploadDeclaredClaimReportExcel API METHOD ACCESSED.");
         return declaredClaimReportService.uploadDeclaredClaimsReport();
+    }
+
+    @GetMapping("/closed-claim-report")
+    public ResponseEntity<CommonResponseDTO> uploadClosedClaimsReportExcel() {
+        log.info("UploadClosedClaimReportExcel API METHOD ACCESSED.");
+        return closedClaimReportService.uploadClosedClaimsReport();
     }
 
     @PostMapping("/test")
