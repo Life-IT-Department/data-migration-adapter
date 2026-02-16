@@ -24,8 +24,8 @@ public class MainDataReportEntity extends BaseMainData {
     private Integer defermentTerm;
     @Column(name = "retirement_benefit_payout_term")
     private Integer retirementBenefitPayoutTerm;
-    @Column(name = "status_date")
-    private LocalDate statusDate;
+   // @Column(name = "status_date")
+   // private LocalDate statusDate;
     @Column(name = "accd_sa")
     private BigDecimal accd_Sa;
     @Column(name = "sub_accd")
