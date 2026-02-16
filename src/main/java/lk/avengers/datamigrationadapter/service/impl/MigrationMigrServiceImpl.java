@@ -303,6 +303,15 @@ public class MigrationMigrServiceImpl implements MigrationMigrService {
             policyRequestDTO.setSpSex(getSexChar(mainDataReport.getSpouseChildGender()));
             policyRequestDTO.setSpDob(mainDataReport.getSpouseChildDob());
             policyRequestDTO.setSpAnb(getAdmittedAge(mainDataReport.getInception(), mainDataReport.getSpouseChildDob()));
+            policyRequestDTO.setSpAgeAdmitted(false);
+            policyRequestDTO.setSpHeight(0);
+            policyRequestDTO.setSpWeight(0);
+        } else {
+            policyRequestDTO.setSpSex("");
+            policyRequestDTO.setSpAnb(0);
+            policyRequestDTO.setSpAgeAdmitted(false);
+            policyRequestDTO.setSpHeight(0);
+            policyRequestDTO.setSpWeight(0);
         }
         requestDTOList.add(policyRequestDTO);
     }
@@ -372,7 +381,15 @@ public class MigrationMigrServiceImpl implements MigrationMigrService {
             policyRequestDTO.setSpSex(getSexChar(alhReport.getSpouseGender()));
             policyRequestDTO.setSpDob(alhReport.getSpouseDob());
             policyRequestDTO.setSpAnb(getAdmittedAge(alhReport.getInception(), alhReport.getSpouseDob()));
-
+            policyRequestDTO.setSpAgeAdmitted(false);
+            policyRequestDTO.setSpHeight(0);
+            policyRequestDTO.setSpWeight(0);
+        } else {
+            policyRequestDTO.setSpSex("");
+            policyRequestDTO.setSpAnb(0);
+            policyRequestDTO.setSpAgeAdmitted(false);
+            policyRequestDTO.setSpHeight(0);
+            policyRequestDTO.setSpWeight(0);
         }
 
         requestDTOList.add(policyRequestDTO);
