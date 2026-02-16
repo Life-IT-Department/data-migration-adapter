@@ -293,7 +293,7 @@ public class MainDataReportUploadServiceImpl implements MainDataReportUploadServ
                 .frequency(commonFunction.getIntegerValue(row.getCell(col++)))
                 .nextPremium(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
                 .status(commonFunction.getStringValue(row.getCell(col++)))
-                .statusDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+                .date(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
                 .reason(commonFunction.getStringValue(row.getCell(col++)))
                 .agentCode(commonFunction.getStringValue(row.getCell(col++)))
                 .introducer(commonFunction.getStringValue(row.getCell(col++)))
@@ -349,6 +349,11 @@ public class MainDataReportUploadServiceImpl implements MainDataReportUploadServ
                 .subFseb_(commonFunction.getBigDecimalValue(row.getCell(col++)))
                 .subRateMilFseb_(commonFunction.getBigDecimalValue(row.getCell(col++)))
                 .fseb_OccupationalLoadingPercentage(commonFunction.getDoubleValue(row.getCell(col++)))
+                // HB
+                .hb_Sa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subHb_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .subRateMilHb_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .hb_OccupationalLoadingPercentage(commonFunction.getDoubleValue(row.getCell(col++)))
                 // LEB
                 .leb_Sa(commonFunction.getBigDecimalValue(row.getCell(col++)))
                 .subLeb_(commonFunction.getBigDecimalValue(row.getCell(col++)))
