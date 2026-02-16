@@ -27,7 +27,7 @@ public class PaidClaimEntity {
     private String policyNo;
     @Column(name = "agent_no")
     private String agentNo;
-    @Column(name = "agent_name")
+    @Column(name = "agent_name", columnDefinition = "TEXT")
     private String agentName;
     @Column(name = "company_branch")
     private String companyBranch;
@@ -103,9 +103,9 @@ public class PaidClaimEntity {
     private String district;
     @Column(name = "place_of_claim")
     private String placeOfClaim;
-    @Column(name = "cause_of_loss")
+    @Column(name = "cause_of_loss", columnDefinition = "TEXT")
     private String causeOfLoss;
-    @Column(name = "cause_of_claim")
+    @Column(name = "cause_of_claim", columnDefinition = "TEXT")
     private String causeOfClaim;
     @Column(name = "status_notes", columnDefinition = "TEXT")
     private String statusNotes;
