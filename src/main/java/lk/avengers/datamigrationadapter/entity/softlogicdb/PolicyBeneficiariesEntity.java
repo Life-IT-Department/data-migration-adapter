@@ -29,7 +29,7 @@ public class PolicyBeneficiariesEntity {
     private Integer beAge;
 
     @Column(name = "BE_Sex", length = 1 ,columnDefinition="char")
-    private Character beSex;
+    private Character beSex='M';
 
     @Column(name = "BE_DOB")
     private LocalDate beDob;
@@ -44,7 +44,7 @@ public class PolicyBeneficiariesEntity {
     private LocalDate beInclusionDate;
 
     @Column(name = "BE_Coverage", precision = 18,  scale = 2)
-    private BigDecimal beCoverage;
+    private BigDecimal beCoverage=BigDecimal.ZERO;
 
     @Column(name = "BE_IsHB")
     private Boolean beIsHb;
