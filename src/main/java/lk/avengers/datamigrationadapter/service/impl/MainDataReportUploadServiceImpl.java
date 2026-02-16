@@ -274,7 +274,6 @@ public class MainDataReportUploadServiceImpl implements MainDataReportUploadServ
                 .productCode(commonFunction.getStringValue(row.getCell(col++)))
                 .planNo(commonFunction.getStringValue(row.getCell(col++)))
                 // Dates & Terms
-
                 .inception(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
                 .expiry(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
                 .issueDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
@@ -506,7 +505,6 @@ public class MainDataReportUploadServiceImpl implements MainDataReportUploadServ
                 .refundValue(commonFunction.getBigDecimalValue(row.getCell(col++)))
                 // createdAt - handled by @CreatedDate
                 .build();
-
         list.add(entity);
     }
 
@@ -526,7 +524,6 @@ public class MainDataReportUploadServiceImpl implements MainDataReportUploadServ
     private void mapExcelRowsToMainDataALHReportEntity(Row row, List<MainDataALHReportEntity> list) {
         MainDataALHReportEntity entity = MainDataALHReportEntity.builder().build();
         int c = 0;
-
         // Policy & identifiers (0-3)
         entity.setPolicyNo(commonFunction.getIntegerValue(row.getCell(c++)));
         entity.setProposalNo(commonFunction.getIntegerValue(row.getCell(c++)));
@@ -736,7 +733,6 @@ public class MainDataReportUploadServiceImpl implements MainDataReportUploadServ
         entity.setLastPaymentDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(c++))));
         entity.setLastPremiumDueDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(c++))));
         entity.setRefundValue(commonFunction.getBigDecimalValue(row.getCell(c++)));
-
         list.add(entity);
     }
 
