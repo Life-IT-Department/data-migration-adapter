@@ -95,7 +95,7 @@ public class PaidClaimEntity {
     private Integer noOfDaysHospitalizedStandard;
     @Column(name = "no_of_days_hospitalized_icu")
     private Integer noOfDaysHospitalizedIcu;
-    @Column(name = "policy_holder_address")
+    @Column(name = "policy_holder_address", columnDefinition = "TEXT")
     private String policyHolderAddress;
     @Column(name = "phone_number")
     private String phoneNumber;
@@ -107,7 +107,7 @@ public class PaidClaimEntity {
     private String causeOfLoss;
     @Column(name = "cause_of_claim")
     private String causeOfClaim;
-    @Column(name = "status_notes")
+    @Column(name = "status_notes", columnDefinition = "TEXT")
     private String statusNotes;
     @Column(name = "claim_description", columnDefinition = "TEXT")
     private String claimDescription;

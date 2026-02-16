@@ -25,6 +25,9 @@ public class ReportUploadController {
     private final PosSignatureReportService posSignatureReportService;
     private final PolicyBeneficiariesMappingService policyBeneficiariesMappingService;
     private final PolicyBenefitMappingService policyBenefitMappingService;
+    private final PaidClaimsReportService paidClaimsReportService;
+    private final RejectedClaimReportService rejectedClaimReportService;
+    private final OutstandingClaimReportService outstandingClaimReportService;
 
     @PostMapping("/cash-flow-report")
     public ResponseEntity<CommonResponseDTO> uploadCashFlow(@RequestParam int year) {
@@ -35,12 +38,6 @@ public class ReportUploadController {
     @GetMapping("/contact-detail-report")
     public ResponseEntity<CommonResponseDTO> uploadContactDetail() {
         log.info("CONTACT_DETAIL_REPORT_UPLOAD API METHOD ACCESSED.");
-        return contactDetailReportService.processExcel();
-    }
-
-    @GetMapping("/paid-claim-report")
-    public ResponseEntity<CommonResponseDTO> updatePaidClaimReport() {
-        log.info("PAID_CLAIM_REPORT_UPLOAD API METHOD ACCESSED.");
         return contactDetailReportService.processExcel();
     }
 
@@ -63,6 +60,24 @@ public class ReportUploadController {
         return mainDataReportUploadService.uploadMainDataALHReportExcel();
     }
 
+    @GetMapping("/paid-claim-report")
+    public ResponseEntity<CommonResponseDTO> uploadPaidClaimReportExcel() {
+        log.info("UploadPaidClaimReportExcel API METHOD ACCESSED.");
+        return paidClaimsReportService.uploadPaidClaimsReport();
+    }
+
+    @GetMapping("/rejected-claim-report")
+    public ResponseEntity<CommonResponseDTO> uploadRejectedClaimReportExcel() {
+        log.info("UploadRejectedClaimReportExcel API METHOD ACCESSED.");
+        return rejectedClaimReportService.uploadRejectedClaimReport();
+    }
+
+    @GetMapping("/oustanding-claim-report")
+    public ResponseEntity<CommonResponseDTO> uploadOutstandingClaimsReportExcel() {
+        log.info("UploadOutstandingClaimReportExcel API METHOD ACCESSED.");
+        return outstandingClaimReportService.uploadOutstandingClaimsReport();
+    }
+
     @PostMapping("/test")
     public CommonResponseDTO test() {
         log.info("Test API METHOD ACCESSED.");
@@ -74,6 +89,4 @@ public class ReportUploadController {
         log.info("Test2 API METHOD ACCESSED.");
         return policyBenefitMappingService.processBenefitCodeMapping();
     }
-
-
 }

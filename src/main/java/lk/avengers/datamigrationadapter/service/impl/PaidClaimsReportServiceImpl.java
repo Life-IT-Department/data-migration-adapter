@@ -5,316 +5,246 @@ import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.PaidClaimEnti
 import lk.avengers.datamigrationadapter.repository.postgresql.reportdb.PaidClaimReportRepository;
 import lk.avengers.datamigrationadapter.service.PaidClaimsReportService;
 import lombok.RequiredArgsConstructor;
-import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import com.github.pjfanning.xlsx.StreamingReader;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.io.*;
+import java.time.*;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
-@Service
 @Slf4j
+@Service
 @RequiredArgsConstructor
 public class PaidClaimsReportServiceImpl implements PaidClaimsReportService {
 
     @Value("${paidClaimReport.file}")
-    String paidClaimReportFilePath;
+    private String paidClaimReportFilePath;
 
     private final PaidClaimReportRepository paidClaimReportRepository;
 
-    @SneakyThrows
-    @Override
-    public ResponseEntity<CommonResponseDTO> uploadPaidClaimsReport(){
-        log.info("UPLOAD_EXCEL(MULTIPART_FILE) METHOD ACCESSED.");
+    private static final int BATCH_SIZE = 2000;
+    private static final DateTimeFormatter DMY =
+            DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
-// Get file path from properties
+    @Override
+    public ResponseEntity<CommonResponseDTO> uploadPaidClaimsReport() {
+
         File file = new File(paidClaimReportFilePath);
 
-// Validate file existence
-        if (!file.exists() || !file.isFile()) {
-            return ResponseEntity.badRequest().body(
-                    CommonResponseDTO.builder()
-                            .message("File not found at the given path: " + paidClaimReportFilePath)
-                            .status(HttpStatus.BAD_REQUEST.toString())
-                            .build()
-            );
+        if (!file.exists()) {
+            return error("File not found: " + paidClaimReportFilePath);
         }
 
-// Date/time for current year, month, and created timestamp
         int currentYear = LocalDate.now().getYear();
         int currentMonth = LocalDate.now().getMonthValue();
         LocalDateTime now = LocalDateTime.now();
 
-        try (InputStream is = new FileInputStream(file);
-             Workbook workbook = WorkbookFactory.create(is)) {
+        int totalSaved = 0;
+
+        paidClaimReportRepository.truncate();
+        log.info("Old paid claim records deleted.");
+
+        try (InputStream is = new BufferedInputStream(new FileInputStream(file));
+             Workbook workbook = StreamingReader.builder()
+                     .rowCacheSize(200)
+                     .bufferSize(8192)
+                     .open(is)) {
 
             Sheet sheet = workbook.getSheetAt(0);
 
-            // HEADER ROW IS 4TH (INDEX 3)
-            Row headerRow = sheet.getRow(3);
-            if (headerRow == null) {
-                return ResponseEntity.badRequest().body(
-                        CommonResponseDTO.builder()
-                                .message("Header row (A4) missing.")
-                                .status(HttpStatus.BAD_REQUEST.toString())
-                                .build()
-                );
+            Iterator<Row> rowIterator = sheet.rowIterator();
+
+            if (!rowIterator.hasNext()) {
+                return error("Excel sheet is empty.");
             }
 
-            // Validate headers
-            List<String> expectedHeaders = Arrays.asList(
-                    "Claim Off#", "Product", "Policy No", "Agent #", "Agent Name",
-                    "Company Branch", "Sales Branch", "Branch Code", "Sum Assured of the benefit",
-                    "MCFP", "Medical or non medical", "U/W Decision", "Occurred On",
-                    "Declared On", "Occu-red", "Decla-red", "Original Claim Amt",
-                    "Total Claim Amt", "Total Fees Amt", "Trn. Date", "Trn. Status",
-                    "Trn. Amount / CY", "Trn. Amount /LC", "Payee Pin", "Policy Holder",
-                    "Claimed Life Assured", "Claimant Name", "Profession Code",
-                    "Profession / Activity", "No of previous claims",
-                    "Previous claims total Settlement", "Previous Claim Numbers",
-                    "Life assured Current Age", "Risk No", "Gender",
-                    "Policy Age At Claim Date", "No of Days hospitalized in standard units",
-                    "No of Days hospitalized in ICU units", "Policy Holder Address",
-                    "Phone Number", "District", "Place of Claim", "Cause of Loss",
-                    "Cause of Claim", "Status Notes", "Claim Description",
-                    "U/Year", "Expert", "Pay To", "X/Gracia", "HCP Name",
-                    "Claim Type", "Policy Status"
-            );
+            List<PaidClaimEntity> batch = new ArrayList<>(BATCH_SIZE);
 
-            ResponseEntity<CommonResponseDTO> validationResponse = getStringResponseEntity(expectedHeaders, headerRow);
-            if (validationResponse != null) return validationResponse;
+            while (rowIterator.hasNext()) {
 
-            // Get last row with data
-            int lastRowWithData = getLastRowWithData(sheet);
+                Row row = rowIterator.next();
 
-            List<PaidClaimEntity> claims = new ArrayList<>();
+                // Skip rows before row index 4 (data starts from 5th row)
+                if (row.getRowNum() < 4) continue;
 
-            // Read records starting from row 5 (index 4)
-            for (int i = 4; i <= lastRowWithData; i++) {
-                Row row = sheet.getRow(i);
-                if (row == null) continue;
+                if (isRowBlank(row)) continue;
 
-                PaidClaimEntity claim = new PaidClaimEntity();
+                PaidClaimEntity claim = mapRow(row);
 
-                // Helper lambda to safely parse numeric cells
-                java.util.function.Function<Integer, Double> getDouble = col -> {
-                    String val = getCellValue(row.getCell(col));
-                    return (val == null || val.isEmpty()) ? null : Double.parseDouble(val);
-                };
-
-                // Helper lambda to safely parse integer cells
-                java.util.function.Function<Integer, Integer> getInt = col -> {
-                    String val = getCellValue(row.getCell(col));
-                    return (val == null || val.isEmpty()) ? null : (int) Double.parseDouble(val);
-                };
-
-                // Helper lambda to parse LocalDate from string
-                java.util.function.Function<Integer, LocalDate> getDate = col -> {
-                    String val = getCellValue(row.getCell(col));
-                    return (val == null || val.isEmpty()) ? null :
-                            LocalDate.parse(val, DateTimeFormatter.ofPattern("dd/MM/yyyy"));
-                };
-
-                // Map fields
-                claim.setClaimOfficeNumber(getCellValue(row.getCell(1)));
-                claim.setProduct(getCellValue(row.getCell(2)));
-                claim.setPolicyNo(getCellValue(row.getCell(3)));
-                claim.setAgentNo(getCellValue(row.getCell(4)));
-                claim.setAgentName(getCellValue(row.getCell(5)));
-                claim.setCompanyBranch(getCellValue(row.getCell(6)));
-                claim.setSalesBranch(getCellValue(row.getCell(7)));
-
-                claim.setBranchCode(getInt.apply(8));
-                claim.setSumAssuredOfTheBenefit(getDouble.apply(9));
-                claim.setMcfp(getDouble.apply(10));
-                claim.setMedicalOrNonMedical("yes".equalsIgnoreCase(getCellValue(row.getCell(11))));
-                claim.setUwDecision(getDouble.apply(12));
-
-                claim.setOccurredOn(getDate.apply(13));
-                claim.setDeclaredOn(getDate.apply(14));
-
-                claim.setOccurred(getDouble.apply(15));
-                claim.setDeclared(getDouble.apply(16));
-                claim.setOriginalClaimAmt(getDouble.apply(17));
-                claim.setTotalClaimAmt(getDouble.apply(18));
-                claim.setTotalFeesAmt(getDouble.apply(19));
-
-                claim.setTrnDate(getDate.apply(20));
-                claim.setTrnStatus(getCellValue(row.getCell(21)));
-                claim.setTrnAmountCy(getDouble.apply(22));
-                claim.setTrnAmountLc(getDouble.apply(23));
-
-                claim.setPayeePin(getCellValue(row.getCell(24)));
-                claim.setPolicyHolder(getCellValue(row.getCell(25)));
-                claim.setClaimedLifeAssured(getCellValue(row.getCell(26)));
-                claim.setClaimantName(getCellValue(row.getCell(27)));
-
-                claim.setProfessionCode(row.getCell(28) == null || getCellValue(row.getCell(28)).isEmpty() ? null : (long) Double.parseDouble(getCellValue(row.getCell(28))));
-                claim.setProfessionOrActivity(getCellValue(row.getCell(29)));
-                claim.setNoOfPreviousClaims(getInt.apply(30));
-                claim.setPreviousClaimsTotalSettlement(getDouble.apply(31));
-                claim.setPreviousClaimNumbers(getCellValue(row.getCell(32)));
-                claim.setLifeAssuredCurrentAge(getInt.apply(33));
-                claim.setLongRiskNo(getInt.apply(34));
-                claim.setGender(getCellValue(row.getCell(35)));
-                claim.setPolicyAgeAtClaimDate(getInt.apply(36));
-                claim.setNoOfDaysHospitalizedStandard(getInt.apply(37));
-                claim.setNoOfDaysHospitalizedIcu(getInt.apply(38));
-
-                claim.setPolicyHolderAddress(getCellValue(row.getCell(39)));
-                claim.setPhoneNumber(getCellValue(row.getCell(40)));
-                claim.setDistrict(getCellValue(row.getCell(41)));
-                claim.setPlaceOfClaim(getCellValue(row.getCell(42)));
-                claim.setCauseOfLoss(getCellValue(row.getCell(43)));
-                claim.setCauseOfClaim(getCellValue(row.getCell(44)));
-                claim.setStatusNotes(getCellValue(row.getCell(45)));
-                claim.setClaimDescription(getCellValue(row.getCell(46)));
-
-                claim.setUnderwritingYear(getInt.apply(47));
-                claim.setExpert(getInt.apply(48));
-
-                claim.setPayTo(getCellValue(row.getCell(49)));
-                claim.setXGracia(getCellValue(row.getCell(50)));
-                claim.setHcpName(getCellValue(row.getCell(51)));
-                claim.setClaimType(getCellValue(row.getCell(52)));
-                claim.setPolicyStatus(getCellValue(row.getCell(53)));
-
-                // Current metadata
                 claim.setCurrentYear(currentYear);
                 claim.setCurrentMonth(currentMonth);
                 claim.setCreatedAt(now);
 
-                claims.add(claim);
-                log.debug("Processed row index: {}", i);
+                batch.add(claim);
+
+                if (batch.size() >= BATCH_SIZE) {
+                    paidClaimReportRepository.saveAll(batch);
+                    totalSaved += batch.size();
+                    batch.clear();
+                    log.info("Inserted {} records so far...", totalSaved);
+                }
             }
 
-            paidClaimReportRepository.truncate();
-            log.info("Deleted previous paid claim records.");
+            if (!batch.isEmpty()) {
+                paidClaimReportRepository.saveAll(batch);
+                totalSaved += batch.size();
+            }
 
-            // Save new records
-            paidClaimReportRepository.saveAll(claims);
-            log.info("Saved {} paid claim records successfully.", claims.size());
+            log.info("Completed upload. Total records: {}", totalSaved);
 
-            CommonResponseDTO response = CommonResponseDTO.builder()
-                    .message(claims.size() + " records uploaded successfully.")
-                    .status(HttpStatus.OK.toString())
-                    .build();
-
-            return ResponseEntity.ok(response);
-
-        } catch (IOException e) {
-            log.error("Error processing Excel file: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+            return ResponseEntity.ok(
                     CommonResponseDTO.builder()
-                            .message("Error processing Excel file: " + e.getMessage())
-                            .status(HttpStatus.INTERNAL_SERVER_ERROR.toString())
+                            .message(totalSaved + " records uploaded successfully.")
+                            .status(HttpStatus.OK.toString())
                             .build()
             );
+
+        } catch (Exception e) {
+            log.error("Excel processing error", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(CommonResponseDTO.builder()
+                            .message("Error processing file: " + e.getMessage())
+                            .status(HttpStatus.INTERNAL_SERVER_ERROR.toString())
+                            .build());
         }
     }
 
-    /**
-     * Safely reads the value of an Excel cell as a String.
-     * Handles STRING, NUMERIC, BOOLEAN, FORMULA types.
-     * Returns null if the cell is null or blank.
-     */
-    private String getCellValue(Cell cell) {
+    /* ================== ROW MAPPING ================== */
+
+    private PaidClaimEntity mapRow(Row row) {
+
+        PaidClaimEntity claim = new PaidClaimEntity();
+
+        claim.setClaimOfficeNumber(getString(row, 1));
+        claim.setProduct(getString(row, 2));
+        claim.setPolicyNo(getString(row, 3));
+        claim.setAgentNo(getString(row, 4));
+        claim.setAgentName(getString(row, 5));
+        claim.setCompanyBranch(getString(row, 6));
+        claim.setSalesBranch(getString(row, 7));
+
+        claim.setBranchCode(getInt(row, 8));
+        claim.setSumAssuredOfTheBenefit(getDouble(row, 9));
+        claim.setMcfp(getDouble(row, 10));
+        claim.setMedicalOrNonMedical("yes".equalsIgnoreCase(getString(row, 11)));
+        claim.setUwDecision(getDouble(row, 12));
+
+        claim.setOccurredOn(getDate(row, 13));
+        claim.setDeclaredOn(getDate(row, 14));
+
+        claim.setOccurred(getDouble(row, 15));
+        claim.setDeclared(getDouble(row, 16));
+        claim.setOriginalClaimAmt(getDouble(row, 17));
+        claim.setTotalClaimAmt(getDouble(row, 18));
+        claim.setTotalFeesAmt(getDouble(row, 19));
+
+        claim.setTrnDate(getDate(row, 20));
+        claim.setTrnStatus(getString(row, 21));
+        claim.setTrnAmountCy(getDouble(row, 22));
+        claim.setTrnAmountLc(getDouble(row, 23));
+
+        claim.setPayeePin(getString(row, 24));
+        claim.setPolicyHolder(getString(row, 25));
+        claim.setClaimedLifeAssured(getString(row, 26));
+        claim.setClaimantName(getString(row, 27));
+
+        claim.setProfessionCode(getLong(row, 28));
+        claim.setProfessionOrActivity(getString(row, 29));
+        claim.setNoOfPreviousClaims(getInt(row, 30));
+        claim.setPreviousClaimsTotalSettlement(getDouble(row, 31));
+        claim.setPreviousClaimNumbers(getString(row, 32));
+        claim.setLifeAssuredCurrentAge(getInt(row, 33));
+        claim.setLongRiskNo(getInt(row, 34));
+        claim.setGender(getString(row, 35));
+        claim.setPolicyAgeAtClaimDate(getInt(row, 36));
+        claim.setNoOfDaysHospitalizedStandard(getInt(row, 37));
+        claim.setNoOfDaysHospitalizedIcu(getInt(row, 38));
+
+        claim.setPolicyHolderAddress(getString(row, 39));
+        claim.setPhoneNumber(getString(row, 40));
+        claim.setDistrict(getString(row, 41));
+        claim.setPlaceOfClaim(getString(row, 42));
+        claim.setCauseOfLoss(getString(row, 43));
+        claim.setCauseOfClaim(getString(row, 44));
+        claim.setStatusNotes(getString(row, 45));
+        claim.setClaimDescription(getString(row, 46));
+
+        claim.setUnderwritingYear(getInt(row, 47));
+        claim.setExpert(getInt(row, 48));
+
+        claim.setPayTo(getString(row, 49));
+        claim.setXGracia(getString(row, 50));
+        claim.setHcpName(getString(row, 51));
+        claim.setClaimType(getString(row, 52));
+        claim.setPolicyStatus(getString(row, 53));
+
+        return claim;
+    }
+
+    /* ================== CELL HELPERS ================== */
+
+    private String getString(Row row, int col) {
+        Cell cell = row.getCell(col, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL);
         if (cell == null) return null;
 
         switch (cell.getCellType()) {
             case STRING:
-                String val = cell.getStringCellValue();
-                return (val == null || val.isBlank()) ? null : val.trim();
-
+                return cell.getStringCellValue().trim();
             case NUMERIC:
                 if (DateUtil.isCellDateFormatted(cell)) {
-                    // Format date as dd/MM/yyyy
-                    return cell.getLocalDateTimeCellValue().toLocalDate()
-                            .format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
-                } else {
-                    double numericValue = cell.getNumericCellValue();
-                    // Avoid scientific notation for integers
-                    if (numericValue == (long) numericValue) {
-                        return String.valueOf((long) numericValue);
-                    } else {
-                        return String.valueOf(numericValue);
-                    }
+                    return cell.getLocalDateTimeCellValue()
+                            .toLocalDate()
+                            .format(DMY);
                 }
-
+                double d = cell.getNumericCellValue();
+                return d == (long) d ? String.valueOf((long) d)
+                        : String.valueOf(d);
             case BOOLEAN:
                 return String.valueOf(cell.getBooleanCellValue());
-
-            case FORMULA:
-                // Evaluate the formula
-                FormulaEvaluator evaluator = cell.getSheet().getWorkbook().getCreationHelper().createFormulaEvaluator();
-                return getCellValue(evaluator.evaluateInCell(cell));
-
-            case BLANK:
-            case _NONE:
-            case ERROR:
             default:
                 return null;
         }
     }
 
-    /**
-     * Validates that the header row matches the expected headers.
-     * Returns ResponseEntity with error if headers mismatch; otherwise returns null.
-     */
-    private ResponseEntity<CommonResponseDTO> getStringResponseEntity(List<String> expectedHeaders, Row headerRow) {
-        for (int i = 0; i < expectedHeaders.size(); i++) {
-            String expectedHeader = expectedHeaders.get(i);
-            Cell cell = headerRow.getCell(i);
-            String actualHeader = getCellValue(cell);
-
-            if (!expectedHeader.equalsIgnoreCase(actualHeader != null ? actualHeader : "")) {
-                String message = String.format(
-                        "Header mismatch at column %d: expected '%s' but found '%s'",
-                        i + 1, expectedHeader, actualHeader
-                );
-                log.error(message);
-                return ResponseEntity.badRequest().body(
-                        CommonResponseDTO.builder()
-                                .message(message)
-                                .status(HttpStatus.BAD_REQUEST.toString())
-                                .build()
-                );
-            }
-        }
-        return null;
+    private Double getDouble(Row row, int col) {
+        String val = getString(row, col);
+        return val == null ? null : Double.parseDouble(val);
     }
 
-    /**
-     * Finds the last row in the sheet that contains any non-empty cell.
-     * Returns the zero-based row index of the last row with data.
-     */
-    private int getLastRowWithData(Sheet sheet) {
-        int lastRow = sheet.getLastRowNum();
-        for (int i = lastRow; i >= 0; i--) {
-            Row row = sheet.getRow(i);
-            if (row != null) {
-                for (Cell cell : row) {
-                    String cellValue = getCellValue(cell);
-                    if (cellValue != null && !cellValue.isBlank()) {
-                        return i; // Found last row with data
-                    }
-                }
-            }
-        }
-        return 0; // Sheet is empty or all rows blank
+    private Integer getInt(Row row, int col) {
+        Double d = getDouble(row, col);
+        return d == null ? null : d.intValue();
     }
 
+    private Long getLong(Row row, int col) {
+        Double d = getDouble(row, col);
+        return d == null ? null : d.longValue();
+    }
 
+    private LocalDate getDate(Row row, int col) {
+        String val = getString(row, col);
+        return val == null ? null : LocalDate.parse(val, DMY);
+    }
+
+    private boolean isRowBlank(Row row) {
+        for (Cell cell : row) {
+            if (cell != null && cell.getCellType() != CellType.BLANK) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private ResponseEntity<CommonResponseDTO> error(String message) {
+        return ResponseEntity.badRequest().body(
+                CommonResponseDTO.builder()
+                        .message(message)
+                        .status(HttpStatus.BAD_REQUEST.toString())
+                        .build());
+    }
 }

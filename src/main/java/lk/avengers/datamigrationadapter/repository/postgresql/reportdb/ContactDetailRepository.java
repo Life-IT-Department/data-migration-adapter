@@ -7,10 +7,14 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
+
 @Repository
 public interface ContactDetailRepository extends JpaRepository<ContactDetailEntity,Long> {
     @Modifying
     @Transactional
     @Query(value = "TRUNCATE TABLE contact_detail RESTART IDENTITY CASCADE", nativeQuery = true)
     void truncateTable();
+
+    Optional<ContactDetailEntity> findByProductAndPolicyNo(String product, String policyNo);
 }
