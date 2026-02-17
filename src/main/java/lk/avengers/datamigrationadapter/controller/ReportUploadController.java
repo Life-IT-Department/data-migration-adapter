@@ -23,8 +23,6 @@ public class ReportUploadController {
     private final CashFlowReportUploadService cashFlowReportUploadService;
     private final ContactDetailReportService contactDetailReportService;
     private final PosSignatureReportService posSignatureReportService;
-    private final PolicyBeneficiariesMappingService policyBeneficiariesMappingService;
-    private final PolicyBenefitMappingService policyBenefitMappingService;
     private final PaidClaimsReportService paidClaimsReportService;
     private final RejectedClaimReportService rejectedClaimReportService;
     private final OutstandingClaimReportService outstandingClaimReportService;
@@ -90,17 +88,5 @@ public class ReportUploadController {
     public ResponseEntity<CommonResponseDTO> uploadClosedClaimsReportExcel() {
         log.info("UploadClosedClaimReportExcel API METHOD ACCESSED.");
         return closedClaimReportService.uploadClosedClaimsReport();
-    }
-
-    @PostMapping("/test")
-    public CommonResponseDTO test() {
-        log.info("Test API METHOD ACCESSED.");
-        return policyBeneficiariesMappingService.mapBeneficiaries();
-    }
-
-    @PostMapping("/test2")
-    public CommonResponseDTO test2() {
-        log.info("Test2 API METHOD ACCESSED.");
-        return policyBenefitMappingService.processBenefitCodeMapping();
     }
 }

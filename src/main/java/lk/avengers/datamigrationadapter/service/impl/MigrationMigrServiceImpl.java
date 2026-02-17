@@ -88,7 +88,7 @@ public class MigrationMigrServiceImpl implements MigrationMigrService {
             policyRepository.saveAll(policyEntityList);
             log.info("Saved {} policies to the MSSQL DB", policyEntityList.size());
         }
-        log.info("Migration completed for policy {}");
+        log.info("Migration completed");
     }
 
     private void processACPPolicy(ACPPolicyEntity acpPolicy, String policyNo) {

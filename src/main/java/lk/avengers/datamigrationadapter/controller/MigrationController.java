@@ -1,9 +1,7 @@
 package lk.avengers.datamigrationadapter.controller;
 
 import lk.avengers.datamigrationadapter.dto.CommonResponseDTO;
-import lk.avengers.datamigrationadapter.service.ClaimsMappingService;
-import lk.avengers.datamigrationadapter.service.MigrationMigrService;
-import lk.avengers.datamigrationadapter.service.MigrationService;
+import lk.avengers.datamigrationadapter.service.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -18,14 +16,28 @@ public class MigrationController {
     public final MigrationService  migrationService;
     private final ClaimsMappingService claimsMappingService;
     private final MigrationMigrService migrationMigrService;
+    private final PolicyBeneficiariesMappingService policyBeneficiariesMappingService;
+    private final PolicyBenefitMappingService policyBenefitMappingService;
 
-    @PostMapping("/policy")
+    @GetMapping("/policy")
     public ResponseEntity<String> migratePolicyData(@RequestHeader String uuid) {
         log.info("UUID: {} MIGRATE_POLICY_DATA (STRING) METHOD ACCESSED.", uuid);
 
        migrationService.migratePolicyData(uuid);
 
-        return ResponseEntity.ok("Policy data migration successfully.") ;
+        return ResponseEntity.ok("Policy data migration successful") ;
+    }
+
+    @GetMapping("/beneficiaries")
+    public CommonResponseDTO migrateBeneficiariesData() {
+        log.info("MIGRATE BENEFICIARIES API METHOD ACCESSED.");
+        return policyBeneficiariesMappingService.mapBeneficiaries();
+    }
+
+    @GetMapping("/benefits")
+    public CommonResponseDTO test2() {
+        log.info("MIGRATE BENEFITS API METHOD ACCESSED.");
+        return policyBenefitMappingService.processBenefitCodeMapping();
     }
 
     @GetMapping("/claims")
@@ -36,10 +48,9 @@ public class MigrationController {
 
     @GetMapping("/policy-migr")
     public ResponseEntity<String> migrateMigrPolicyData() {
-        log.info("UUID: {} MIGRATE_POLICY_DATA (STRING) METHOD ACCESSED.");
+        log.info("MIGRATE_POLICY_DATA (STRING) METHOD ACCESSED.");
 
         migrationMigrService.migratePolicyData();
-        return ResponseEntity.ok("Policy data migration successfully.") ;
+        return ResponseEntity.ok("Policy data migration successful") ;
     }
-
 }
