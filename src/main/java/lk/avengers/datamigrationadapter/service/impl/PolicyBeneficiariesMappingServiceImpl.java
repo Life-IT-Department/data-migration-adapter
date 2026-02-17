@@ -59,7 +59,7 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
 
             mainDataReportRepository.findFirstByProductCodeAndPolicyNo(policyNoSplit[0], Integer.parseInt(policyNoSplit[1]))
                     .ifPresentOrElse(mainDataReportEntity -> {
-                        log.info("Main Data Report data found for Policy No: {}", policyNo);
+                      //  log.info("Main Data Report data found for Policy No: {}", policyNo);
                         PolicyBeneficiariesEntity spouseDetailsFromMainData = getSpouseDetailsFromMainData(mainDataReportEntity, policyNo);
                         List<PolicyBeneficiariesEntity> childrenFromMainData = getChildrenFromMainData(mainDataReportEntity, policyNo);
                         if (spouseDetailsFromMainData != null) {
