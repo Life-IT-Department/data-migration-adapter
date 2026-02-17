@@ -47,6 +47,8 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
             "SCL/935254", "SCL/935395", "SCL/935486", "SCL/935510", "ULF/527879", "UPR/215038", "ULP/321661", "SCL/1038926", "UPR/399550", "SCL/900753", "ULV/451021", "ULV/571323", "UPR/126334", "SCL/988394");
 
 
+    //private final List<String> policyList = List.of("ULT/348672");
+
     @Transactional(transactionManager = "softlogicPlatformTransactionManager")
     @Override
     public CommonResponseDTO mapBeneficiaries() {
@@ -128,7 +130,7 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
                 .name(mainDataReportEntity.getChild1Name())
                 .dob(mainDataReportEntity.getChild1Dob())
                 .age(mainDataReportEntity.getChild1Age())
-                .childHbc(String.valueOf(mainDataReportEntity.getChild2Hbc_()))
+                .childHbc(String.valueOf(mainDataReportEntity.getChild1Hbc_()))
                 .build());
         childDtoList.add(ChildDto.builder()
                 .name(mainDataReportEntity.getChild2Name())
