@@ -30,7 +30,6 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
     private final static String CHILD_TYPE = "Child";
 
 
-
     private final List<String> policyList = List.of("ASP/888636", "SCL/1044031", "ULT/348672", "ULE/402719", "ULE/121830", "ULE/274795",
             "ASP/1082429", "SCL/1098458", "ULP/349597", "ASP/1052257", "ULI/756262", "UPR/378844", "UPS/279539", "ULI/809491", "ULP/406538",
             "ULE/400218", "ULE/398701", "ULE/197178", "ULV/714360", "ULV/700310", "UPS/428565", "ASP/1104355", "SCL/1104348", "ULP/198457",
@@ -45,7 +44,7 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
             "SCL/834408", "SCL/873695", "SCL/846311", "SCL/893719", "SCL/1002906", "SCL/1082510", "SCL/859140", "SCL/905034", "SCL/974022",
             "SCL/974303", "SCL/974386", "SCL/992735", "SCL/992792", "SCL/992891", "SCL/994475", "SCL/1005792", "SCL/1005990", "SCL/1006303",
             "SCL/1048123", "SCL/1055102", "SCL/1055169", "SCL/1070424", "SCL/1071018", "SCL/1089275", "SCL/1089309", "SCL/1081926", "SCL/1005768",
-            "SCL/935254", "SCL/935395", "SCL/935486", "SCL/935510","ULF/527879", "UPR/215038", "ULP/321661", "SCL/1038926", "UPR/399550","SCL/900753", "ULV/451021", "ULV/571323", "UPR/126334", "SCL/988394");
+            "SCL/935254", "SCL/935395", "SCL/935486", "SCL/935510", "ULF/527879", "UPR/215038", "ULP/321661", "SCL/1038926", "UPR/399550", "SCL/900753", "ULV/451021", "ULV/571323", "UPR/126334", "SCL/988394");
 
 
     @Transactional(transactionManager = "softlogicPlatformTransactionManager")
@@ -82,7 +81,7 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
                     }
                     policyBeneficiariesRepository.saveAll(childrenFromALHMainData);
                 }, () -> {
-                    log.warn("No Main Data ALH Report data found for Policy No: {}", policyNo);
+                    log.warn("No Main Data or ALH Main  data found for Policy No: {}", policyNo);
                 });
     }
 
@@ -307,12 +306,17 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
 
 
     private Character getSex(String gender) {
-        if (gender.equalsIgnoreCase("MALE")) {
-            return 'M';
-        } else if (gender.equalsIgnoreCase("FEMALE")) {
-            return 'F';
+        if (gender != null && !gender.isEmpty() && !gender.isBlank()) {
+            if (gender.equalsIgnoreCase("MALE")) {
+                return 'M';
+            } else if (gender.equalsIgnoreCase("FEMALE")) {
+                return 'F';
+            } else {
+                return null;
+            }
         } else {
-            return null;
+            // Default value
+            return 'M';
         }
     }
 
