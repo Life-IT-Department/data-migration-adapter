@@ -9,6 +9,7 @@ import lk.avengers.datamigrationadapter.repository.softlogicdb.PolicyBeneficiari
 import lk.avengers.datamigrationadapter.repository.postgresql.reportdb.MainDataALHReportRepository;
 import lk.avengers.datamigrationadapter.repository.postgresql.reportdb.MainDataReportRepository;
 import lk.avengers.datamigrationadapter.service.PolicyBeneficiariesMappingService;
+import lk.avengers.datamigrationadapter.util.MainExcelReader;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -26,33 +27,16 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
     private final MainDataReportRepository mainDataReportRepository;
     private final MainDataALHReportRepository mainDataALHReportRepository;
     private final PolicyBeneficiariesRepository policyBeneficiariesRepository;
+    private final MainExcelReader mainExcelReader;
+
     private final static String SPOUSE_TYPE = "Spouse";
     private final static String CHILD_TYPE = "Child";
-
-
-    private final List<String> policyList = List.of("ASP/888636", "SCL/1044031", "ULT/348672", "ULE/402719", "ULE/121830", "ULE/274795",
-            "ASP/1082429", "SCL/1098458", "ULP/349597", "ASP/1052257", "ULI/756262", "UPR/378844", "UPS/279539", "ULI/809491", "ULP/406538",
-            "ULE/400218", "ULE/398701", "ULE/197178", "ULV/714360", "ULV/700310", "UPS/428565", "ASP/1104355", "SCL/1104348", "ULP/198457",
-            "ULI/828517", "SCL/900886", "SCL/1013747", "ULI/441816", "ULC/863654", "ULA/242859", "SCL/953141", "SCL/953703", "SCL/960278",
-            "SCL/911347", "SCL/955195", "SCL/964197", "SCL/911537", "SCL/955690", "SCL/936039", "SCL/904391", "SCL/922831", "SCL/949701",
-            "SCL/925552", "SCL/943654", "SCL/957498", "SCL/913475", "SCL/950410", "SCL/908277", "SCL/914200", "SCL/924779", "SCL/931139",
-            "SCL/944652", "ULT/361790", "ULT/362384", "ULT/365627", "ULT/372227", "ULT/371856", "ULT/366419", "ULT/371518", "ULT/373738",
-            "ULT/366641", "ULV/896787", "ULV/901215", "ULV/894709", "ULE/360909", "ULE/351064", "ULE/366096", "ULE/373381", "ULE/373878",
-            "ULE/358945", "SCL/963207", "SCL/964239", "SCL/924845", "SCL/945246", "SCL/897066", "SCL/908210", "SCL/919498", "SCL/926923",
-            "ULT/326371", "ULT/323410", "ULT/323436", "ULT/326355", "ULT/322214", "ULT/325084", "ULT/322370", "ULT/326835", "ULT/326298",
-            "ULT/327387", "ULT/323527", "ULT/325217", "ULT/325464", "ULT/325498", "ULT/326959", "ULT/325704", "ULT/326124", "SCL/838805",
-            "SCL/834408", "SCL/873695", "SCL/846311", "SCL/893719", "SCL/1002906", "SCL/1082510", "SCL/859140", "SCL/905034", "SCL/974022",
-            "SCL/974303", "SCL/974386", "SCL/992735", "SCL/992792", "SCL/992891", "SCL/994475", "SCL/1005792", "SCL/1005990", "SCL/1006303",
-            "SCL/1048123", "SCL/1055102", "SCL/1055169", "SCL/1070424", "SCL/1071018", "SCL/1089275", "SCL/1089309", "SCL/1081926", "SCL/1005768",
-            "SCL/935254", "SCL/935395", "SCL/935486", "SCL/935510", "ULF/527879", "UPR/215038", "ULP/321661", "SCL/1038926", "UPR/399550", "SCL/900753", "ULV/451021", "ULV/571323", "UPR/126334", "SCL/988394");
-
-
-    //private final List<String> policyList = List.of("ALH/756080");
 
     @Transactional(transactionManager = "softlogicPlatformTransactionManager")
     @Override
     public CommonResponseDTO mapBeneficiaries() {
         log.info("mapBeneficiaries called.");
+        List<String> policyList = mainExcelReader.readPolicyNumbers();
         CommonResponseDTO commonResponse = new CommonResponseDTO();
         policyList.forEach(policyNo -> {
             String[] policyNoSplit = policyNo.trim().split("/");

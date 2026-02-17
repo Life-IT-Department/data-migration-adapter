@@ -13,18 +13,16 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("migrate")
 public class MigrationController {
 
-    public final MigrationService  migrationService;
     private final ClaimsMappingService claimsMappingService;
     private final MigrationMigrService migrationMigrService;
     private final PolicyBeneficiariesMappingService policyBeneficiariesMappingService;
     private final PolicyBenefitMappingService policyBenefitMappingService;
 
     @GetMapping("/policy")
-    public ResponseEntity<String> migratePolicyData(@RequestHeader String uuid) {
-        log.info("UUID: {} MIGRATE_POLICY_DATA (STRING) METHOD ACCESSED.", uuid);
+    public ResponseEntity<String> migrateMigrPolicyData() {
+        log.info("MIGRATE_POLICY_DATA (STRING) METHOD ACCESSED.");
 
-       migrationService.migratePolicyData(uuid);
-
+        migrationMigrService.migratePolicyData();
         return ResponseEntity.ok("Policy data migration successful") ;
     }
 
@@ -44,13 +42,5 @@ public class MigrationController {
     public ResponseEntity<CommonResponseDTO> migrateClaimsData(){
         log.info("MIGRATE CLAIMS METHOD ACCESSED");
         return claimsMappingService.mapClaimsData();
-    }
-
-    @GetMapping("/policy-migr")
-    public ResponseEntity<String> migrateMigrPolicyData() {
-        log.info("MIGRATE_POLICY_DATA (STRING) METHOD ACCESSED.");
-
-        migrationMigrService.migratePolicyData();
-        return ResponseEntity.ok("Policy data migration successful") ;
     }
 }
