@@ -209,8 +209,6 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
 
         mainDataALHReportRepository.findFirstByProductCodeAndPolicyNo(policyNoSplit[0], Integer.parseInt(policyNoSplit[1]))
                 .ifPresentOrElse(mainDataALHReportEntity -> {
-                    //TODO remove this
-                    mainDataALHReportEntity.setDth_OccLoadingPercentage(0.0);
                     log.info("Main ALH Data Report data found for Policy No: {}", policyNo);
                     benefitCodeMapperEntityList.forEach(benefitCodeMapperEntity -> {
                         if (benefitCodeMapperEntity.getAllianzBenefitCode().equalsIgnoreCase("Spouse-DTHAC")) {
