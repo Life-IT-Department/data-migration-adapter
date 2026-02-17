@@ -95,10 +95,7 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
             policyBeneficiariesEntity.setBeAge(mainDataALHReportEntity.getSpouseAge());
             policyBeneficiariesEntity.setBeSex(getSex(mainDataALHReportEntity.getSpouseGender()));
             policyBeneficiariesEntity.setBeDob(mainDataALHReportEntity.getSpouseDob());
-            policyBeneficiariesEntity.setBeNic(null);
             policyBeneficiariesEntity.setBeType(SPOUSE_TYPE);
-            policyBeneficiariesEntity.setBeInclusionDate(null);
-            policyBeneficiariesEntity.setBeCoverage(null);
             java.math.BigDecimal spouseHbSa = mainDataALHReportEntity.getSpouseHbSa();
             policyBeneficiariesEntity.setBeIsHb(spouseHbSa != null && spouseHbSa.compareTo(java.math.BigDecimal.ZERO) != 0);
             return policyBeneficiariesEntity;
@@ -115,10 +112,7 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
             policyBeneficiariesEntity.setBeAge(mainDataReportEntity.getSpouseChildAge());
             policyBeneficiariesEntity.setBeSex(getSex(mainDataReportEntity.getSpouseChildGender()));
             policyBeneficiariesEntity.setBeDob(mainDataReportEntity.getSpouseChildDob());
-            policyBeneficiariesEntity.setBeNic(null);
             policyBeneficiariesEntity.setBeType(SPOUSE_TYPE);
-            policyBeneficiariesEntity.setBeInclusionDate(null);
-            policyBeneficiariesEntity.setBeCoverage(null);
             java.math.BigDecimal spouseHbSa = mainDataReportEntity.getSpouseChildHb_Sa();
             policyBeneficiariesEntity.setBeIsHb(spouseHbSa != null && spouseHbSa.compareTo(java.math.BigDecimal.ZERO) != 0);
             return policyBeneficiariesEntity;
@@ -303,12 +297,8 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
                 policyBeneficiariesEntity.setBePolicyNo(policyNumber.trim());
                 policyBeneficiariesEntity.setBeFullName(childDto.getName());
                 policyBeneficiariesEntity.setBeAge(childDto.getAge());
-                policyBeneficiariesEntity.setBeSex(null);
                 policyBeneficiariesEntity.setBeDob(childDto.getDob());
-                policyBeneficiariesEntity.setBeNic(null);
                 policyBeneficiariesEntity.setBeType(CHILD_TYPE);
-                policyBeneficiariesEntity.setBeInclusionDate(null);
-                policyBeneficiariesEntity.setBeCoverage(null);
                 policyBeneficiariesEntity.setBeIsHb(Double.parseDouble(childDto.getChildHbc()) != 0.0);
                 beneficiariesEntityList.add(policyBeneficiariesEntity);
             }
