@@ -12,6 +12,7 @@ import lk.avengers.datamigrationadapter.service.PolicyBeneficiariesMappingServic
 import lk.avengers.datamigrationadapter.util.MainExcelReader;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,22 +38,26 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
     public CommonResponseDTO mapBeneficiaries() {
         log.info("mapBeneficiaries called.");
         List<String> policyList = mainExcelReader.readPolicyNumbers();
-        CommonResponseDTO commonResponse = new CommonResponseDTO();
+
+        List<PolicyBeneficiariesEntity> allBeneficiariesEntityList = new ArrayList<>();
         policyList.forEach(policyNo -> {
             String[] policyNoSplit = policyNo.trim().split("/");
-
             mainDataReportRepository.findFirstByProductCodeAndPolicyNo(policyNoSplit[0], Integer.parseInt(policyNoSplit[1]))
                     .ifPresentOrElse(mainDataReportEntity -> {
-                      //  log.info("Main Data Report data found for Policy No: {}", policyNo);
                         PolicyBeneficiariesEntity spouseDetailsFromMainData = getSpouseDetailsFromMainData(mainDataReportEntity, policyNo);
                         List<PolicyBeneficiariesEntity> childrenFromMainData = getChildrenFromMainData(mainDataReportEntity, policyNo);
                         if (spouseDetailsFromMainData != null) {
                             childrenFromMainData.add(spouseDetailsFromMainData);
                         }
-                        policyBeneficiariesRepository.saveAll(childrenFromMainData);
+                        allBeneficiariesEntityList.addAll(childrenFromMainData);
                     }, () -> getDetailsFromALHMainData(policyNo, policyNoSplit));
         });
-        return commonResponse;
+        policyBeneficiariesRepository.saveAll(allBeneficiariesEntityList);
+        return CommonResponseDTO.builder()
+                .message(String.format("%d beneficiaries records were saved", allBeneficiariesEntityList.size()))
+                .status(HttpStatus.OK.toString())
+                .build();
+
     }
 
     private void getDetailsFromALHMainData(String policyNo, String[] policyNoSplit) {
