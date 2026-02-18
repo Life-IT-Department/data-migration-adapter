@@ -410,10 +410,10 @@ public class MainDataReportUploadServiceImpl implements MainDataReportUploadServ
                 .spouseChildGender(commonFunction.getStringValue(row.getCell(col++)))
                 .spouseChildDob(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
                 .spouseChildAge(commonFunction.getIntegerValue(row.getCell(col++)))
-                .spouseDeath_Sa(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .spouseSubDeath_(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .spouseSubRateMilDeath_(commonFunction.getBigDecimalValue(row.getCell(col++)))
-                .spouseDeath_OccupationalLoadingPercent(commonFunction.getDoubleValue(row.getCell(col++)))
+                .spouseDth_Sa(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseSubDth_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseSubRateMilDth_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+                .spouseDth_OccupationalLoadingPercent(commonFunction.getDoubleValue(row.getCell(col++)))
                 .spouseChildAccd_Sa(commonFunction.getBigDecimalValue(row.getCell(col++)))
                 .spouseChildSubAccd_(commonFunction.getBigDecimalValue(row.getCell(col++)))
                 .spouseChildSubRateMilAccd_(commonFunction.getBigDecimalValue(row.getCell(col++)))
@@ -592,10 +592,10 @@ public class MainDataReportUploadServiceImpl implements MainDataReportUploadServ
         entity.setSpouseDob(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(c++))));
         entity.setSpouseAge(commonFunction.getIntegerValue(row.getCell(c++)));
         entity.setOccupationSpouse(commonFunction.getStringValue(row.getCell(c++)));
-        entity.setSpouseDeathSa(commonFunction.getBigDecimalValue(row.getCell(c++)));
-        entity.setSpouseSubDeath(commonFunction.getIntegerValue(row.getCell(c++)));
-        entity.setSpouseSubRateMilDeath(commonFunction.getBigDecimalValue(row.getCell(c++)));
-        entity.setSpouseDeathOccLoadingPercentage(commonFunction.getDoubleValue(row.getCell(c++)));
+        entity.setSpouseDth_Sa(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setSpouseSubDth_(commonFunction.getIntegerValue(row.getCell(c++)));
+        entity.setSpouseSubRateMilDth_(commonFunction.getBigDecimalValue(row.getCell(c++)));
+        entity.setSpouseDth_OccLoadingPercentage(commonFunction.getDoubleValue(row.getCell(c++)));
         entity.setSpouseHbSa(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setSpouseSubHb(commonFunction.getBigDecimalValue(row.getCell(c++)));
         entity.setSpouseSubRateMilHb(commonFunction.getBigDecimalValue(row.getCell(c++)));

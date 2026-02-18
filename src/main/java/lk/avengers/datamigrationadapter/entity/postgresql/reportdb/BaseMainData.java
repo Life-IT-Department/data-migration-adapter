@@ -76,16 +76,12 @@ public abstract class BaseMainData {
     private String sarChoice;
     @Column(name = "number_of_riders_taken")
     private Integer numberOfRidersTaken;
+    private LocalDate date;
     //DTH
     @Column(name = "sub_dth")
     private Integer subDth_;
     @Column(name = "sub_rate_mil_dth")
     private BigDecimal subRateMilDth_;
-   // @Column(name = "dth_occupational_loading_percent")
-    //private Double dth_OccupationalLoadingPercent;
-    //
-    private LocalDate date;
-    // DTH
     @Column(name = "dth_sar")
     private BigDecimal dth_Sar;
     @Column(name = "dth_occupational_loading_percentage")
