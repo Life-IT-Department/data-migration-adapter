@@ -297,7 +297,7 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
 
 
     private Character getSex(String gender) {
-        if (gender != null && !gender.isEmpty() && !gender.isBlank()) {
+        if (gender != null && !gender.isBlank()) {
             if (gender.equalsIgnoreCase("MALE")) {
                 return 'M';
             } else if (gender.equalsIgnoreCase("FEMALE")) {
