@@ -9,15 +9,16 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "policy_beneficiaries")
+@Table(name = "Migr_PolicyBeneficieries")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class PolicyBeneficiariesEntity {
-//TODO check column names and types
+
     @Id
+    @Column(name = "AutoID")
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Integer autoId;
 
     @Column(name = "BE_PolicyNo", length = 30)
     private String bePolicyNo;

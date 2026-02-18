@@ -17,12 +17,8 @@ import java.time.LocalDate;
 @Table(name = "Migr_PolicyData")
 public class MigrPolicyData {
 
-    @Column(name = "PolicyId", length = 30)
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long policyId;
-
     // Life Assured (LA) fields
+    @Id
     @Column(name = "LA_PolicyNo", length = 30)
     private String laPolicyNo;
 
@@ -62,16 +58,16 @@ public class MigrPolicyData {
     @Column(name = "LA_Nationality", length = 20)
     private String laNationality;
 
-    @Column(name = "LA_email", length = 30)
+    @Column(name = "LA_email", length = 100) // 30 -> 50
     private String laEmail;
 
     @Column(name = "LA_AgeAdmited")
     private Boolean laAgeAdmitted;
 
-    @Column(name = "LA_AddressCity", length = 20)
+    @Column(name = "LA_AddressCity", length = 100) // 20 -> 50
     private String laAddressCity;
 
-    @Column(name = "LA_Occupation", length = 30)
+    @Column(name = "LA_Occupation", length = 100) // 30 -> 100
     private String laOccupation;
 
     @Column(name = "LA_monthlyIncome", precision = 18, scale = 2)
@@ -91,9 +87,6 @@ public class MigrPolicyData {
 
     @Column(name = "LA_IsPolicyAssign")
     private Boolean laIsPolicyAssign = false;
-
-    @Column(name = "LA_ProposalNo", length = 30)
-    private String laProposalNo;
 
     // Policy (PO) fields
     @Column(name = "PO_plancode", length = 4)

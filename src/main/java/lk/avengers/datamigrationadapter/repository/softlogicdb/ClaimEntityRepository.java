@@ -11,6 +11,6 @@ import org.springframework.stereotype.Repository;
 public interface ClaimEntityRepository extends JpaRepository<ClaimEntity, Integer> {
     @Modifying
     @Transactional
-    @Query(value = "DBCC CHECKIDENT ('dbo.claims', RESEED, 0)", nativeQuery = true)
+    @Query(value = "TRUNCATE TABLE claims; DBCC CHECKIDENT ('dbo.claims', RESEED, 0)", nativeQuery = true)
     void truncate();
 }

@@ -104,6 +104,7 @@ public class ClaimsMappingServiceImpl implements ClaimsMappingService {
                             ClaimEntity.builder()
                                     .policyNo(policyNo)
                                     .claimType(rejectedClaimEntity.getClaimType())
+                                    .claimNo(rejectedClaimEntity.getClaimNo())
                                     .dateOfEvent(rejectedClaimEntity.getOccurredDate())
                                     .dateOfIntimation(rejectedClaimEntity.getDeclaredDate())
                                     .patientAdmitted(rejectedClaimEntity.getClaimantName())
@@ -116,28 +117,6 @@ public class ClaimsMappingServiceImpl implements ClaimsMappingService {
                                     .rider(rejectedClaimEntity.getRider())
                                     .build()
 
-                    ));
-                }
-
-                if(!declaredClaimEntityList.isEmpty()){
-                    declaredClaimEntityList.forEach(declaredClaimEntity -> claimEntityList.add(
-                            ClaimEntity.builder()
-                                    .policyNo(policyNo)
-                                    .claimNo(declaredClaimEntity.getClaimOfficeNumber())
-                                    .claimType(declaredClaimEntity.getClaimType())
-                                    .dateOfEvent(declaredClaimEntity.getOccurredDate())
-                                    .dateOfIntimation(declaredClaimEntity.getDeclaredDate())
-                                    .patientAdmitted(declaredClaimEntity.getClaimedLifeAssured())
-                                    .causeOfDeath(declaredClaimEntity.getCauseOfClaims())
-                                    .natureOfIllness(declaredClaimEntity.getCauseOfClaims())
-                                    .totalClaimAmount(BigDecimal.valueOf(declaredClaimEntity.getOriginalClaimAmt()))
-                                    .totalSettledAmount(BigDecimal.valueOf(declaredClaimEntity.getOriginalClaimAmt()))
-                                    .claimStatus(DECLARED)
-                                    .nameOfTheHospital(declaredClaimEntity.getPlaceOfClaims())
-                                    .dateOfPayment(declaredClaimEntity.getClaimClosedDate())
-                                    .comments(declaredClaimEntity.getClaimDescription())
-                                    .policyYear(declaredClaimEntity.getUnderwritingYear())
-                                    .build()
                     ));
                 }
 
@@ -158,7 +137,35 @@ public class ClaimsMappingServiceImpl implements ClaimsMappingService {
 
                     ));
                 }
+
+                if(!declaredClaimEntityList.isEmpty()){
+                    declaredClaimEntityList.forEach(declaredClaimEntity -> {
+                        String claimNo = declaredClaimEntity.getClaimOfficeNumber();
+                        if(claimEntityList.stream().noneMatch(claimEntity -> claimEntity.getClaimNo().equalsIgnoreCase(claimNo))){
+                            claimEntityList.add(
+                                    ClaimEntity.builder()
+                                            .policyNo(policyNo)
+                                            .claimNo(declaredClaimEntity.getClaimOfficeNumber())
+                                            .claimType(declaredClaimEntity.getClaimType())
+                                            .dateOfEvent(declaredClaimEntity.getOccurredDate())
+                                            .dateOfIntimation(declaredClaimEntity.getDeclaredDate())
+                                            .patientAdmitted(declaredClaimEntity.getClaimedLifeAssured())
+                                            .causeOfDeath(declaredClaimEntity.getCauseOfClaims())
+                                            .natureOfIllness(declaredClaimEntity.getCauseOfClaims())
+                                            .totalClaimAmount(BigDecimal.valueOf(declaredClaimEntity.getOriginalClaimAmt()))
+                                            .totalSettledAmount(BigDecimal.valueOf(declaredClaimEntity.getOriginalClaimAmt()))
+                                            .claimStatus(DECLARED)
+                                            .nameOfTheHospital(declaredClaimEntity.getPlaceOfClaims())
+                                            .dateOfPayment(declaredClaimEntity.getClaimClosedDate())
+                                            .comments(declaredClaimEntity.getClaimDescription())
+                                            .policyYear(declaredClaimEntity.getUnderwritingYear())
+                                            .build()
+                            );
+                        }
+                    });
+                }
             });
+            claimEntityRepository.truncate();
             claimEntityRepository.saveAll(claimEntityList);
             return ResponseEntity.ok(CommonResponseDTO.builder()
                     .data(null)
