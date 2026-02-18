@@ -187,8 +187,6 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
         List<PolicyBenefitsEntity> policyBenefitsEntityList = new ArrayList<>();
         mainDataALHReportRepository.findFirstByProductCodeAndPolicyNo(policyNoSplit[0], Integer.parseInt(policyNoSplit[1]))
                 .ifPresentOrElse(mainDataALHReportEntity -> {
-                    log.info("Main ALH Data Report data found for Policy No: {}", policyNo);
-
                     if (mainDataALHReportEntity.getDth_Sar().compareTo(BigDecimal.ZERO) > 0) {
                         PolicyBenefitsEntity policyBenefitsEntity = getPolicyBenefitForALHData(policyNo, benefitCodeMapperEntityList, mainDataALHReportEntity, "DTH");
                         if (policyBenefitsEntity != null) {
