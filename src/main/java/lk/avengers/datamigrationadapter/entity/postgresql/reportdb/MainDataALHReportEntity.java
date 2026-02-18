@@ -51,15 +51,16 @@ public class MainDataALHReportEntity extends BaseMainData{
     private Integer spouseAge;
     @Column(name = "occupation_spouse")
     private String occupationSpouse;
-    // Spouse Death & HB
+    // Spouse Death
     @Column(name = "spouse_death_sa")
-    private BigDecimal spouseDeathSa;
+    private BigDecimal spouseDth_Sa;
     @Column(name = "spouse_sub_death")
-    private Integer spouseSubDeath;
+    private Integer spouseSubDth_;
     @Column(name = "spouse_sub_rate_mil_death")
-    private BigDecimal spouseSubRateMilDeath;
+    private BigDecimal spouseSubRateMilDth_;
     @Column(name = "spouse_death_occupational_loading_percentage")
-    private Double spouseDeathOccLoadingPercentage;
+    private Double spouseDth_OccLoadingPercentage;
+    // Spouse HB
     @Column(name = "spouse_hb_sa")
     private BigDecimal spouseHbSa;
     @Column(name = "spouse_sub_hb")

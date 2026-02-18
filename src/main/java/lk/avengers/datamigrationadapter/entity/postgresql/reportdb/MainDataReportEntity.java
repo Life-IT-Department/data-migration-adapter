@@ -24,8 +24,8 @@ public class MainDataReportEntity extends BaseMainData {
     private Integer defermentTerm;
     @Column(name = "retirement_benefit_payout_term")
     private Integer retirementBenefitPayoutTerm;
-   // @Column(name = "status_date")
-   // private LocalDate statusDate;
+    // @Column(name = "status_date")
+    // private LocalDate statusDate;
     @Column(name = "accd_sa")
     private BigDecimal accd_Sa;
     @Column(name = "sub_accd")
@@ -203,13 +203,13 @@ public class MainDataReportEntity extends BaseMainData {
     private Integer spouseChildAge;
     //spouse Death
     @Column(name = "spouse_death_sa")
-    private BigDecimal spouseDeath_Sa;
+    private BigDecimal spouseDth_Sa;
     @Column(name = "spouse_sub_death")
-    private BigDecimal spouseSubDeath_;
+    private BigDecimal spouseSubDth_;
     @Column(name = "spouse_sub_rate_mil_death")
-    private BigDecimal spouseSubRateMilDeath_;
+    private BigDecimal spouseSubRateMilDth_;
     @Column(name = "spouse_death_occupational_loading_percent")
-    private Double spouseDeath_OccupationalLoadingPercent;
+    private Double spouseDth_OccupationalLoadingPercent;
 
     @Column(name = "spouse_child_accd_sa")
     private BigDecimal spouseChildAccd_Sa;
