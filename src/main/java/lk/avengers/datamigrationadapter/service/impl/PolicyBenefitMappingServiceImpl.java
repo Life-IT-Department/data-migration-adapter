@@ -152,7 +152,7 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
                 policyBenefitsEntity.setPbPremPortion(BigDecimal.ZERO);
                 policyBenefitsEntity.setPbOccuExtra(BigDecimal.ZERO);
                 policyBenefitsEntity.setPbExtraMortalityRate(BigDecimal.ZERO);
-                
+
                 policyBenefitsEntityList.add(policyBenefitsEntity);
             }
         }
