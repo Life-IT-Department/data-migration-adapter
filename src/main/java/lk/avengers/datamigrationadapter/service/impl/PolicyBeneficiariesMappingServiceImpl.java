@@ -50,9 +50,11 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
                             childrenFromMainData.add(spouseDetailsFromMainData);
                         }
                         allBeneficiariesEntityList.addAll(childrenFromMainData);
-                    }, () -> getDetailsFromALHMainData(policyNo, policyNoSplit));
+                    }, () -> getDetailsFromALHMainData(policyNo, policyNoSplit, allBeneficiariesEntityList));
         });
-        policyBeneficiariesRepository.saveAll(allBeneficiariesEntityList);
+        if (!allBeneficiariesEntityList.isEmpty()) {
+            policyBeneficiariesRepository.saveAll(allBeneficiariesEntityList);
+        }
         return CommonResponseDTO.builder()
                 .message(String.format("%d beneficiaries records were saved", allBeneficiariesEntityList.size()))
                 .status(HttpStatus.OK.toString())
@@ -60,7 +62,7 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
 
     }
 
-    private void getDetailsFromALHMainData(String policyNo, String[] policyNoSplit) {
+    private void getDetailsFromALHMainData(String policyNo, String[] policyNoSplit, List<PolicyBeneficiariesEntity> allBeneficiariesEntityList) {
         mainDataALHReportRepository.findFirstByProductCodeAndPolicyNo(policyNoSplit[0], Integer.parseInt(policyNoSplit[1]))
                 .ifPresentOrElse(mainDataALHReportEntity -> {
                     log.info("Main ALH Data Report data found for Policy No: {}", policyNo);
@@ -70,10 +72,8 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
                     if (spouseDetailsFromALHMainData != null) {
                         childrenFromALHMainData.add(spouseDetailsFromALHMainData);
                     }
-                    policyBeneficiariesRepository.saveAll(childrenFromALHMainData);
-                }, () -> {
-                    log.warn("No Main Data or ALH Main  data found for Policy No: {}", policyNo);
-                });
+                    allBeneficiariesEntityList.addAll(childrenFromALHMainData);
+                }, () -> log.warn("No Main Data or ALH Main  data found for Policy No: {}", policyNo));
     }
 
     private PolicyBeneficiariesEntity getSpouseDetailsFromALHMainData(MainDataALHReportEntity mainDataALHReportEntity, String policyNo) {
