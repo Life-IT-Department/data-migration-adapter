@@ -54,12 +54,17 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
         });
         if (!allBeneficiariesEntityList.isEmpty()) {
             policyBeneficiariesRepository.saveAll(allBeneficiariesEntityList);
+        } else {
+            log.warn("No beneficiaries records found to save. Please check the excel file and try again.");
+            return CommonResponseDTO.builder()
+                    .message("No beneficiaries records found to save. Please check the excel file and try again.")
+                    .status(HttpStatus.BAD_REQUEST.toString())
+                    .build();
         }
         return CommonResponseDTO.builder()
                 .message(String.format("%d beneficiaries records were saved", allBeneficiariesEntityList.size()))
                 .status(HttpStatus.OK.toString())
                 .build();
-
     }
 
     private void getDetailsFromALHMainData(String policyNo, String[] policyNoSplit, List<PolicyBeneficiariesEntity> allBeneficiariesEntityList) {

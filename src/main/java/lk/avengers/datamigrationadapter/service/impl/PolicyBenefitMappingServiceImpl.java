@@ -18,6 +18,7 @@ import lk.avengers.datamigrationadapter.service.PolicyBenefitMappingService;
 import lk.avengers.datamigrationadapter.util.MainExcelReader;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.ReflectionUtils;
@@ -78,8 +79,17 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
         });
         if (!policyBenefitsEntityList.isEmpty()) {
             policyBenefitsEntityRepository.saveAll(policyBenefitsEntityList);
+        } else {
+            log.warn("No policy benefits found to save. Please check the excel file and try again.");
+            CommonResponseDTO.builder()
+                    .message("No Policy benefits Found to save. Please check the excel file and try again.")
+                    .status(HttpStatus.BAD_REQUEST.toString())
+                    .build();
         }
-        return new CommonResponseDTO();
+        return CommonResponseDTO.builder()
+                .message(String.format("%d policy benefits records were saved", policyBenefitsEntityList.size()))
+                .status(HttpStatus.OK.toString())
+                .build();
     }
 
     private void setFieldNamesInMainDataEntityClassLists(List<BenefitCodeMapperEntity> benefitCodeMapperEntityList, AtomicReference<List<String>> policyHolderBenefitFieldNamesInMainDataEntityClassList, List<String> fieldNamesInMainDataEntityClassList, AtomicReference<List<String>> spouseBenefitFieldNamesInMainDataEntityClassList) {
