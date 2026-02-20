@@ -86,8 +86,9 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
                     .status(HttpStatus.BAD_REQUEST.toString())
                     .build();
         }
+        log.info("Policy benefits saved successfully. {} policy benefits records were saved from {} policies.", policyBenefitsEntityList.size(), policyList.size());
         return CommonResponseDTO.builder()
-                .message(String.format("%d policy benefits records were saved", policyBenefitsEntityList.size()))
+                .message(String.format("%d policy benefits records were saved from %d policies", policyBenefitsEntityList.size(), policyList.size()))
                 .status(HttpStatus.OK.toString())
                 .build();
     }

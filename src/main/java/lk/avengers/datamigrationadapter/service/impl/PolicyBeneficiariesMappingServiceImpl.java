@@ -61,8 +61,9 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
                     .status(HttpStatus.BAD_REQUEST.toString())
                     .build();
         }
+        log.info("Policy beneficiaries saved successfully. {} policy beneficiaries records were saved from {} policies.", allBeneficiariesEntityList.size(), policyList.size());
         return CommonResponseDTO.builder()
-                .message(String.format("%d beneficiaries records were saved", allBeneficiariesEntityList.size()))
+                .message(String.format("%d beneficiaries records were saved from %d policies", allBeneficiariesEntityList.size(), policyList.size()))
                 .status(HttpStatus.OK.toString())
                 .build();
     }
