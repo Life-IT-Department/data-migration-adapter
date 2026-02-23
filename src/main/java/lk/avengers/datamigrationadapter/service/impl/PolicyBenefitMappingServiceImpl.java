@@ -40,6 +40,8 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
     private final ACPPolicyRepository acpPolicyRepository;
     private final PolicyBenefitsEntityRepository policyBenefitsEntityRepository;
     private final MainExcelReader mainExcelReader;
+    private static final String SPOUSE = "Spouse";
+    private static final String CHILD ="Child";
 
     @Transactional(transactionManager = "softlogicPlatformTransactionManager")
     @Override
@@ -71,7 +73,7 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
                                 .forEach((key, value) -> generateBenefitsEntityFromMainData(policyNo, mainDataReportEntity, key, value, policyBenefitsEntityList));
                         addChildBenefitsFromMainData(policyNo, mainDataReportEntity, benefitCodeMapperEntityList, policyBenefitsEntityList);
                     }, () -> {
-                        Boolean hasALHData = getDetailsFromALHMainData(policyNo, policyNoSplit, benefitCodeMapperEntityList, policyBenefitsEntityList);
+                        boolean hasALHData = getDetailsFromALHMainData(policyNo, policyNoSplit, benefitCodeMapperEntityList, policyBenefitsEntityList);
                         if (!hasALHData) {
                             getDetailsFromACPData(policyNo, policyNoSplit, benefitCodeMapperEntityList, policyBenefitsEntityList);
                         }
@@ -98,14 +100,14 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
 
             policyHolderBenefitFieldNamesInMainDataEntityClassList.get().addAll(fieldNamesInMainDataEntityClassList
                     .stream()
-                    .filter(fieldName -> !fieldName.trim().toLowerCase().contains("Spouse".toLowerCase()))
-                    .filter(fieldName -> !fieldName.trim().toLowerCase().contains("Child".toLowerCase()))
+                    .filter(fieldName -> !fieldName.trim().toLowerCase().contains(SPOUSE.toLowerCase()))
+                    .filter(fieldName -> !fieldName.trim().toLowerCase().contains(CHILD.toLowerCase()))
                     .filter(fieldName -> fieldName.trim().toLowerCase().contains(benefitCodeMapperEntity.getAllianzBenefitCode().concat("_").toLowerCase().trim()))
                     .toList());
 
             spouseBenefitFieldNamesInMainDataEntityClassList.get().addAll(fieldNamesInMainDataEntityClassList
                     .stream()
-                    .filter(fieldName -> fieldName.trim().toLowerCase().contains("Spouse".toLowerCase()))
+                    .filter(fieldName -> fieldName.trim().toLowerCase().contains(SPOUSE.toLowerCase()))
                     .filter(fieldName -> fieldName.trim().toLowerCase().contains(benefitCodeMapperEntity.getAllianzBenefitCode().concat("_").toLowerCase().trim()))
                     .toList());
         });
@@ -122,7 +124,7 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
                     .filter(name -> name.toLowerCase().trim().contains(benefitCodeMapperEntity.getAllianzBenefitCode().replaceFirst("^Spouse-", "").concat("_").toLowerCase().trim()))
                     .toList();
 
-            if (!policyHolderFilterList.isEmpty() && !benefitCodeMapperEntity.getAllianzBenefitCode().startsWith("Spouse")) {
+            if (!policyHolderFilterList.isEmpty() && !benefitCodeMapperEntity.getAllianzBenefitCode().toLowerCase().startsWith(SPOUSE.toLowerCase())) {
                 RiderCoverColumnDTO riderCoverColumnDTO = RiderCoverColumnDTO.builder()
                         .coverName(policyHolderFilterList.stream().filter(name -> name.toLowerCase().contains("_sa")).findFirst().orElse(null))
                         .coverPerMilRate(policyHolderFilterList.stream().filter(name -> name.toLowerCase().contains("mil")).findFirst().orElse(null))
@@ -131,7 +133,7 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
                 policyHolderBenefitMap.put(benefitCodeMapperEntity.getSoftlogicBenefitCode(), riderCoverColumnDTO);
             }
 
-            if (!spouseFilterList.isEmpty() && benefitCodeMapperEntity.getAllianzBenefitCode().startsWith("Spouse")) {
+            if (!spouseFilterList.isEmpty() && benefitCodeMapperEntity.getAllianzBenefitCode().toLowerCase().startsWith(SPOUSE.toLowerCase())) {
                 RiderCoverColumnDTO spouseRiderCoverColumnDTO = RiderCoverColumnDTO.builder()
                         .coverName(spouseFilterList.stream().filter(name -> name.toLowerCase().contains("_sa")).findFirst().orElse(null))
                         .coverPerMilRate(spouseFilterList.stream().filter(name -> name.toLowerCase().contains("mil")).findFirst().orElse(null))

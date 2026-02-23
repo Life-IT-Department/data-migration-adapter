@@ -36,6 +36,9 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
     @Transactional(transactionManager = "softlogicPlatformTransactionManager")
     @Override
     public CommonResponseDTO mapBeneficiaries() {
+        log.info("Beneficiaries mapping process started. Truncating table");
+        policyBeneficiariesRepository.truncate();
+        log.info("Truncating Table process completed");
         log.info("mapBeneficiaries called.");
         List<String> policyList = mainExcelReader.readPolicyNumbers();
 
