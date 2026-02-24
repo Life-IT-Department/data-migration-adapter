@@ -55,6 +55,9 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
                         allBeneficiariesEntityList.addAll(childrenFromMainData);
                     }, () -> getDetailsFromALHMainData(policyNo, policyNoSplit, allBeneficiariesEntityList));
         });
+
+        policyBeneficiariesRepository.saveAll(allBeneficiariesEntityList);
+
         if (!allBeneficiariesEntityList.isEmpty()) {
             policyBeneficiariesRepository.saveAll(allBeneficiariesEntityList);
         } else {
