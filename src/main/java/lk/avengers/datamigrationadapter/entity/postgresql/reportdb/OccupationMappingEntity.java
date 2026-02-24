@@ -1,8 +1,7 @@
 package lk.avengers.datamigrationadapter.entity.postgresql.reportdb;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 
 @Getter
 @Setter
