@@ -11,6 +11,6 @@ import org.springframework.stereotype.Repository;
 public interface PolicyBeneficiariesRepository extends JpaRepository<PolicyBeneficiariesEntity, Long> {
     @Modifying
     @Transactional
-    @Query(value = "TRUNCATE TABLE dbo.Migr_PolicyBenefits", nativeQuery = true)
+    @Query(value = "TRUNCATE TABLE dbo.Migr_PolicyBeneficieries", nativeQuery = true)
     void truncate();
 }
