@@ -33,7 +33,7 @@ public class MigrationController {
     }
 
     @GetMapping("/benefits")
-    public CommonResponseDTO test2() {
+    public CommonResponseDTO migrateBenefitsData() {
         log.info("MIGRATE BENEFITS API METHOD ACCESSED.");
         return policyBenefitMappingService.processBenefitCodeMapping();
     }
