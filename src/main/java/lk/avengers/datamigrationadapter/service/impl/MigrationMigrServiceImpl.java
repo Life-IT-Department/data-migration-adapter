@@ -4,8 +4,10 @@ import jakarta.annotation.PostConstruct;
 import lk.avengers.datamigrationadapter.dto.MigrPolicyDataDTO;
 import lk.avengers.datamigrationadapter.dto.response.PolicyNumberResponseDTO;
 import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.*;
+import lk.avengers.datamigrationadapter.entity.softlogicdb.FundCurrentBalanceEntity;
 import lk.avengers.datamigrationadapter.entity.softlogicdb.MigrPolicyData;
 import lk.avengers.datamigrationadapter.repository.postgresql.reportdb.*;
+import lk.avengers.datamigrationadapter.repository.softlogicdb.FundCurrentBalanceEntityRepository;
 import lk.avengers.datamigrationadapter.repository.softlogicdb.MigrPolicyRepository;
 import lk.avengers.datamigrationadapter.service.MigrationMigrService;
 import lk.avengers.datamigrationadapter.util.MainExcelReader;
@@ -25,6 +27,9 @@ import java.util.Optional;
 @RequiredArgsConstructor
 @Slf4j
 public class MigrationMigrServiceImpl implements MigrationMigrService {
+
+    private static final String DEFAULT_BRANCH_CODE = "6J";
+
     private final MainDataReportRepository mainDataReportRepository;
     private final MainDataALHReportRepository mainDataALHReportRepository;
     private final ACPPolicyRepository acpPolicyRepository;
@@ -33,25 +38,31 @@ public class MigrationMigrServiceImpl implements MigrationMigrService {
     private final BranchCodeMappingRepository branchCodeMappingRepository;
     private final ContactDetailRepository contactDetailRepository;
     private final MigrPolicyRepository policyRepository;
+    private final OccupationCodeMappingRepository occupationCodeMappingRepository;
+    private final FundCurrentBalanceEntityRepository fundCurrentBalanceEntityRepository;
 
     private final MainExcelReader mainExcelReader;
 
     private List<ProductCodeMappingEntity> productCodeMappingList;
     private List<AdvisorCodeMappingEntity> advisorCodeMappingList;
     private List<BranchCodeMappingEntity> branchCodeMappingList;
+    private List<OccupationMappingEntity> occupationMappingList;
 
     @PostConstruct
     public void init() {
         this.productCodeMappingList = productCodeMappingRepository.findAll();
         this.advisorCodeMappingList = advisorCodeMappingRepository.findAll();
         this.branchCodeMappingList = branchCodeMappingRepository.findAll();
+        this.occupationMappingList = occupationCodeMappingRepository.findAll();
 
         log.info("Loaded {} PRODUCT_CODE_MAPPING records", productCodeMappingList.size());
         log.info("Loaded {} ADVISOR_CODE_MAPPING records", advisorCodeMappingList.size());
         log.info("Loaded {} BRANCH_CODE_MAPPING records", branchCodeMappingList.size());
+        log.info("Loaded {} OCCUPATION_CODE_MAPPING records", occupationMappingList.size());
     }
 
     private final List<MigrPolicyDataDTO> requestDTOList = new ArrayList<>();
+    private final List<FundCurrentBalanceEntity> fundCurrentBalanceEntityList = new ArrayList<>();
 
     @Override
     public void migratePolicyData() {
@@ -61,20 +72,19 @@ public class MigrationMigrServiceImpl implements MigrationMigrService {
         policyList.forEach(policy -> {
             Object policyEntity = findPolicyInRepositories(policy);
 
-            if (policyEntity instanceof MainDataReportEntity mainDataReport) {
-                // Use mainDataReport with full type safety
-                processMainDataReport(mainDataReport, policy);
-
-            } else if (policyEntity instanceof MainDataALHReportEntity alhReport) {
-                // Use alhReport with full type safety
-                processALHReport(alhReport, policy);
-
-            } else if (policyEntity instanceof ACPPolicyEntity acpPolicy) {
-                // Use acpPolicy with full type safety
-                processACPPolicy(acpPolicy, policy);
-
-            } else if (policyEntity == null) {
-                log.error("Policy {} not found in any repository", policy);
+            switch (policyEntity) {
+                case MainDataReportEntity mainDataReport ->
+                    // Use mainDataReport with full type safety
+                        processMainDataReport(mainDataReport, policy);
+                case MainDataALHReportEntity alhReport ->
+                    // Use alhReport with full type safety
+                        processALHReport(alhReport, policy);
+                case ACPPolicyEntity acpPolicy ->
+                    // Use acpPolicy with full type safety
+                        processACPPolicy(acpPolicy, policy);
+                case null -> log.error("Policy {} not found in any repository", policy);
+                default -> {
+                }
             }
 
         });
@@ -84,8 +94,10 @@ public class MigrationMigrServiceImpl implements MigrationMigrService {
                     .toList();
             log.info("Existing table truncating in MSSQL DB...");
             policyRepository.truncateTable();
+            fundCurrentBalanceEntityRepository.truncate();
             log.info("Saving data into MSSQL DB...");
             policyRepository.saveAll(policyEntityList);
+            fundCurrentBalanceEntityRepository.saveAll(fundCurrentBalanceEntityList);
             log.info("Saved {} policies to the MSSQL DB", policyEntityList.size());
         }
         log.info("Migration completed");
@@ -99,6 +111,7 @@ public class MigrationMigrServiceImpl implements MigrationMigrService {
         }
 
         MigrPolicyDataDTO policyRequestDTO = new MigrPolicyDataDTO();
+        FundCurrentBalanceEntity fundCurrentBalanceEntity = new FundCurrentBalanceEntity();
         // ===== Policy (PO) =====
         policyRequestDTO.setPoPlanCode(getSoftLogicProductCodeMapping(policyNo));
         policyRequestDTO.setPoPlanVersion(acpPolicy.getPlanNo());
@@ -138,7 +151,7 @@ public class MigrationMigrServiceImpl implements MigrationMigrService {
             policyRequestDTO.setLaEmail(getValidatedEmail(contact.getEmailAddress()));
             policyRequestDTO.setLaAgeAdmitted(false);
             policyRequestDTO.setLaAddressCity(contact.getCity());
-            policyRequestDTO.setLaOccupation(contact.getOccupation());
+            policyRequestDTO.setLaOccupation(getOccupation(contact.getOccupation()));
             policyRequestDTO.setLaAnb(Integer.parseInt(getAdmittedAge(acpPolicy.getInception(), contact.getDateOfBirth()).toString()));
             policyRequestDTO.setLaNameWithInitials(getNameWithInitials(contact.getFirstName(), contact.getLastName()));
             policyRequestDTO.setLaIsPolicyAssign(false);
@@ -147,6 +160,10 @@ public class MigrationMigrServiceImpl implements MigrationMigrService {
         } else {
             log.error("Contact details not found for policy {}", policyNo);
         }
+
+//        fundCurrentBalanceEntity.setTotalBalance(acpPolicy.getInsuredValueToday());
+//        fundCurrentBalanceEntity.setTopupBalance(acpPolicy.getInsure());
+//        fundCurrentBalanceEntityList.add(fundCurrentBalanceEntity);
 
         // ===== No Spouse (SP) =====
 
@@ -220,6 +237,7 @@ public class MigrationMigrServiceImpl implements MigrationMigrService {
         }
 
         MigrPolicyDataDTO policyRequestDTO = new MigrPolicyDataDTO();
+        FundCurrentBalanceEntity fundCurrentBalanceEntity = new FundCurrentBalanceEntity();
         // ===== Policy (PO) =====
         policyRequestDTO.setPoPlanCode(getSoftLogicProductCodeMapping(policyNo));
         policyRequestDTO.setPoPlanVersion(mainDataReport.getPlanNo());
@@ -259,7 +277,7 @@ public class MigrationMigrServiceImpl implements MigrationMigrService {
             policyRequestDTO.setLaEmail(getValidatedEmail(contact.getEmailAddress()));
             policyRequestDTO.setLaAgeAdmitted(false);
             policyRequestDTO.setLaAddressCity(contact.getCity());
-            policyRequestDTO.setLaOccupation(contact.getOccupation());
+            policyRequestDTO.setLaOccupation(getOccupation(contact.getOccupation()));
             policyRequestDTO.setLaAnb(Integer.parseInt(getAdmittedAge(mainDataReport.getInception(), contact.getDateOfBirth()).toString()));
             policyRequestDTO.setLaPrefLanguage(getLanguageChar(contact.getLanguagePreference()));
             policyRequestDTO.setLaNameWithInitials(getNameWithInitials(contact.getFirstName(), contact.getLastName()));
@@ -287,6 +305,12 @@ public class MigrationMigrServiceImpl implements MigrationMigrService {
             policyRequestDTO.setSpHeight(0);
             policyRequestDTO.setSpWeight(0);
         }
+
+        fundCurrentBalanceEntity.setPolicyNo(policyNo);
+        fundCurrentBalanceEntity.setTotalBalance(mainDataReport.getValueToday());
+        fundCurrentBalanceEntity.setTopupBalance(mainDataReport.getBstValueToday());
+        fundCurrentBalanceEntityList.add(fundCurrentBalanceEntity);
+
         requestDTOList.add(policyRequestDTO);
     }
 
@@ -298,6 +322,7 @@ public class MigrationMigrServiceImpl implements MigrationMigrService {
         }
 
         MigrPolicyDataDTO policyRequestDTO = new MigrPolicyDataDTO();
+        FundCurrentBalanceEntity fundCurrentBalanceEntity = new FundCurrentBalanceEntity();
         // ===== Policy (PO) =====
         policyRequestDTO.setPoPlanCode(getSoftLogicProductCodeMapping(policyNo));
         policyRequestDTO.setPoPlanVersion(alhReport.getPlanNo());
@@ -337,7 +362,7 @@ public class MigrationMigrServiceImpl implements MigrationMigrService {
             policyRequestDTO.setLaEmail(getValidatedEmail(contact.getEmailAddress()));
             policyRequestDTO.setLaAgeAdmitted(false);
             policyRequestDTO.setLaAddressCity(contact.getCity());
-            policyRequestDTO.setLaOccupation(contact.getOccupation());
+            policyRequestDTO.setLaOccupation(getOccupation(contact.getOccupation()));
             policyRequestDTO.setLaAnb(Integer.parseInt(getAdmittedAge(alhReport.getInception(), contact.getDateOfBirth()).toString()));
             policyRequestDTO.setLaPrefLanguage(getLanguageChar(contact.getLanguagePreference()));
             policyRequestDTO.setLaNameWithInitials(getNameWithInitials(contact.getFirstName(), contact.getLastName()));
@@ -375,7 +400,7 @@ public class MigrationMigrServiceImpl implements MigrationMigrService {
             return false;
         }
 
-        return "In Force".equalsIgnoreCase(status)
+        return status.toLowerCase().contains("In Force".toLowerCase())
                 || "Lapsed".equalsIgnoreCase(status);
     }
 
@@ -506,7 +531,7 @@ public class MigrationMigrServiceImpl implements MigrationMigrService {
                 .filter(mapping -> mapping.getAllianzbranchcode() != null && salesBranchCode.equals(mapping.getAllianzbranchcode()))
                 .map(BranchCodeMappingEntity::getSlbranchcode)
                 .findFirst()
-                .orElse(null);
+                .orElse(DEFAULT_BRANCH_CODE);
     }
 
     private String getPolicyStatusCode(String status, LocalDate lastPremiumDueDate) {
@@ -524,6 +549,17 @@ public class MigrationMigrServiceImpl implements MigrationMigrService {
             }
             default -> "NONE";
         };
+    }
+
+    private String getOccupation(String allianzOccupation){
+        if(allianzOccupation == null){
+            return null;
+        }
+        return occupationMappingList.stream()
+                .filter(occupationMappingEntity -> occupationMappingEntity.getImsOccupation().trim().equalsIgnoreCase(allianzOccupation))
+                .map(OccupationMappingEntity::getSlOccupation)
+                .findFirst()
+                .orElse(null);
     }
 
     private String getFrequencyString(Integer frequency) {
@@ -561,7 +597,7 @@ public class MigrationMigrServiceImpl implements MigrationMigrService {
                 .toList();
 
         if (advCodes.isEmpty()) {
-            return null;
+            return DEFAULT_BRANCH_CODE.concat("100");
         }
 
         if (advCodes.size() == 1) {
@@ -572,7 +608,6 @@ public class MigrationMigrServiceImpl implements MigrationMigrService {
                 .filter(code -> {
                     String numericPart = code.replaceAll("^[^0-9]+", "");
                     if (numericPart.isEmpty()) return false;
-
                     try {
                         return Integer.parseInt(numericPart) > 100;
                     } catch (NumberFormatException e) {
@@ -580,7 +615,7 @@ public class MigrationMigrServiceImpl implements MigrationMigrService {
                     }
                 })
                 .findFirst()
-                .orElse(null);
+                .orElse(DEFAULT_BRANCH_CODE.concat("100"));
     }
 
 

@@ -55,7 +55,7 @@ public class MigrPolicyData {
     @Column(name = "LA_Phone2", length = 10)
     private String laPhone2;
 
-    @Column(name = "LA_Nationality", length = 20)
+    @Column(name = "LA_Nationality", length = 100) //20 -> 100
     private String laNationality;
 
     @Column(name = "LA_email", length = 100) // 30 -> 50

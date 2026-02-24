@@ -52,6 +52,7 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
                         allBeneficiariesEntityList.addAll(childrenFromMainData);
                     }, () -> getDetailsFromALHMainData(policyNo, policyNoSplit));
         });
+        policyBeneficiariesRepository.truncate();
         policyBeneficiariesRepository.saveAll(allBeneficiariesEntityList);
         return CommonResponseDTO.builder()
                 .message(String.format("%d beneficiaries records were saved", allBeneficiariesEntityList.size()))
