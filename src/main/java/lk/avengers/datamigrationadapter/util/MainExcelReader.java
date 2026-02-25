@@ -33,9 +33,10 @@ public class MainExcelReader {
              Workbook workbook = new XSSFWorkbook(is)) {
 
 //            Sheet sheet = workbook.getSheet("POC_3_UAT");
-//            Sheet sheet = workbook.getSheet("POC_3_INTERMEDIATE");
+            Sheet sheet = workbook.getSheet("POC_3_INTERMEDIATE");
 //            Sheet sheet = workbook.getSheet("POC_4");
-            Sheet sheet = workbook.getSheet("ACTUARIAL");
+//            Sheet sheet = workbook.getSheet("ACTUARIAL");
+//            Sheet sheet = workbook.getSheet("TEST");
 
             for (Row row : sheet) {
 

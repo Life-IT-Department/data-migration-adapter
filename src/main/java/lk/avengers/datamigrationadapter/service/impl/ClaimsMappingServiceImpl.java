@@ -2,9 +2,9 @@ package lk.avengers.datamigrationadapter.service.impl;
 
 import lk.avengers.datamigrationadapter.dto.CommonResponseDTO;
 import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.*;
-import lk.avengers.datamigrationadapter.entity.softlogicdb.ClaimEntity;
+import lk.avengers.datamigrationadapter.entity.softlogicdb.MigrAllClaimsEntity;
 import lk.avengers.datamigrationadapter.repository.postgresql.reportdb.*;
-import lk.avengers.datamigrationadapter.repository.softlogicdb.ClaimEntityRepository;
+import lk.avengers.datamigrationadapter.repository.softlogicdb.MigrAllClaimsEntityRepository;
 import lk.avengers.datamigrationadapter.service.ClaimsMappingService;
 import lk.avengers.datamigrationadapter.util.MainExcelReader;
 import lombok.RequiredArgsConstructor;
@@ -15,8 +15,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -26,165 +28,186 @@ public class ClaimsMappingServiceImpl implements ClaimsMappingService {
     private final PaidClaimReportRepository paidClaimReportRepository;
     private final OutstandingClaimRepository outstandingClaimRepository;
     private final RejectedClaimRepository rejectedClaimRepository;
-    private final ClaimEntityRepository claimEntityRepository;
-    private final DeclaredClaimReportRepository declaredClaimReportRepository;
     private final ClosedClaimsReportRepository closedClaimsReportRepository;
+    private final MigrAllClaimsEntityRepository migrAllClaimsEntityRepository;
+
+    private final MainDataReportRepository mainDataReportRepository;
+    private final MainDataALHReportRepository mainDataALHReportRepository;
+    private final ACPPolicyRepository acpPolicyRepository;
 
     private final MainExcelReader mainExcelReader;
 
     private final static String PAID = "Paid";
     private final static String OUTSTANDING = "Outstanding";
     private final static String REJECTED = "Rejected";
-    private final static String DECLARED = "Declared";
     private final static String CLOSED = "Closed";
 
     @SneakyThrows
     @Override
-    public ResponseEntity<CommonResponseDTO> mapClaimsData(){
+    public ResponseEntity<CommonResponseDTO> mapClaimsData() {
 
         List<String> policyList = mainExcelReader.readPolicyNumbers();
-        try{
-            List<ClaimEntity> claimEntityList = new ArrayList<>();
+
+        try {
+            List<MigrAllClaimsEntity> claimEntityList = new ArrayList<>();
+
             policyList.forEach(policyNo -> {
 
-                List<PaidClaimEntity> paidClaimEntityList = paidClaimReportRepository.findByPolicyNo(policyNo);
-                List<OutstandingClaimEntity> outstandingClaimEntityList = outstandingClaimRepository.findByPolicyNumber(policyNo);
-                List<RejectedClaimEntity> rejectedClaimEntityList = rejectedClaimRepository.findByPolicy(policyNo.replaceFirst("/", ""));
-                List<DeclaredClaimEntity> declaredClaimEntityList = declaredClaimReportRepository.findByPolicyNo(policyNo);
-                List<ClosedClaimReportEntity> closedClaimReportEntityList = closedClaimsReportRepository.findByPolicyNo(policyNo);
+                List<PaidClaimEntity> paidClaimEntityList =
+                        paidClaimReportRepository.findByPolicyNo(policyNo);
 
-                if(!paidClaimEntityList.isEmpty()){
-                    paidClaimEntityList.forEach(paidClaimEntity -> claimEntityList.add(
-                            ClaimEntity.builder()
-                                    .policyNo(policyNo)
-                                    .claimNo(paidClaimEntity.getClaimOfficeNumber())
-                                    .claimType(paidClaimEntity.getClaimType())
-                                    .dateOfEvent(paidClaimEntity.getOccurredOn())
-                                    .dateOfIntimation(paidClaimEntity.getDeclaredOn())
-                                    .patientAdmitted(paidClaimEntity.getClaimantName())
-                                    .causeOfDeath(paidClaimEntity.getCauseOfClaim())
-                                    .natureOfIllness(paidClaimEntity.getCauseOfClaim())
-                                    .totalClaimAmount(BigDecimal.valueOf(paidClaimEntity.getOriginalClaimAmt()))
-                                    .totalSettledAmount(BigDecimal.valueOf(paidClaimEntity.getTrnAmountCy()))
-                                    .claimStatus(PAID)
-                                    .nameOfTheHospital(paidClaimEntity.getPlaceOfClaim())
-                                    .dateOfPayment(paidClaimEntity.getTrnDate())
-                                    .comments(paidClaimEntity.getClaimDescription())
-                                    .policyYear(paidClaimEntity.getUnderwritingYear())
-                                    .totalPreviousClaims(paidClaimEntity.getNoOfPreviousClaims())
-                                    .totalAmountPreviousClaims(BigDecimal.valueOf(paidClaimEntity.getPreviousClaimsTotalSettlement()))
-                                    .build()
+                List<OutstandingClaimEntity> outstandingClaimEntityList =
+                        outstandingClaimRepository.findByPolicyNumber(policyNo);
 
-                    ));
-                }
+                List<RejectedClaimEntity> rejectedClaimEntityList =
+                        rejectedClaimRepository.findByPolicy(policyNo.replaceFirst("/", ""));
 
-                if(!outstandingClaimEntityList.isEmpty()){
-                    outstandingClaimEntityList.forEach(outstandingClaimEntity -> claimEntityList.add(
-                            ClaimEntity.builder()
-                                    .policyNo(policyNo)
-                                    .claimNo(outstandingClaimEntity.getClaimOfficeNumber())
-                                    .claimType(outstandingClaimEntity.getClaimType())
-                                    .dateOfEvent(outstandingClaimEntity.getOccurredOn())
-                                    .dateOfIntimation(outstandingClaimEntity.getDeclaredOn())
-                                    .patientAdmitted(outstandingClaimEntity.getClaimedLifeAssured())
-                                    .causeOfDeath(outstandingClaimEntity.getCauseOfClaim())
-                                    .natureOfIllness(outstandingClaimEntity.getCauseOfClaim())
-                                    .totalClaimAmount(BigDecimal.valueOf(outstandingClaimEntity.getOriginalClaimAmount()))
-                                    .totalSettledAmount(BigDecimal.valueOf(outstandingClaimEntity.getPaidAmount()))
-                                    .claimStatus(OUTSTANDING)
-                                    .nameOfTheHospital(outstandingClaimEntity.getPlaceOfClaim())
-                                    .comments(outstandingClaimEntity.getClaimDescription())
-                                    .policyYear(outstandingClaimEntity.getUnderwritingYear())
-                                    .build()
-                    ));
-                }
+                List<ClosedClaimReportEntity> closedClaimReportEntityList =
+                        closedClaimsReportRepository.findByPolicyNo(policyNo);
 
-                if(!rejectedClaimEntityList.isEmpty()){
-                    rejectedClaimEntityList.forEach(rejectedClaimEntity -> claimEntityList.add(
-                            ClaimEntity.builder()
-                                    .policyNo(policyNo)
-                                    .claimType(rejectedClaimEntity.getClaimType())
-                                    .claimNo(rejectedClaimEntity.getClaimNo())
-                                    .dateOfEvent(rejectedClaimEntity.getOccurredDate())
-                                    .dateOfIntimation(rejectedClaimEntity.getDeclaredDate())
-                                    .patientAdmitted(rejectedClaimEntity.getClaimantName())
-                                    .causeOfDeath(rejectedClaimEntity.getReason())
-                                    .natureOfIllness(rejectedClaimEntity.getReason())
-                                    .totalClaimAmount(BigDecimal.valueOf(rejectedClaimEntity.getClaimedAmount()))
-                                    .claimStatus(REJECTED)
-                                    .dateOfPayment(rejectedClaimEntity.getRejectedDate())
-                                    .comments(rejectedClaimEntity.getRider())
-                                    .rider(rejectedClaimEntity.getRider())
-                                    .build()
+                // ================= PAID =================
+                paidClaimEntityList.forEach(paid -> claimEntityList.add(
+                        MigrAllClaimsEntity.builder()
+                                .clPolicyNo(policyNo)
+                                .clClaimNo(paid.getClaimOfficeNumber())
+                                .clClaimType(paid.getClaimType())
+                                .clDateofEvent(paid.getOccurredOn())
+                                .clDateofIntimation(paid.getDeclaredOn())
+                                .clPatientAdmitted(paid.getClaimantName())
+                                .clCauseofDeath(paid.getCauseOfClaim())
+                                .clNatureofIllnuss(paid.getCauseOfClaim())
+                                .clTotalClaimAmount(BigDecimal.valueOf(paid.getOriginalClaimAmt()))
+                                .clTotalSettledAmount(BigDecimal.valueOf(paid.getTrnAmountCy()))
+                                .clClaimStatus(getClaimStatusCode(PAID))
+                                .clNameOftheHospital(paid.getPlaceOfClaim())
+                                .clDateofPayment(paid.getTrnDate())
+                                .clComments(paid.getClaimDescription())
+                                .clPolicyYear(paid.getUnderwritingYear())
+                                .build()
+                ));
 
-                    ));
-                }
+                // ================= OUTSTANDING =================
+                outstandingClaimEntityList.forEach(out -> claimEntityList.add(
+                        MigrAllClaimsEntity.builder()
+                                .clPolicyNo(policyNo)
+                                .clClaimNo(out.getClaimOfficeNumber())
+                                .clClaimType(out.getClaimType())
+                                .clDateofEvent(out.getOccurredOn())
+                                .clDateofIntimation(out.getDeclaredOn())
+                                .clPatientAdmitted(out.getClaimedLifeAssured())
+                                .clCauseofDeath(out.getCauseOfClaim())
+                                .clNatureofIllnuss(out.getCauseOfClaim())
+                                .clTotalClaimAmount(BigDecimal.valueOf(out.getOriginalClaimAmount()))
+                                .clTotalSettledAmount(BigDecimal.valueOf(out.getPaidAmount()))
+                                .clClaimStatus(getClaimStatusCode(OUTSTANDING))
+                                .clNameOftheHospital(out.getPlaceOfClaim())
+                                .clComments(out.getClaimDescription())
+                                .clPolicyYear(out.getUnderwritingYear())
+                                .build()
+                ));
 
-                if(!closedClaimReportEntityList.isEmpty()){
-                    closedClaimReportEntityList.forEach(closedClaimReportEntity -> claimEntityList.add(
-                            ClaimEntity.builder()
-                                    .policyNo(policyNo)
-                                    .claimNo(closedClaimReportEntity.getClaimNo())
-                                    .claimType(closedClaimReportEntity.getTypeOfClaim())
-                                    .dateOfEvent(closedClaimReportEntity.getOccurrenceDate())
-                                    .dateOfIntimation(closedClaimReportEntity.getDeclarationDate())
-                                    .patientAdmitted(closedClaimReportEntity.getPolicyHolder())
-                                    .totalClaimAmount(BigDecimal.valueOf(closedClaimReportEntity.getClaimAmount()))
-                                    .totalSettledAmount(BigDecimal.valueOf(closedClaimReportEntity.getClaimAmount()))
-                                    .claimStatus(CLOSED)
-                                    .comments(closedClaimReportEntity.getRemarks())
-                                    .build()
+                // ================= REJECTED =================
+                rejectedClaimEntityList.forEach(rej -> claimEntityList.add(
+                        MigrAllClaimsEntity.builder()
+                                .clPolicyNo(policyNo)
+                                .clClaimNo(rej.getClaimNo())
+                                .clClaimType(rej.getClaimType())
+                                .clDateofEvent(rej.getOccurredDate())
+                                .clDateofIntimation(rej.getDeclaredDate())
+                                .clPatientAdmitted(rej.getClaimantName())
+                                .clCauseofDeath(rej.getReason())
+                                .clNatureofIllnuss(rej.getReason())
+                                .clTotalClaimAmount(BigDecimal.valueOf(rej.getClaimedAmount()))
+                                .clClaimStatus(getClaimStatusCode(REJECTED))
+                                .clDateofPayment(rej.getRejectedDate())
+                                .clComments(rej.getRider())
+                                .clPolicyYear(getPolicyYear(policyNo))
+                                .build()
+                ));
 
-                    ));
-                }
+                // ================= CLOSED =================
+                closedClaimReportEntityList.forEach(closed -> claimEntityList.add(
+                        MigrAllClaimsEntity.builder()
+                                .clPolicyNo(policyNo)
+                                .clClaimNo(closed.getClaimNo())
+                                .clClaimType(closed.getTypeOfClaim())
+                                .clDateofEvent(closed.getOccurrenceDate())
+                                .clDateofIntimation(closed.getDeclarationDate())
+                                .clPatientAdmitted(closed.getPolicyHolder())
+                                .clTotalClaimAmount(BigDecimal.valueOf(closed.getClaimAmount()))
+                                .clTotalSettledAmount(BigDecimal.valueOf(closed.getClaimAmount()))
+                                .clClaimStatus(getClaimStatusCode(CLOSED))
+                                .clComments(closed.getRemarks())
+                                .clPolicyYear(getPolicyYear(policyNo))
+                                .build()
+                ));
 
-                if(!declaredClaimEntityList.isEmpty()){
-                    declaredClaimEntityList.forEach(declaredClaimEntity -> {
-                        String claimNo = declaredClaimEntity.getClaimOfficeNumber();
-                        if(claimEntityList.stream().noneMatch(claimEntity -> claimEntity.getClaimNo().equalsIgnoreCase(claimNo))){
-                            claimEntityList.add(
-                                    ClaimEntity.builder()
-                                            .policyNo(policyNo)
-                                            .claimNo(declaredClaimEntity.getClaimOfficeNumber())
-                                            .claimType(declaredClaimEntity.getClaimType())
-                                            .dateOfEvent(declaredClaimEntity.getOccurredDate())
-                                            .dateOfIntimation(declaredClaimEntity.getDeclaredDate())
-                                            .patientAdmitted(declaredClaimEntity.getClaimedLifeAssured())
-                                            .causeOfDeath(declaredClaimEntity.getCauseOfClaims())
-                                            .natureOfIllness(declaredClaimEntity.getCauseOfClaims())
-                                            .totalClaimAmount(BigDecimal.valueOf(declaredClaimEntity.getOriginalClaimAmt()))
-                                            .totalSettledAmount(BigDecimal.valueOf(declaredClaimEntity.getOriginalClaimAmt()))
-                                            .claimStatus(DECLARED)
-                                            .nameOfTheHospital(declaredClaimEntity.getPlaceOfClaims())
-                                            .dateOfPayment(declaredClaimEntity.getClaimClosedDate())
-                                            .comments(declaredClaimEntity.getClaimDescription())
-                                            .policyYear(declaredClaimEntity.getUnderwritingYear())
-                                            .build()
-                            );
-                        }
-                    });
-                }
             });
-            claimEntityRepository.truncate();
-            claimEntityRepository.saveAll(claimEntityList);
-            return ResponseEntity.ok(CommonResponseDTO.builder()
-                    .data(null)
-                    .message(claimEntityList.size() + " claim data were mapped successfully")
-                    .status(HttpStatus.OK.toString())
-                    .build());
+
+            migrAllClaimsEntityRepository.truncate();
+            migrAllClaimsEntityRepository.saveAll(claimEntityList);
+
+            return ResponseEntity.ok(
+                    CommonResponseDTO.builder()
+                            .data(null)
+                            .message(claimEntityList.size() + " claim data were mapped successfully")
+                            .status(HttpStatus.OK.toString())
+                            .build()
+            );
 
         } catch (Exception e) {
-            CommonResponseDTO.builder()
-                    .data(null)
-                    .message(e.getMessage())
-                    .status(HttpStatus.INTERNAL_SERVER_ERROR.toString())
-                    .build();
-
-            return ResponseEntity.internalServerError().body(CommonResponseDTO.builder()
-                    .data(null)
-                    .message(e.getMessage())
-                    .status(HttpStatus.INTERNAL_SERVER_ERROR.toString())
-                    .build());
+            return ResponseEntity.internalServerError().body(
+                    CommonResponseDTO.builder()
+                            .data(null)
+                            .message(e.getMessage())
+                            .status(HttpStatus.INTERNAL_SERVER_ERROR.toString())
+                            .build()
+            );
         }
+    }
+
+    private String getClaimStatusCode(String claimStatus){
+        switch (claimStatus) {
+            case (PAID) -> {
+                return "P";
+            }
+            case (REJECTED) -> {
+                return "R";
+            }
+            case (CLOSED) -> {
+                return "C";
+            }
+            case (OUTSTANDING) -> {
+                return "O";
+            }
+            default -> {
+                return "N";
+            }
+        }
+    }
+
+    private Integer getPolicyYear(String policyNo) {
+        String productCode =
+                (policyNo != null && policyNo.length() >= 3)
+                        ? policyNo.replace("/", "").substring(0, 3)
+                        : null;
+        Integer number = (policyNo != null && policyNo.length() >= 3)
+                ? Integer.valueOf(policyNo.replace("/", "").substring(3))
+                : null;
+        LocalDate inception = mainDataReportRepository
+                .findFirstByProductCodeAndPolicyNo(productCode, number)
+                .map(MainDataReportEntity::getInception)
+                .or(() -> mainDataALHReportRepository
+                        .findFirstByProductCodeAndPolicyNo(productCode, number)
+                        .map(MainDataALHReportEntity::getInception))
+                .or(() -> acpPolicyRepository
+                        .findFirstByProductCodeAndPolicyNo(productCode, String.valueOf(number))
+                        .map(ACPPolicyEntity::getInception))
+                .orElse(null);
+
+        if (inception == null) {
+            return null;
+        }
+        return inception.getYear();
     }
 }

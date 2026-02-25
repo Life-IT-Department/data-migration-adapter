@@ -18,10 +18,9 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.Period;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
@@ -109,9 +108,7 @@ public class MigrationMigrServiceImpl implements MigrationMigrService {
             log.info("Skipping policy {} due to status {}", policyNo, acpPolicy.getStatus());
             return;
         }
-
         MigrPolicyDataDTO policyRequestDTO = new MigrPolicyDataDTO();
-        FundCurrentBalanceEntity fundCurrentBalanceEntity = new FundCurrentBalanceEntity();
         // ===== Policy (PO) =====
         policyRequestDTO.setPoPlanCode(getSoftLogicProductCodeMapping(policyNo));
         policyRequestDTO.setPoPlanVersion(acpPolicy.getPlanNo());
@@ -160,10 +157,6 @@ public class MigrationMigrServiceImpl implements MigrationMigrService {
         } else {
             log.error("Contact details not found for policy {}", policyNo);
         }
-
-//        fundCurrentBalanceEntity.setTotalBalance(acpPolicy.getInsuredValueToday());
-//        fundCurrentBalanceEntity.setTopupBalance(acpPolicy.getInsure());
-//        fundCurrentBalanceEntityList.add(fundCurrentBalanceEntity);
 
         // ===== No Spouse (SP) =====
 
@@ -322,7 +315,6 @@ public class MigrationMigrServiceImpl implements MigrationMigrService {
         }
 
         MigrPolicyDataDTO policyRequestDTO = new MigrPolicyDataDTO();
-        FundCurrentBalanceEntity fundCurrentBalanceEntity = new FundCurrentBalanceEntity();
         // ===== Policy (PO) =====
         policyRequestDTO.setPoPlanCode(getSoftLogicProductCodeMapping(policyNo));
         policyRequestDTO.setPoPlanVersion(alhReport.getPlanNo());
@@ -585,9 +577,11 @@ public class MigrationMigrServiceImpl implements MigrationMigrService {
 
 
     private String getAgentCodeMapping(String agentCode) {
+
         if (agentCode == null || agentCode.isBlank()) {
             return null;
         }
+
         List<String> advCodes = advisorCodeMappingList.stream()
                 .filter(m -> agentCode.equalsIgnoreCase(m.getCode()))
                 .map(AdvisorCodeMappingEntity::getAdvCode)
@@ -605,18 +599,28 @@ public class MigrationMigrServiceImpl implements MigrationMigrService {
         }
 
         return advCodes.stream()
-                .filter(code -> {
-                    String numericPart = code.replaceAll("^[^0-9]+", "");
-                    if (numericPart.isEmpty()) return false;
-                    try {
-                        return Integer.parseInt(numericPart) > 100;
-                    } catch (NumberFormatException e) {
-                        return false;
-                    }
-                })
-                .findFirst()
+                .map(code -> Map.entry(code, extractTrailingNumber(code)))
+                .filter(e -> e.getValue() != null && e.getValue() > 100)
+                .max(Comparator.comparingInt(Map.Entry::getValue))
+                .map(Map.Entry::getKey)
                 .orElse(DEFAULT_BRANCH_CODE.concat("100"));
     }
+
+    private Integer extractTrailingNumber(String code) {
+        if (code == null) return null;
+
+        code = code.trim();
+
+        Matcher m = Pattern.compile("(\\d+)$").matcher(code);
+        if (!m.find()) return null;
+
+        try {
+            return Integer.parseInt(m.group(1));
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
 
 
     private String getSoftLogicProductCodeMapping(String policyNo) {
