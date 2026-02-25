@@ -143,7 +143,7 @@ public class CashFlowReportUploadServiceImpl implements CashFlowReportUploadServ
                 .time(commonFunction.getLocalTimeValue(row.getCell(4)))
                 .station(commonFunction.getIntegerValue(row.getCell(5)))
                 .receiptNo(commonFunction.getIntegerValue(row.getCell(6)))
-                .payerPin(commonFunction.getStringValue(row.getCell(7)))
+                .payerPin(getStringValue(row.getCell(7)))
                 .payerName(commonFunction.getStringValue(row.getCell(8)))
                 .payerAddress(commonFunction.getStringValue(row.getCell(9)))
                 .details(commonFunction.getStringValue(row.getCell(10)))
@@ -277,8 +277,7 @@ public class CashFlowReportUploadServiceImpl implements CashFlowReportUploadServ
 
     private boolean shouldSkipRow(Row row) {
         return row.getRowNum() == HEADER_ROW_1 || row.getRowNum() == HEADER_ROW_2
-                || row.getRowNum() == HEADER_ROW_3 || row.getRowNum() == HEADER_ROW_4 || isCellBlank(row.getCell(0));
-        // return isCellBlank(row.getCell(1)) || isCellBlank(row.getCell(3));
+                || row.getRowNum() == HEADER_ROW_3 || row.getRowNum() == HEADER_ROW_4 || isCellBlank(row.getCell(1));
     }
 
     /**
@@ -306,5 +305,19 @@ public class CashFlowReportUploadServiceImpl implements CashFlowReportUploadServ
             return cell.getStringCellValue().isBlank();
         }
         return false;
+    }
+
+    private String getStringValue(Cell cell) {
+        if (cell == null || cell.getCellType() == CellType.BLANK) return null;
+        try {
+            return switch (cell.getCellType()) {
+                case STRING -> cell.getStringCellValue().trim();
+                case NUMERIC -> String.valueOf(cell.getStringCellValue()).trim();
+                default -> null;
+            };
+        } catch (Exception e) {
+            log.error("Error parsing string value from cell: {} cell address: {}", cell.toString(), cell.getAddress());
+            return null;
+        }
     }
 }
