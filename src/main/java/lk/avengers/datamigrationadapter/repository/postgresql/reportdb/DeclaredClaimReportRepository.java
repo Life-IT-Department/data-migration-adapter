@@ -9,6 +9,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface DeclaredClaimReportRepository extends JpaRepository<DeclaredClaimEntity, Integer> {
@@ -18,4 +19,6 @@ public interface DeclaredClaimReportRepository extends JpaRepository<DeclaredCla
     void truncate();
 
     List<DeclaredClaimEntity> findByPolicyNo(String policyNo);
+
+    Optional<DeclaredClaimEntity> findFirstByPolicyNoAndClaimOfficeNumberOrderByIdDesc(String policyNo, String claimOfficeNumber);
 }

@@ -148,7 +148,7 @@ public class MigrationMigrServiceImpl implements MigrationMigrService {
             policyRequestDTO.setLaEmail(getValidatedEmail(contact.getEmailAddress()));
             policyRequestDTO.setLaAgeAdmitted(false);
             policyRequestDTO.setLaAddressCity(contact.getCity());
-            policyRequestDTO.setLaOccupation(getOccupation(contact.getOccupation()));
+            policyRequestDTO.setLaOccupation(String.valueOf(getOccupation(contact.getOccupation())));
             policyRequestDTO.setLaAnb(Integer.parseInt(getAdmittedAge(acpPolicy.getInception(), contact.getDateOfBirth()).toString()));
             policyRequestDTO.setLaNameWithInitials(getNameWithInitials(contact.getFirstName(), contact.getLastName()));
             policyRequestDTO.setLaIsPolicyAssign(false);
@@ -270,7 +270,7 @@ public class MigrationMigrServiceImpl implements MigrationMigrService {
             policyRequestDTO.setLaEmail(getValidatedEmail(contact.getEmailAddress()));
             policyRequestDTO.setLaAgeAdmitted(false);
             policyRequestDTO.setLaAddressCity(contact.getCity());
-            policyRequestDTO.setLaOccupation(getOccupation(contact.getOccupation()));
+            policyRequestDTO.setLaOccupation(String.valueOf(getOccupation(contact.getOccupation())));
             policyRequestDTO.setLaAnb(Integer.parseInt(getAdmittedAge(mainDataReport.getInception(), contact.getDateOfBirth()).toString()));
             policyRequestDTO.setLaPrefLanguage(getLanguageChar(contact.getLanguagePreference()));
             policyRequestDTO.setLaNameWithInitials(getNameWithInitials(contact.getFirstName(), contact.getLastName()));
@@ -354,7 +354,7 @@ public class MigrationMigrServiceImpl implements MigrationMigrService {
             policyRequestDTO.setLaEmail(getValidatedEmail(contact.getEmailAddress()));
             policyRequestDTO.setLaAgeAdmitted(false);
             policyRequestDTO.setLaAddressCity(contact.getCity());
-            policyRequestDTO.setLaOccupation(getOccupation(contact.getOccupation()));
+            policyRequestDTO.setLaOccupation(String.valueOf(getOccupation(contact.getOccupation())));
             policyRequestDTO.setLaAnb(Integer.parseInt(getAdmittedAge(alhReport.getInception(), contact.getDateOfBirth()).toString()));
             policyRequestDTO.setLaPrefLanguage(getLanguageChar(contact.getLanguagePreference()));
             policyRequestDTO.setLaNameWithInitials(getNameWithInitials(contact.getFirstName(), contact.getLastName()));
@@ -543,15 +543,15 @@ public class MigrationMigrServiceImpl implements MigrationMigrService {
         };
     }
 
-    private String getOccupation(String allianzOccupation){
+    private Integer getOccupation(String allianzOccupation){
         if(allianzOccupation == null){
             return null;
         }
         return occupationMappingList.stream()
                 .filter(occupationMappingEntity -> occupationMappingEntity.getImsOccupation().trim().equalsIgnoreCase(allianzOccupation))
-                .map(OccupationMappingEntity::getSlOccupation)
+                .map(OccupationMappingEntity::getSlCode)
                 .findFirst()
-                .orElse(null);
+                .orElse(0);
     }
 
     private String getFrequencyString(Integer frequency) {

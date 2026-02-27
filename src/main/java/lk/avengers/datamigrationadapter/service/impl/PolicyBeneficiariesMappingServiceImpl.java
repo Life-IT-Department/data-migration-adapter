@@ -47,6 +47,10 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
             String[] policyNoSplit = policyNo.trim().split("/");
             mainDataReportRepository.findFirstByProductCodeAndPolicyNo(policyNoSplit[0], Integer.parseInt(policyNoSplit[1]))
                     .ifPresentOrElse(mainDataReportEntity -> {
+                        if (!isEligiblePolicyStatus(mainDataReportEntity.getStatus())) {
+                            log.info("Skipping policy {} due to status {}", policyNo, mainDataReportEntity.getStatus());
+                            return;
+                        }
                         PolicyBeneficiariesEntity spouseDetailsFromMainData = getSpouseDetailsFromMainData(mainDataReportEntity, policyNo);
                         List<PolicyBeneficiariesEntity> childrenFromMainData = getChildrenFromMainData(mainDataReportEntity, policyNo);
                         if (spouseDetailsFromMainData != null) {
@@ -77,13 +81,18 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
     private void getDetailsFromALHMainData(String policyNo, String[] policyNoSplit, List<PolicyBeneficiariesEntity> allBeneficiariesEntityList) {
         mainDataALHReportRepository.findFirstByProductCodeAndPolicyNo(policyNoSplit[0], Integer.parseInt(policyNoSplit[1]))
                 .ifPresentOrElse(mainDataALHReportEntity -> {
-                    PolicyBeneficiariesEntity spouseDetailsFromALHMainData = getSpouseDetailsFromALHMainData(mainDataALHReportEntity, policyNo);
-                    List<PolicyBeneficiariesEntity> childrenFromALHMainData = getChildrenFromALHMainData(mainDataALHReportEntity, policyNo);
+                    if (!isEligiblePolicyStatus(mainDataALHReportEntity.getStatus())) {
+                        log.info("Skipping policy {} due to status {}", policyNo, mainDataALHReportEntity.getStatus());
+                    } else {
+                        PolicyBeneficiariesEntity spouseDetailsFromALHMainData = getSpouseDetailsFromALHMainData(mainDataALHReportEntity, policyNo);
+                        List<PolicyBeneficiariesEntity> childrenFromALHMainData = getChildrenFromALHMainData(mainDataALHReportEntity, policyNo);
 
-                    if (spouseDetailsFromALHMainData != null) {
-                        childrenFromALHMainData.add(spouseDetailsFromALHMainData);
+                        if (spouseDetailsFromALHMainData != null) {
+                            childrenFromALHMainData.add(spouseDetailsFromALHMainData);
+                        }
+                        allBeneficiariesEntityList.addAll(childrenFromALHMainData);
                     }
-                    allBeneficiariesEntityList.addAll(childrenFromALHMainData);
+
                 }, () -> log.warn("No Main Data or ALH Main  data found for Policy No: {}", policyNo));
     }
 
@@ -320,6 +329,16 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
             // Default value
             return 'M';
         }
+    }
+
+    private boolean isEligiblePolicyStatus(String status) {
+
+        if (status == null) {
+            return false;
+        }
+
+        return status.toLowerCase().contains("In Force".toLowerCase())
+                || "Lapsed".equalsIgnoreCase(status);
     }
 
 }

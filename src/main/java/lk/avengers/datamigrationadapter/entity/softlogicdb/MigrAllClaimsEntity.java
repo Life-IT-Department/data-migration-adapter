@@ -25,7 +25,7 @@ public class MigrAllClaimsEntity {
     @Column(name = "CL_ClaimNo", length = 30)
     private String clClaimNo;
 
-    @Column(name = "CL_ClaimType", length = 20)
+    @Column(name = "CL_ClaimType", length = 40)
     private String clClaimType;
 
     @Column(name = "CL_DateofEvent")
@@ -40,10 +40,10 @@ public class MigrAllClaimsEntity {
     @Column(name = "CL_RelationShip", length = 10)
     private String clRelationShip;
 
-    @Column(name = "CL_CauseofDeath", length = 100)
+    @Column(name = "CL_CauseofDeath", length = 255)
     private String clCauseofDeath;
 
-    @Column(name = "CL_NatureofIllnuss", length = 100)
+    @Column(name = "CL_NatureofIllnuss", length = 255)
     private String clNatureofIllnuss;
 
     @Column(name = "CL_TotalClaimAmount", precision = 18, scale = 2)
@@ -55,7 +55,7 @@ public class MigrAllClaimsEntity {
     @Column(name = "CL_ClaimStatus", length = 1)
     private String clClaimStatus;
 
-    @Column(name = "CL_NameOftheHospital", length = 100)
+    @Column(name = "CL_NameOftheHospital", length = 255)
     private String clNameOftheHospital;
 
     @Column(name = "CL_DoneBy", length = 30)
