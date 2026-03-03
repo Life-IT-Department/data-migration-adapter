@@ -2,6 +2,7 @@ package lk.avengers.datamigrationadapter.entity.postgresql.reportdb;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.DynamicUpdate;
 import org.springframework.beans.BeanUtils;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -16,6 +17,7 @@ import java.time.LocalTime;
 @Setter
 @Builder
 @Getter
+@DynamicUpdate
 @AllArgsConstructor
 @NoArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
@@ -52,6 +54,9 @@ public class CashFlowReportEntity {
 
     @Column(name = "payer_address")
     private String payerAddress;
+
+    @Column(name = "policy_no")
+    private String policyNo;
 
     @Column(name = "details", columnDefinition = "TEXT")
     private String details;

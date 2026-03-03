@@ -67,6 +67,10 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
             String[] policyNoSplit = policyNo.trim().split("/");
             mainDataReportRepository.findFirstByProductCodeAndPolicyNo(policyNoSplit[0], Integer.parseInt(policyNoSplit[1]))
                     .ifPresentOrElse(mainDataReportEntity -> {
+                        if (!isEligiblePolicyStatus(mainDataReportEntity.getStatus())) {
+                            log.info("Skipping policy {} due to status {}", policyNo, mainDataReportEntity.getStatus());
+                            return;
+                        }
                         policyHolderBenefitMap
                                 .forEach((key, value) -> generateBenefitsEntityFromMainData(policyNo, mainDataReportEntity, key, value, policyBenefitsEntityList));
                         spouseBenefitMap
@@ -203,7 +207,10 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
     private void getDetailsFromACPData(String policyNo, String[] policyNoSplit, List<BenefitCodeMapperEntity> benefitCodeMapperEntityList, List<MigrPolicyBenefitsEntity> policyBenefitsEntityList) {
         acpPolicyRepository.findFirstByProductCodeAndPolicyNo(policyNoSplit[0].trim(), policyNoSplit[1].trim())
                 .ifPresentOrElse(acpPolicyEntity -> {
-
+                    if (!isEligiblePolicyStatus(acpPolicyEntity.getStatus())) {
+                        log.info("Skipping policy {} due to status {}", policyNo, acpPolicyEntity.getStatus());
+                        return;
+                    }
                     if (acpPolicyEntity.getDthSar().compareTo(BigDecimal.ZERO) > 0) {
                         MigrPolicyBenefitsEntity policyBenefitsEntity = getPolicyBenefitForACPData(policyNo, benefitCodeMapperEntityList, acpPolicyEntity, "DTH");
                         if (policyBenefitsEntity != null) {
@@ -282,6 +289,10 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
         AtomicReference<Boolean> booleanOptional = new AtomicReference<>(true);
         mainDataALHReportRepository.findFirstByProductCodeAndPolicyNo(policyNoSplit[0], Integer.parseInt(policyNoSplit[1]))
                 .ifPresentOrElse(mainDataALHReportEntity -> {
+                    if (!isEligiblePolicyStatus(mainDataALHReportEntity.getStatus())) {
+                        log.info("Skipping policy {} due to status {}", policyNo, mainDataALHReportEntity.getStatus());
+                        return;
+                    }
                     if (mainDataALHReportEntity.getDth_Sar().compareTo(BigDecimal.ZERO) > 0) {
                         MigrPolicyBenefitsEntity policyBenefitsEntity = getPolicyBenefitForALHData(policyNo, benefitCodeMapperEntityList, mainDataALHReportEntity, "DTH");
                         if (policyBenefitsEntity != null) {
@@ -498,6 +509,16 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
         }
 
         throw new IllegalArgumentException("Cannot convert type " + value.getClass() + " to BigDecimal");
+    }
+
+    private boolean isEligiblePolicyStatus(String status) {
+
+        if (status == null) {
+            return false;
+        }
+
+        return status.toLowerCase().contains("In Force".toLowerCase())
+                || "Lapsed".equalsIgnoreCase(status);
     }
 
 }

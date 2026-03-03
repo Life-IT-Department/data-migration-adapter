@@ -1,17 +1,16 @@
 package lk.avengers.datamigrationadapter.repository.softlogicdb;
 
 import jakarta.transaction.Transactional;
-import lk.avengers.datamigrationadapter.entity.softlogicdb.MigrPolicyBenefitsEntity;
-import lk.avengers.datamigrationadapter.entity.softlogicdb.PolicyBenefitsEntity;
+import lk.avengers.datamigrationadapter.entity.softlogicdb.MigrAllClaimsEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface PolicyBenefitsEntityRepository extends JpaRepository<MigrPolicyBenefitsEntity, Long> {
+public interface MigrAllClaimsEntityRepository extends JpaRepository<MigrAllClaimsEntity, Integer> {
     @Modifying
     @Transactional
-    @Query(value = "TRUNCATE TABLE dbo.Migr_PolicyBenefits; DBCC CHECKIDENT ('policy', RESEED, 1)", nativeQuery = true)
+    @Query(value = "TRUNCATE TABLE Migr_AllClaims; DBCC CHECKIDENT ('policy', RESEED, 1)", nativeQuery = true)
     void truncate();
 }

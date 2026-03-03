@@ -30,7 +30,7 @@ public class ReportUploadController {
     private final ClosedClaimReportService closedClaimReportService;
     private final PremiumDetailsReportsService premiumDetailsReportsService;
 
-    @PostMapping("/cash-flow-report")
+    @GetMapping("/cash-flow-report")
     public ResponseEntity<CommonResponseDTO> uploadCashFlow(@RequestParam int year) {
         log.info("CASH_FLOW_REPORT_UPLOAD API METHOD ACCESSED.");
         return cashFlowReportUploadService.uploadCashFlowReport(year);
