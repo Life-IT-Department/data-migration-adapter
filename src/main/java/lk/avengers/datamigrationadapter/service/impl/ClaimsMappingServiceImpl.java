@@ -44,6 +44,16 @@ public class ClaimsMappingServiceImpl implements ClaimsMappingService {
     private final static String REJECTED = "Rejected";
     private final static String CLOSED = "Closed";
 
+    private final static String DEATH = "death";
+
+    private final static String SURRENDERED = "Surrended"; // spelling mistake is known
+    private final static String DECEASED  = "Deceased";
+    private final static String IN_FORCE  = "In Force";
+    private final static String UNPAID  = "*Unpaid";
+
+    private final static String ULV  = "ULV";
+
+
     @SneakyThrows
     @Override
     public ResponseEntity<CommonResponseDTO> mapClaimsData() {
@@ -54,9 +64,9 @@ public class ClaimsMappingServiceImpl implements ClaimsMappingService {
             List<MigrAllClaimsEntity> claimEntityList = new ArrayList<>();
 
             policyList.forEach(policyNo -> {
-
-                if (!isEligiblePolicyStatus(getStatus(policyNo))) {
-                    log.info("Skipping policy {} due to status {}", policyNo, policyNo);
+                String policyStatus = getStatus(policyNo);
+                if (!isEligiblePolicyStatus(policyStatus)) {
+                    log.info("Skipping policy {} due to status {}", policyNo, policyStatus);
                     return;
                 }
                 List<PaidClaimEntity> paidClaimEntityList =
@@ -73,26 +83,35 @@ public class ClaimsMappingServiceImpl implements ClaimsMappingService {
 
                 // ================= PAID =================
                 paidClaimEntityList.forEach(paid -> {
-                    claimEntityList.add(
-                            MigrAllClaimsEntity.builder()
-                                    .clPolicyNo(policyNo)
-                                    .clClaimNo(paid.getClaimOfficeNumber())
-                                    .clClaimType(paid.getClaimType())
-                                    .clDateofEvent(paid.getOccurredOn())
-                                    .clDateofIntimation(paid.getDeclaredOn())
-                                    .clPatientAdmitted(paid.getClaimantName())
-                                    .clCauseofDeath(paid.getCauseOfClaim())
-                                    .clNatureofIllnuss(paid.getCauseOfClaim())
-                                    .clTotalClaimAmount(BigDecimal.valueOf(paid.getOriginalClaimAmt()))
-                                    .clTotalSettledAmount(BigDecimal.valueOf(paid.getTrnAmountCy()))
-                                    .clClaimStatus(getClaimStatusCode(PAID))
-                                    .clNameOftheHospital(paid.getPlaceOfClaim())
-                                    .clDateofPayment(paid.getTrnDate())
-                                    .clComments(paid.getClaimDescription())
-                                    .clPolicyYear(paid.getUnderwritingYear())
-                                    .build()
-                    );
 
+                    boolean isPaid = paid.getTrnStatus().equalsIgnoreCase(PAID);
+                    boolean isUnpaid = paid.getTrnStatus().equalsIgnoreCase(UNPAID);
+                    boolean isInForce = paid.getPolicyStatus().equalsIgnoreCase(IN_FORCE);
+                    boolean isSurrendered = paid.getPolicyStatus().equalsIgnoreCase(SURRENDERED);
+                    boolean isDeceased = paid.getPolicyStatus().equalsIgnoreCase(DECEASED);
+                    boolean isULV = policyNo.contains(ULV);
+
+                    if ((isPaid || isUnpaid) && ((isInForce && isULV) || isSurrendered || isDeceased)) {
+                        claimEntityList.add(
+                                MigrAllClaimsEntity.builder()
+                                        .clPolicyNo(policyNo)
+                                        .clClaimNo(paid.getClaimOfficeNumber())
+                                        .clClaimType(paid.getClaimType())
+                                        .clDateofEvent(paid.getOccurredOn())
+                                        .clDateofIntimation(paid.getDeclaredOn())
+                                        .clPatientAdmitted(paid.getClaimedLifeAssured())
+                                        .clCauseofDeath(paid.getClaimType().equalsIgnoreCase(DEATH) ? paid.getCauseOfClaim() : "")
+                                        .clNatureofIllnuss(paid.getCauseOfClaim())
+                                        .clTotalClaimAmount(BigDecimal.valueOf(paid.getOriginalClaimAmt()))
+                                        .clTotalSettledAmount(BigDecimal.valueOf(paid.getTrnAmountCy()))
+                                        .clClaimStatus(getClaimStatusCode(PAID))
+                                        .clNameOftheHospital(paid.getPlaceOfClaim())
+                                        .clDateofPayment(paid.getTrnDate())
+                                        .clComments(paid.getClaimDescription())
+                                        .clPolicyYear(paid.getUnderwritingYear())
+                                        .build()
+                        );
+                    }
                 });
 
                 // ================= OUTSTANDING =================
@@ -104,7 +123,7 @@ public class ClaimsMappingServiceImpl implements ClaimsMappingService {
                                 .clDateofEvent(out.getOccurredOn())
                                 .clDateofIntimation(out.getDeclaredOn())
                                 .clPatientAdmitted(out.getClaimedLifeAssured())
-                                .clCauseofDeath(out.getCauseOfClaim())
+                                .clCauseofDeath(out.getClaimType().equalsIgnoreCase(DEATH) ? out.getCauseOfClaim() : "")
                                 .clNatureofIllnuss(out.getCauseOfClaim())
                                 .clTotalClaimAmount(BigDecimal.valueOf(out.getOriginalClaimAmount()))
                                 .clTotalSettledAmount(BigDecimal.valueOf(out.getPaidAmount()))
@@ -120,8 +139,10 @@ public class ClaimsMappingServiceImpl implements ClaimsMappingService {
                     Optional<DeclaredClaimEntity> intimation = declaredClaimReportRepository.
                             findFirstByPolicyNoAndClaimOfficeNumberOrderByIdDesc(policyNo, rej.getClaimNo());
                     String causeOfDeath = "";
+                    String placeOfClaim = "";
                     if (intimation.isPresent()) {
                         causeOfDeath = intimation.get().getCauseOfClaims();
+                        placeOfClaim = intimation.get().getPlaceOfClaims();
                     }
                     claimEntityList.add(
                             MigrAllClaimsEntity.builder()
@@ -129,15 +150,15 @@ public class ClaimsMappingServiceImpl implements ClaimsMappingService {
                                     .clClaimNo(rej.getClaimNo())
                                     .clClaimType(rej.getClaimType())
                                     .clDateofEvent(rej.getOccurredDate())
-                                    .clCauseofDeath(causeOfDeath)
+                                    .clCauseofDeath(rej.getClaimType().equalsIgnoreCase(DEATH) ? causeOfDeath : "")
                                     .clDateofIntimation(rej.getDeclaredDate())
                                     .clPatientAdmitted(rej.getClaimantName())
-                                    .clCauseofDeath(rej.getReason())
-                                    .clNatureofIllnuss(rej.getReason())
+                                    .clNatureofIllnuss(causeOfDeath)
                                     .clTotalClaimAmount(BigDecimal.valueOf(rej.getClaimedAmount()))
+                                    .clTotalSettledAmount(BigDecimal.ZERO)
                                     .clClaimStatus(getClaimStatusCode(REJECTED))
-                                    .clDateofPayment(rej.getRejectedDate())
-                                    .clComments(rej.getRider())
+                                    .clNameOftheHospital(placeOfClaim)
+                                    .clComments(rej.getReason())
                                     .clPolicyYear(getPolicyYear(policyNo))
                                     .build()
 
@@ -149,21 +170,24 @@ public class ClaimsMappingServiceImpl implements ClaimsMappingService {
                     Optional<DeclaredClaimEntity> intimation = declaredClaimReportRepository.
                             findFirstByPolicyNoAndClaimOfficeNumberOrderByIdDesc(policyNo, closed.getClaimNo());
                     String causeOfDeath = "";
+                    String placeOfClaim = "";
                     if(intimation.isPresent()){
                         causeOfDeath = intimation.get().getCauseOfClaims();
+                        placeOfClaim = intimation.get().getPlaceOfClaims();
                     }
                     claimEntityList.add(
                             MigrAllClaimsEntity.builder()
                                     .clPolicyNo(policyNo)
                                     .clClaimNo(closed.getClaimNo())
                                     .clClaimType(closed.getTypeOfClaim())
-                                    .clCauseofDeath(causeOfDeath)
+                                    .clCauseofDeath(closed.getTypeOfClaim().equalsIgnoreCase(DEATH) ? causeOfDeath : "")
                                     .clDateofEvent(closed.getOccurrenceDate())
                                     .clDateofIntimation(closed.getDeclarationDate())
                                     .clPatientAdmitted(closed.getPolicyHolder())
                                     .clTotalClaimAmount(BigDecimal.valueOf(closed.getClaimAmount()))
-                                    .clTotalSettledAmount(BigDecimal.valueOf(closed.getClaimAmount()))
+                                    .clTotalSettledAmount(BigDecimal.ZERO)
                                     .clClaimStatus(getClaimStatusCode(CLOSED))
+                                    .clNameOftheHospital(placeOfClaim)
                                     .clComments(closed.getRemarks())
                                     .clPolicyYear(getPolicyYear(policyNo))
                                     .build()

@@ -27,6 +27,7 @@ import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Slf4j
 @Service
@@ -39,7 +40,7 @@ public class CashFlowReportUploadServiceImpl implements CashFlowReportUploadServ
     private final BatchProcessService genisysBatchService;
     private final CashFlowReportRepository cashFlowReportRepository;
     private final CommonFunction commonFunction;
-    DataFormatter dataFormatter = new DataFormatter();
+
     private static final int HEADER_ROW_1 = 0;
     private static final int HEADER_ROW_2 = 1;
     private static final int HEADER_ROW_3 = 2;
@@ -93,7 +94,6 @@ public class CashFlowReportUploadServiceImpl implements CashFlowReportUploadServ
                 if (shouldSkipRow(row)) {
                     continue;
                 }
-                // Stop at first empty row (past last data row)
                 if (isEndOfDataRow(row)) {
                     break;
                 }
@@ -129,7 +129,7 @@ public class CashFlowReportUploadServiceImpl implements CashFlowReportUploadServ
 
         return ResponseEntity.ok(
                 CommonResponseDTO.builder()
-                        .message("Main data report " + totalCount + " records uploaded successfully.")
+                        .message("Cash Flow report " + totalCount + " records uploaded successfully.")
                         .status(HttpStatus.OK.toString())
                         .build()
         );
@@ -173,80 +173,37 @@ public class CashFlowReportUploadServiceImpl implements CashFlowReportUploadServ
 
     private InputStream getFileInputStreamByYear(int year) {
         try {
-            // Get the directory path from the configured path
-            Path directoryPath;
-            Path configuredPath = Paths.get(cashFlowReportPath);
+            Path directoryPath = Paths.get(cashFlowReportPath);
 
-            // Check if the configured path is a directory or file
-            if (Files.exists(configuredPath) && Files.isDirectory(configuredPath)) {
-                // If it's an existing directory, use it directly
-                directoryPath = configuredPath;
-            } else if (cashFlowReportPath.contains("/") || cashFlowReportPath.contains("\\")) {
-                // If path contains directory separators, check if it's meant to be a directory
-                // or get the parent directory if it's a file path
-                if (configuredPath.toString().endsWith("/") || configuredPath.toString().endsWith("\\") ||
-                        !configuredPath.getFileName().toString().contains(".")) {
-                    // Treat as directory path
-                    directoryPath = configuredPath;
-                } else {
-                    // Get parent directory
-                    directoryPath = configuredPath.getParent();
-                    if (directoryPath == null) {
-                        directoryPath = Paths.get(".");
-                    }
-                }
-            } else {
-                // If it's just a filename, use current directory
-                directoryPath = Paths.get(".");
+            if (!Files.exists(directoryPath) || !Files.isDirectory(directoryPath)) {
+                throw new ReportException(
+                        HttpStatus.NOT_FOUND.value(),
+                        "Invalid cash flow directory path: " + directoryPath.toAbsolutePath()
+                );
             }
 
-            // Pattern to match year anywhere in filename as a standalone number (supports files with or without Excel extensions)
-            // This pattern looks for the year as a 4-digit number that's either:
-            // - At the start of filename followed by non-digit
-            // - Preceded by non-digit and followed by non-digit  
-            // - At the end of filename preceded by non-digit
-            Pattern yearPattern = Pattern.compile(".*(?:^|[^\\d])" + year + "(?:[^\\d]|$).*", Pattern.CASE_INSENSITIVE);
+            String expectedPrefix = "CashFlowTrn-" + year;
 
-            log.info("Searching for cash flow files for year {} in directory: {}", year, directoryPath.toAbsolutePath());
-            log.info("Using pattern: {}", yearPattern.pattern());
+            List<Path> matchingFiles;
 
-            // Find all Excel files in the directory that match the year pattern
-            List<Path> matchingFiles = Files.list(directoryPath)
-                    .filter(Files::isRegularFile)
-                    .filter(path -> {
-                        String fileName = path.getFileName().toString().toLowerCase();
-                        // Only consider Excel files
-                        return fileName.endsWith(".xlsx") || fileName.endsWith(".xls") || fileName.endsWith(".xlsm");
-                    })
-                    .filter(path -> {
-                        String fileName = path.getFileName().toString();
-                        Matcher matcher = yearPattern.matcher(fileName);
-                        boolean matches = matcher.matches();
-                        log.debug("Checking file '{}' against pattern: {}", fileName, matches);
-                        return matches;
-                    })
-                    .toList();
-
-            // Handle different scenarios
-            if (matchingFiles.isEmpty()) {
-                // List all Excel files in the directory for debugging
-                List<String> allExcelFiles = Files.list(directoryPath)
+            try (Stream<Path> stream = Files.list(directoryPath)) {
+                matchingFiles = stream
                         .filter(Files::isRegularFile)
                         .filter(path -> {
                             String fileName = path.getFileName().toString().toLowerCase();
-                            return fileName.endsWith(".xlsx") || fileName.endsWith(".xls") || fileName.endsWith(".xlsm");
+                            return fileName.startsWith(expectedPrefix.toLowerCase())
+                                    && (fileName.endsWith(".xlsx")
+                                    || fileName.endsWith(".xls")
+                                    || fileName.endsWith(".xlsm"));
                         })
-                        .map(path -> path.getFileName().toString())
-                        .collect(Collectors.toList());
+                        .toList();
+            }
 
-                String debugInfo = allExcelFiles.isEmpty() ?
-                        "No Excel files found in directory." :
-                        "Available Excel files: " + String.join(", ", allExcelFiles);
-
+            if (matchingFiles.isEmpty()) {
                 throw new ReportException(
                         HttpStatus.NOT_FOUND.value(),
-                        "No cash flow file found for year " + year + " in directory: " + directoryPath.toAbsolutePath() +
-                                ". " + debugInfo + " Expected filename pattern: contains '" + year + "' as standalone number."
+                        "No cash flow file found for year " + year +
+                                ". Expected format: CashFlowTrn-" + year + ".xlsx"
                 );
             }
 
@@ -256,16 +213,11 @@ public class CashFlowReportUploadServiceImpl implements CashFlowReportUploadServ
                         .collect(Collectors.joining(", "));
                 throw new ReportException(
                         HttpStatus.CONFLICT.value(),
-                        "Multiple cash flow files found for year " + year + ": " + fileNames +
-                                ". Please ensure only one file exists for the specified year."
+                        "Multiple files found for year " + year + ": " + fileNames
                 );
             }
 
-            // Single file found - return its input stream
-            Path selectedFile = matchingFiles.getFirst();
-            log.info("Found cash flow file for year {}: {}", year, selectedFile.getFileName());
-
-            return Files.newInputStream(selectedFile);
+            return Files.newInputStream(matchingFiles.get(0));
 
         } catch (IOException e) {
             throw new ReportException(
