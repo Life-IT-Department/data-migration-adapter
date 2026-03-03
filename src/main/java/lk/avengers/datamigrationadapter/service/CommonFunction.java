@@ -1,6 +1,7 @@
 package lk.avengers.datamigrationadapter.service;
 
 import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.Row;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -24,4 +25,8 @@ public interface CommonFunction {
     String getStringDateValue(Cell cell);
     
     LocalTime getLocalTimeValue(Cell cell);
+
+    boolean isEndOfDataRow(Row row);
+
+    boolean isCellBlank(Cell cell);
 }
