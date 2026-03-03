@@ -94,7 +94,7 @@ public class CashFlowReportUploadServiceImpl implements CashFlowReportUploadServ
                     continue;
                 }
                 // Stop at first empty row (past last data row)
-                if (isEndOfDataRow(row)) {
+                if (commonFunction.isEndOfDataRow(row)) {
                     break;
                 }
 
@@ -129,7 +129,7 @@ public class CashFlowReportUploadServiceImpl implements CashFlowReportUploadServ
 
         return ResponseEntity.ok(
                 CommonResponseDTO.builder()
-                        .message("Main data report " + totalCount + " records uploaded successfully.")
+                        .message("cash flow report " + totalCount + " records uploaded successfully.")
                         .status(HttpStatus.OK.toString())
                         .build()
         );
@@ -277,34 +277,7 @@ public class CashFlowReportUploadServiceImpl implements CashFlowReportUploadServ
 
     private boolean shouldSkipRow(Row row) {
         return row.getRowNum() == HEADER_ROW_1 || row.getRowNum() == HEADER_ROW_2
-                || row.getRowNum() == HEADER_ROW_3 || row.getRowNum() == HEADER_ROW_4 || isCellBlank(row.getCell(1));
-    }
-
-    /**
-     * Returns true if all columns in the row are empty or blank, meaning we have passed the last data row.
-     * Processing stops when this returns true.
-     */
-    private boolean isEndOfDataRow(Row row) {
-        if (row == null) {
-            return true;
-        }
-        int lastCellNum = row.getLastCellNum();
-        for (int i = 0; i < lastCellNum; i++) {
-            if (!isCellBlank(row.getCell(i))) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private boolean isCellBlank(Cell cell) {
-        if (cell == null || cell.getCellType() == CellType.BLANK) {
-            return true;
-        }
-        if (cell.getCellType() == CellType.STRING) {
-            return cell.getStringCellValue().isBlank();
-        }
-        return false;
+                || row.getRowNum() == HEADER_ROW_3 || row.getRowNum() == HEADER_ROW_4 || commonFunction.isCellBlank(row.getCell(1));
     }
 
     private String getStringValue(Cell cell) {

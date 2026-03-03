@@ -5,6 +5,7 @@ import jakarta.persistence.PersistenceContext;
 import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.CashFlowReportEntity;
 import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.MainDataALHReportEntity;
 import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.MainDataReportEntity;
+import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.PremiumDetailsEntity;
 import lk.avengers.datamigrationadapter.service.BatchProcessService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -95,4 +96,27 @@ public class BatchProcessServiceImpl implements BatchProcessService {
         flushAndClear();
         log.info("ReportBatchService.saveCashFlowBatch completed");
     }
+
+    @Transactional(
+            transactionManager = "reportPlatformTransactionManager",
+            propagation = Propagation.REQUIRES_NEW
+    )
+    @Override
+    public void savePremiumDetailsBatch(List<PremiumDetailsEntity> batch) {
+        if (batch == null || batch.isEmpty()) {
+            log.debug("ReportBatchService.savePremiumDetailsBatch called with empty batch");
+            return;
+        }
+        log.info("ReportBatchService.savePremiumDetailsBatch started. Batch size: {}", batch.size());
+        for (int i = 0; i < batch.size(); i++) {
+            entityManager.persist(batch.get(i));
+
+            if ((i + 1) % BATCH_SIZE == 0) {
+                flushAndClear();
+            }
+        }
+        flushAndClear();
+        log.info("ReportBatchService.savePremiumDetailsBatch completed");
+    }
+
 }

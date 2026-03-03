@@ -3,6 +3,7 @@ package lk.avengers.datamigrationadapter.service;
 import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.CashFlowReportEntity;
 import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.MainDataALHReportEntity;
 import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.MainDataReportEntity;
+import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.PremiumDetailsEntity;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,4 +16,6 @@ public interface BatchProcessService {
     void saveALHBatch(List<MainDataALHReportEntity> batch);
 
     void saveCashFlowBatch(List<CashFlowReportEntity> batch);
+
+    void savePremiumDetailsBatch(List<PremiumDetailsEntity> batch);
 }

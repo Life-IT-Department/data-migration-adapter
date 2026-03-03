@@ -4,6 +4,7 @@ import lk.avengers.datamigrationadapter.service.CommonFunction;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.ss.usermodel.Row;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -202,6 +203,35 @@ public class CommonFunctionImpl implements CommonFunction {
         }
     }
 
+    /**
+     * Returns true if all columns in the row are empty or blank, meaning we have passed the last data row.
+     * Processing stops when this returns true.
+     */
+    @Override
+    public boolean isEndOfDataRow(Row row) {
+        if (row == null) {
+            return true;
+        }
+        int lastCellNum = row.getLastCellNum();
+        for (int i = 0; i < lastCellNum; i++) {
+            if (!isCellBlank(row.getCell(i))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    @Override
+    public boolean isCellBlank(Cell cell) {
+        if (cell == null || cell.getCellType() == CellType.BLANK) {
+            return true;
+        }
+        if (cell.getCellType() == CellType.STRING) {
+            return cell.getStringCellValue().isBlank();
+        }
+        return false;
+    }
+
     // ==================== Date Parsing Utilities ====================
 
     private LocalDate parseYYYYMMDD(String value) {
@@ -221,4 +251,5 @@ public class CommonFunctionImpl implements CommonFunction {
         }
         return null;
     }
+
 }
