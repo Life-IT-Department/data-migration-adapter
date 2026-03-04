@@ -63,7 +63,7 @@ public class PremiumDetailsReportsServiceImpl implements PremiumDetailsReportsSe
                 log.info("Processing file: {}", file.getFileName());
                 fileName = file.getFileName().toString();
                 Row currentRow = null;
-
+                int reportRecordCount = 0;
                 try (InputStream is = Files.newInputStream(file);
                      Workbook workbook = StreamingReader.builder()
                              .rowCacheSize(1000)
@@ -89,7 +89,8 @@ public class PremiumDetailsReportsServiceImpl implements PremiumDetailsReportsSe
                         if (batch.size() == BATCH_SIZE) {
                             genisysBatchService.savePremiumDetailsBatch(batch);
                             totalCount += batch.size();
-                            log.info("Saved {} from {} Premium Details file records so far...", fileName, totalCount);
+                            reportRecordCount += batch.size();
+                            log.info("Saved {} from {} Premium Details file records so far...", fileName, reportRecordCount);
                             batch.clear();
                         }
                     }
@@ -107,9 +108,10 @@ public class PremiumDetailsReportsServiceImpl implements PremiumDetailsReportsSe
                             "Failed to parse Premium Details Excel file: " + file.getFileName() + ": " + e.getMessage()
                     );
                 }
+                log.info("Premium Details file: {} processed successfully. Total records saved: {}", fileName, reportRecordCount);
             }
 
-            log.info("Premium Details Excel files Upload completed. Total records saved: {}", totalCount);
+            log.info("All Premium Details Excel files Upload completed. Total records saved: {}", totalCount);
 
             return ResponseEntity.ok(
                     CommonResponseDTO.builder()
