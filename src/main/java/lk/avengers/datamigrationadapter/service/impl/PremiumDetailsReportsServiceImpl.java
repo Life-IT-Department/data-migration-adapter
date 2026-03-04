@@ -90,7 +90,7 @@ public class PremiumDetailsReportsServiceImpl implements PremiumDetailsReportsSe
                             genisysBatchService.savePremiumDetailsBatch(batch);
                             totalCount += batch.size();
                             reportRecordCount += batch.size();
-                            log.info("Saved {} from {} Premium Details file records so far...", fileName, reportRecordCount);
+                            log.info("Saved {} records from {} Premium Details file so far...", reportRecordCount, fileName);
                             batch.clear();
                         }
                     }
@@ -99,7 +99,7 @@ public class PremiumDetailsReportsServiceImpl implements PremiumDetailsReportsSe
                         genisysBatchService.savePremiumDetailsBatch(batch);
                         totalCount += batch.size();
                         reportRecordCount += batch.size();
-                        log.info("Saved {} from {} Premium Details file records so far...", fileName, reportRecordCount);
+                        log.info("Saved {} records from {} Premium Details file so far...", reportRecordCount, fileName);
                     }
 
                 } catch (IOException e) {
