@@ -23,8 +23,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.BiConsumer;
-import java.util.function.Supplier;
+
+
 
 
 @Slf4j
@@ -98,6 +98,8 @@ public class PremiumDetailsReportsServiceImpl implements PremiumDetailsReportsSe
                     if (!batch.isEmpty()) {
                         genisysBatchService.savePremiumDetailsBatch(batch);
                         totalCount += batch.size();
+                        reportRecordCount += batch.size();
+                        log.info("Saved {} from {} Premium Details file records so far...", fileName, reportRecordCount);
                     }
 
                 } catch (IOException e) {
