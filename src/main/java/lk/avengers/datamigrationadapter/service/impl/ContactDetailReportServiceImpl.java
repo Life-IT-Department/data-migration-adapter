@@ -50,7 +50,7 @@ public class ContactDetailReportServiceImpl implements ContactDetailReportServic
                     excelFile.close();
                     return ResponseEntity.ok(
                             CommonResponseDTO.builder()
-                                    .message("Contact detail report records uploaded successfully.")
+                                    .message("Main data report records uploaded successfully.")
                                     .status(HttpStatus.OK.toString())
                                     .build()
                     );
