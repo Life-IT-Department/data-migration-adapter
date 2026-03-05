@@ -1,6 +1,7 @@
 package lk.avengers.datamigrationadapter.repository.postgresql.reportdb;
 
 import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.CashFlowReportEntity;
+import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.PremiumDetailsEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -24,4 +25,15 @@ public interface CashFlowReportRepository extends JpaRepository<CashFlowReportEn
     @Transactional
     @Query(value = "DELETE FROM cash_flow WHERE year = :year", nativeQuery = true)
     void deleteAllByYear(@Param("year") int year);
+
+    @Query("""
+    SELECT p
+    FROM CashFlowReportEntity p
+    WHERE (p.policyNo = :policyNo1 OR p.policyNo = :policyNo2)
+      AND p.paymentType = :paymentType
+    """)
+    List<CashFlowReportEntity> findByPolicyNosAndPaymentType(
+            @Param("policyNo1") String policyNo1,
+            @Param("policyNo2") String policyNo2,
+            @Param("paymentType") String paymentType);
 }

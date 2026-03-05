@@ -39,6 +39,7 @@ public class MigrationMigrServiceImpl implements MigrationMigrService {
     private final MigrPolicyRepository policyRepository;
     private final OccupationCodeMappingRepository occupationCodeMappingRepository;
     private final FundCurrentBalanceEntityRepository fundCurrentBalanceEntityRepository;
+    private final PremiumDetailsRepository premiumDetailsRepository;
 
     private final MainExcelReader mainExcelReader;
 
@@ -71,16 +72,30 @@ public class MigrationMigrServiceImpl implements MigrationMigrService {
         policyList.forEach(policy -> {
             Object policyEntity = findPolicyInRepositories(policy);
 
+            LocalDate premiumDueDate = null;
+            String productCode =
+                    (policy != null && policy.length() >= 3)
+                            ? policy.replace("/", "").substring(0, 3)
+                            : null;
+            Integer number = (policy != null && policy.length() >= 3)
+                    ? Integer.valueOf(policy.replace("/", "").substring(3))
+                    : null;
+
+            Optional<PremiumDetailsEntity> premiumDetailsEntityOptional = premiumDetailsRepository.findFirstByPolicyNoAndProductCodeOrderByIdDesc(number, productCode);
+            if(premiumDetailsEntityOptional.isPresent()){
+                premiumDueDate = premiumDetailsEntityOptional.get().getPremiumDueDate();
+            }
+
             switch (policyEntity) {
                 case MainDataReportEntity mainDataReport ->
                     // Use mainDataReport with full type safety
-                        processMainDataReport(mainDataReport, policy);
+                        processMainDataReport(mainDataReport, policy, premiumDueDate);
                 case MainDataALHReportEntity alhReport ->
                     // Use alhReport with full type safety
-                        processALHReport(alhReport, policy);
+                        processALHReport(alhReport, policy, premiumDueDate);
                 case ACPPolicyEntity acpPolicy ->
                     // Use acpPolicy with full type safety
-                        processACPPolicy(acpPolicy, policy);
+                        processACPPolicy(acpPolicy, policy, premiumDueDate);
                 case null -> log.error("Policy {} not found in any repository", policy);
                 default -> {
                 }
@@ -102,7 +117,7 @@ public class MigrationMigrServiceImpl implements MigrationMigrService {
         log.info("Migration completed");
     }
 
-    private void processACPPolicy(ACPPolicyEntity acpPolicy, String policyNo) {
+    private void processACPPolicy(ACPPolicyEntity acpPolicy, String policyNo, LocalDate premiumDueDate) {
 
         if (!isEligiblePolicyStatus(acpPolicy.getStatus())) {
             log.info("Skipping policy {} due to status {}", policyNo, acpPolicy.getStatus());
@@ -123,7 +138,7 @@ public class MigrationMigrServiceImpl implements MigrationMigrService {
         policyRequestDTO.setPoBeginDate(acpPolicy.getInception());
         policyRequestDTO.setPoPolicyYear(getPolicyYear(acpPolicy.getInception()));
         policyRequestDTO.setPoDateUnderwritten(acpPolicy.getInception());
-        policyRequestDTO.setPoPremiumDueDate(acpPolicy.getNextPremium());
+        policyRequestDTO.setPoPremiumDueDate(premiumDueDate != null ? premiumDueDate : acpPolicy.getNextPremium());
         policyRequestDTO.setPoMode(getFrequencyString(Integer.parseInt(acpPolicy.getFrequency())));
         policyRequestDTO.setPoPolicyStatusCode(getPolicyStatusCode(acpPolicy.getStatus(), acpPolicy.getLastPremiumDueDate()));
         policyRequestDTO.setPoExpirationDate(acpPolicy.getExpiry());
@@ -149,7 +164,8 @@ public class MigrationMigrServiceImpl implements MigrationMigrService {
             policyRequestDTO.setLaAgeAdmitted(false);
             policyRequestDTO.setLaAddressCity(contact.getCity());
             policyRequestDTO.setLaOccupation(String.valueOf(getOccupation(contact.getOccupation())));
-            policyRequestDTO.setLaAnb(Integer.parseInt(getAdmittedAge(acpPolicy.getInception(), contact.getDateOfBirth()).toString()));
+//            policyRequestDTO.setLaAnb(Integer.parseInt(getAdmittedAge(acpPolicy.getInception(), contact.getDateOfBirth()).toString()));
+            policyRequestDTO.setLaAnb(acpPolicy.getAae());
             policyRequestDTO.setLaNameWithInitials(getNameWithInitials(contact.getFirstName(), contact.getLastName()));
             policyRequestDTO.setLaIsPolicyAssign(false);
             policyRequestDTO.setLaWeight(0);
@@ -222,7 +238,7 @@ public class MigrationMigrServiceImpl implements MigrationMigrService {
         }
     }
 
-    private void processMainDataReport(MainDataReportEntity mainDataReport, String policyNo) {
+    private void processMainDataReport(MainDataReportEntity mainDataReport, String policyNo, LocalDate premiumDueDate) {
 
         if (!isEligiblePolicyStatus(mainDataReport.getStatus())) {
             log.info("Skipping policy {} due to status {}", policyNo, mainDataReport.getStatus());
@@ -245,7 +261,7 @@ public class MigrationMigrServiceImpl implements MigrationMigrService {
         policyRequestDTO.setPoBeginDate(mainDataReport.getInception());
         policyRequestDTO.setPoPolicyYear(getPolicyYear(mainDataReport.getInception()));
         policyRequestDTO.setPoDateUnderwritten(mainDataReport.getInception());
-        policyRequestDTO.setPoPremiumDueDate(mainDataReport.getNextPremium());
+        policyRequestDTO.setPoPremiumDueDate(premiumDueDate != null ? premiumDueDate : mainDataReport.getNextPremium());
         policyRequestDTO.setPoMode(getFrequencyString(mainDataReport.getFrequency()));
         policyRequestDTO.setPoPolicyStatusCode(getPolicyStatusCode(mainDataReport.getStatus(), mainDataReport.getLastPremiumDueDate()));
         policyRequestDTO.setPoExpirationDate(mainDataReport.getExpiry());
@@ -271,7 +287,8 @@ public class MigrationMigrServiceImpl implements MigrationMigrService {
             policyRequestDTO.setLaAgeAdmitted(false);
             policyRequestDTO.setLaAddressCity(contact.getCity());
             policyRequestDTO.setLaOccupation(String.valueOf(getOccupation(contact.getOccupation())));
-            policyRequestDTO.setLaAnb(Integer.parseInt(getAdmittedAge(mainDataReport.getInception(), contact.getDateOfBirth()).toString()));
+//            policyRequestDTO.setLaAnb(Integer.parseInt(getAdmittedAge(mainDataReport.getInception(), contact.getDateOfBirth()).toString()));
+            policyRequestDTO.setLaAnb(mainDataReport.getAae());
             policyRequestDTO.setLaPrefLanguage(getLanguageChar(contact.getLanguagePreference()));
             policyRequestDTO.setLaNameWithInitials(getNameWithInitials(contact.getFirstName(), contact.getLastName()));
             policyRequestDTO.setLaIsPolicyAssign(false);
@@ -307,7 +324,7 @@ public class MigrationMigrServiceImpl implements MigrationMigrService {
         requestDTOList.add(policyRequestDTO);
     }
 
-    private void processALHReport(MainDataALHReportEntity alhReport, String policyNo) {
+    private void processALHReport(MainDataALHReportEntity alhReport, String policyNo, LocalDate premiumDueDate) {
 
         if (!isEligiblePolicyStatus(alhReport.getStatus())) {
             log.info("Skipping policy {} due to status {}", policyNo, alhReport.getStatus());
@@ -329,7 +346,7 @@ public class MigrationMigrServiceImpl implements MigrationMigrService {
         policyRequestDTO.setPoBeginDate(alhReport.getInception());
         policyRequestDTO.setPoPolicyYear(getPolicyYear(alhReport.getInception()));
         policyRequestDTO.setPoDateUnderwritten(alhReport.getInception());
-        policyRequestDTO.setPoPremiumDueDate(alhReport.getNextPremium());
+        policyRequestDTO.setPoPremiumDueDate(premiumDueDate != null ? premiumDueDate : alhReport.getNextPremium());
         policyRequestDTO.setPoMode(getFrequencyString(alhReport.getFrequency()));
         policyRequestDTO.setPoPolicyStatusCode(getPolicyStatusCode(alhReport.getStatus(), alhReport.getLastPremiumDueDate()));
         policyRequestDTO.setPoExpirationDate(alhReport.getExpiry());
@@ -355,7 +372,8 @@ public class MigrationMigrServiceImpl implements MigrationMigrService {
             policyRequestDTO.setLaAgeAdmitted(false);
             policyRequestDTO.setLaAddressCity(contact.getCity());
             policyRequestDTO.setLaOccupation(String.valueOf(getOccupation(contact.getOccupation())));
-            policyRequestDTO.setLaAnb(Integer.parseInt(getAdmittedAge(alhReport.getInception(), contact.getDateOfBirth()).toString()));
+//            policyRequestDTO.setLaAnb(Integer.parseInt(getAdmittedAge(alhReport.getInception(), contact.getDateOfBirth()).toString()));
+            policyRequestDTO.setLaAnb(alhReport.getAae());
             policyRequestDTO.setLaPrefLanguage(getLanguageChar(contact.getLanguagePreference()));
             policyRequestDTO.setLaNameWithInitials(getNameWithInitials(contact.getFirstName(), contact.getLastName()));
             policyRequestDTO.setLaIsPolicyAssign(false);

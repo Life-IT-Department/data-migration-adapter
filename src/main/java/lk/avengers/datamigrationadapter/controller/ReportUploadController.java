@@ -91,7 +91,7 @@ public class ReportUploadController {
         return closedClaimReportService.uploadClosedClaimsReport();
     }
 
-    @PostMapping("/premium-details-reports")
+    @GetMapping("/premium-details-reports")
     public ResponseEntity<CommonResponseDTO> uploadPremiumDetailsReportsExcels() {
         log.info("uploadPremiumDetailsReportExcels API METHOD ACCESSED.");
         return premiumDetailsReportsService.uploadPremiumDetailsReports();

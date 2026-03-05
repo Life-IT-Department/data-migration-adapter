@@ -35,8 +35,10 @@ public class PremiumDetailsReportsServiceImpl implements PremiumDetailsReportsSe
     private final CommonFunction commonFunction;
     private final PremiumDetailsRepository premiumDetailsRepository;
     private final BatchProcessService genisysBatchService;
+
     @Value("${premiumDetailsReport.file}")
     private String premiumDetailsReportsPath;
+
     private static final int HEADER_ROW_1 = 0;
     private static final int HEADER_ROW_2 = 1;
     private static final int HEADER_ROW_3 = 2;
@@ -50,12 +52,12 @@ public class PremiumDetailsReportsServiceImpl implements PremiumDetailsReportsSe
         log.info("Premium Details Reports Upload (multiple files)");
         String fileName = "";
         try {
-            List<Path> files = getFilesPath(); // get list of Excel files
+            List<Path> files = getFilesPath();
             log.info("Found {} Premium Details file(s) to process.", files.size());
 
             // truncate once before inserting all files
-            premiumDetailsRepository.truncate();
-            log.info("Existing Premium Details Reports records truncated");
+//            premiumDetailsRepository.truncate();
+//            log.info("Existing Premium Details Reports records truncated");
 
             int totalCount = 0;
 
@@ -237,7 +239,7 @@ public class PremiumDetailsReportsServiceImpl implements PremiumDetailsReportsSe
         try {
             return cell.getStringCellValue().trim();
         } catch (Exception e) {
-            log.error("Error parsing date value from cell: {} cell address: {}", cell.toString(), cell.getAddress());
+            log.error("Error parsing date value from cell: {} cell address: {}", cell, cell.getAddress());
             return null;
         }
     }
