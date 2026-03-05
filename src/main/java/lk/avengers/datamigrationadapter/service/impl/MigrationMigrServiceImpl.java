@@ -304,7 +304,7 @@ public class MigrationMigrServiceImpl implements MigrationMigrService {
             policyRequestDTO.setSpFirstName(mainDataReport.getSpouseChildFullName());
             policyRequestDTO.setSpSex(getSexChar(mainDataReport.getSpouseChildGender()));
             policyRequestDTO.setSpDob(mainDataReport.getSpouseChildDob());
-            policyRequestDTO.setSpAnb(getAdmittedAge(mainDataReport.getInception(), mainDataReport.getSpouseChildDob()));
+            policyRequestDTO.setSpAnb(mainDataReport.getSpouseChildAge());
             policyRequestDTO.setSpAgeAdmitted(false);
             policyRequestDTO.setSpHeight(0);
             policyRequestDTO.setSpWeight(0);
@@ -389,7 +389,7 @@ public class MigrationMigrServiceImpl implements MigrationMigrService {
             policyRequestDTO.setSpFirstName(alhReport.getSpouseFullName());
             policyRequestDTO.setSpSex(getSexChar(alhReport.getSpouseGender()));
             policyRequestDTO.setSpDob(alhReport.getSpouseDob());
-            policyRequestDTO.setSpAnb(getAdmittedAge(alhReport.getInception(), alhReport.getSpouseDob()));
+            policyRequestDTO.setSpAnb(alhReport.getSpouseAge());
             policyRequestDTO.setSpAgeAdmitted(false);
             policyRequestDTO.setSpHeight(0);
             policyRequestDTO.setSpWeight(0);

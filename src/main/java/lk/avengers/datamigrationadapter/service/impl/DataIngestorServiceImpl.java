@@ -37,7 +37,7 @@ import java.util.stream.Collectors;
 @Transactional("reportPlatformTransactionManager")
 public class DataIngestorServiceImpl implements DataIngestorService {
 
-    @Value("${acp.data.file}")
+    @Value("${mainDataAcpReport.file}")
     private String acpDataFilePath;
 
     @Value("${policy.list.file}")
