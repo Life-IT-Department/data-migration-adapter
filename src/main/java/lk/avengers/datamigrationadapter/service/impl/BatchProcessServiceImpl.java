@@ -105,7 +105,6 @@ public class BatchProcessServiceImpl implements BatchProcessService {
             log.debug("ReportBatchService.savePremiumDetailsBatch called with empty batch");
             return;
         }
-        log.info("ReportBatchService.savePremiumDetailsBatch started. Batch size: {}", batch.size());
         for (int i = 0; i < batch.size(); i++) {
             entityManager.persist(batch.get(i));
 
