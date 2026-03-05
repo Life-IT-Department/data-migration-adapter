@@ -1,15 +1,13 @@
 package lk.avengers.datamigrationadapter.service.impl;
 
 import lk.avengers.datamigrationadapter.dto.CommonResponseDTO;
-import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.BankPinEntity;
-import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.CashFlowReportEntity;
-import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.PremiumDetailsEntity;
+import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.*;
+import lk.avengers.datamigrationadapter.entity.softlogicdb.MigrPremiumsDue;
 import lk.avengers.datamigrationadapter.entity.softlogicdb.MigrPremiumsPaid;
-import lk.avengers.datamigrationadapter.repository.postgresql.reportdb.BankPinRepository;
-import lk.avengers.datamigrationadapter.repository.postgresql.reportdb.CashFlowReportRepository;
-import lk.avengers.datamigrationadapter.repository.postgresql.reportdb.PremiumDetailsRepository;
+import lk.avengers.datamigrationadapter.repository.postgresql.reportdb.*;
+import lk.avengers.datamigrationadapter.repository.softlogicdb.MigrPremiumsDueRepository;
 import lk.avengers.datamigrationadapter.repository.softlogicdb.MigrPremiumsPaidRepository;
-import lk.avengers.datamigrationadapter.service.PremiumsPaidMappingService;
+import lk.avengers.datamigrationadapter.service.PremiumsMappingService;
 import lk.avengers.datamigrationadapter.util.MainExcelReader;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,12 +24,17 @@ import java.util.stream.Collectors;
 @Slf4j
 @RequiredArgsConstructor
 @Service
-public class PremiumsPaidMappingServiceImpl implements PremiumsPaidMappingService {
+public class PremiumsMappingServiceImpl implements PremiumsMappingService {
 
     private final PremiumDetailsRepository premiumDetailsRepository;
     private final CashFlowReportRepository cashFlowReportRepository;
     private final BankPinRepository bankPinRepository;
     private final MigrPremiumsPaidRepository migrPremiumsPaidRepository;
+    private final MigrPremiumsDueRepository migrPremiumsDueRepository;
+
+    private final MainDataReportRepository mainDataReportRepository;
+    private final MainDataALHReportRepository mainDataALHReportRepository;
+    private final ACPPolicyRepository acpPolicyRepository;
 
     private final MainExcelReader mainExcelReader;
 
@@ -40,7 +43,7 @@ public class PremiumsPaidMappingServiceImpl implements PremiumsPaidMappingServic
     @Override
     public ResponseEntity<CommonResponseDTO> mapPremiumsPaid() {
 
-        log.info("MIGRATE PREMIUMS PAID STARTED");
+        log.info("MIGRATE PREMIUMS PAID & DUE STARTED");
 
         try {
 
@@ -58,9 +61,14 @@ public class PremiumsPaidMappingServiceImpl implements PremiumsPaidMappingServic
             log.info("{} POLICY NUMBERS READ FROM THE EXCEL SHEET", policyList.size());
 
             List<MigrPremiumsPaid> premiumsPaidList = new ArrayList<>();
+            List<MigrPremiumsDue> premiumsDueList = new ArrayList<>();
 
             for (String policy : policyList) {
-
+                String policyStatus = getStatus(policy);
+                if (!isEligiblePolicyStatus(policyStatus)) {
+                    log.info("Skipping policy {} due to status {}", policy, policyStatus);
+                    continue;
+                }
                 PolicyNoDto dto = getProductCodeAndPolicyNo(policy);
 
                 List<PremiumDetailsEntity> premiumDetails =
@@ -132,26 +140,42 @@ public class PremiumsPaidMappingServiceImpl implements PremiumsPaidMappingServic
                                             .build()
                             );
                         }
+
+                        premiumsDueList.add(
+                                MigrPremiumsDue.builder()
+                                        .policyNo(policy)
+                                        .dueDate(premium.getPremiumDueDate())
+                                        .period(getPeriod(premium.getFrequency()))
+                                        .term(premium.getTerm())
+                                        .dueAmount(BigDecimal.valueOf(premium.getModalPremiumAmount()))
+                                        .paidUpDate(premium.getPaymentDate())
+                                        .build()
+                        );
                     }
                 }
             }
-            log.info("TRUNCATING PREMIUMS PAID TABLE");
+            log.info("TRUNCATING PREMIUMS PAID & DUE TABLE");
             migrPremiumsPaidRepository.truncate();
+            migrPremiumsDueRepository.truncate();
+
             migrPremiumsPaidRepository.saveAll(premiumsPaidList);
+            migrPremiumsDueRepository.saveAll(premiumsDueList);
 
             log.info("MIGRATE PREMIUMS PAID COMPLETED - {} records saved",
                     premiumsPaidList.size());
+            log.info("MIGRATE PREMIUMS DUE COMPLETED - {} records saved",
+                    premiumsDueList.size());
 
             return ResponseEntity.ok(
                     CommonResponseDTO.builder()
-                            .message(premiumsPaidList.size() + " premium paid data were mapped successfully")
+                            .message(premiumsPaidList.size() + " premium paid & due data were mapped successfully")
                             .status(HttpStatus.OK.toString())
                             .build()
             );
 
         } catch (Exception e) {
 
-            log.error("ERROR DURING PREMIUMS PAID MIGRATION", e);
+            log.error("ERROR DURING PREMIUMS PAID & DUE MIGRATION", e);
 
             return ResponseEntity.internalServerError().body(
                     CommonResponseDTO.builder()
@@ -172,6 +196,48 @@ public class PremiumsPaidMappingServiceImpl implements PremiumsPaidMappingServic
                 : null;
 
         return new PolicyNoDto(productCode, number);
+    }
+
+    private Integer getPeriod(Integer frequency) {
+        if (frequency == null) {
+            return null;
+        }
+
+        return switch (frequency) {
+            case 1, 5 -> 12;
+            case 2 -> 6;
+            case 3 -> 3;
+            case 4 -> 1;
+            default -> 0;
+        };
+    }
+
+    private boolean isEligiblePolicyStatus(String status) {
+        if (status == null) {
+            return false;
+        }
+        return status.toLowerCase().contains("In Force".toLowerCase())
+                || "Lapsed".equalsIgnoreCase(status);
+    }
+
+    private String getStatus(String policyNo){
+        String productCode =
+                (policyNo != null && policyNo.length() >= 3)
+                        ? policyNo.replace("/", "").substring(0, 3)
+                        : null;
+        Integer number = (policyNo != null && policyNo.length() >= 3)
+                ? Integer.valueOf(policyNo.replace("/", "").substring(3))
+                : null;
+        return mainDataReportRepository
+                .findFirstByProductCodeAndPolicyNo(productCode, number)
+                .map(MainDataReportEntity::getStatus)
+                .or(() -> mainDataALHReportRepository
+                        .findFirstByProductCodeAndPolicyNo(productCode, number)
+                        .map(MainDataALHReportEntity::getStatus))
+                .or(() -> acpPolicyRepository
+                        .findFirstByProductCodeAndPolicyNo(productCode, String.valueOf(number))
+                        .map(ACPPolicyEntity::getStatus))
+                .orElse(null);
     }
 }
 

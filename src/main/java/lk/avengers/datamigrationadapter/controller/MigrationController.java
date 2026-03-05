@@ -17,7 +17,7 @@ public class MigrationController {
     private final MigrationMigrService migrationMigrService;
     private final PolicyBeneficiariesMappingService policyBeneficiariesMappingService;
     private final PolicyBenefitMappingService policyBenefitMappingService;
-    private final PremiumsPaidMappingService premiumsPaidMappingService;
+    private final PremiumsMappingService premiumsPaidMappingService;
 
     @GetMapping("/policy")
     public ResponseEntity<String> migrateMigrPolicyData() {
@@ -45,7 +45,7 @@ public class MigrationController {
         return claimsMappingService.mapClaimsData();
     }
 
-    @GetMapping("/premiums-paid")
+    @GetMapping("/premiums")
     public ResponseEntity<CommonResponseDTO> migratePremiumsPaid(){
         log.info("MIGRATE PREMIUMS PAID METHOD ACCESSED");
         return premiumsPaidMappingService.mapPremiumsPaid();
