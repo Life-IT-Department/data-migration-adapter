@@ -39,6 +39,13 @@ public class PremiumsMappingServiceImpl implements PremiumsMappingService {
     private final MainExcelReader mainExcelReader;
 
     private static final String IN_COMING = "In Coming";
+    private static final String PREMIUM = "Premium";
+    private static final String DOWN_PAYMENT = "Down Payment";
+    private static final String PREM = "PREM";
+    private static final String DEPO = "DEPO";
+    private static final String VLD = "VLD";
+    private static final String CNL = "CNL";
+    private static final String NO = "NO";
 
     @Override
     public ResponseEntity<CommonResponseDTO> mapPremiumsPaid() {
@@ -121,7 +128,7 @@ public class PremiumsMappingServiceImpl implements PremiumsMappingService {
                             premiumsPaidList.add(
                                     MigrPremiumsPaid.builder()
                                             .policyNo(policy)
-                                            .receiptId(String.valueOf(cashFlow.getReceiptNo()))
+                                            .receiptId(cashFlow.getReceiptNo())
                                             .chequeNo(
                                                     cashFlow.getCheckNo() == null
                                                             ? ""
@@ -131,12 +138,16 @@ public class PremiumsMappingServiceImpl implements PremiumsMappingService {
                                             .paymentDate(paidDate)
                                             .paidAmount(paidAmount)
                                             .receiptStatus(
-                                                    "NO".equalsIgnoreCase(cashFlow.getReceiptCancellation())
-                                                            ? "Active"
-                                                            : "Cancelled"
+                                                    NO.equalsIgnoreCase(cashFlow.getReceiptCancellation())
+                                                            ? VLD
+                                                            : CNL
                                             )
-                                            .paymentType(cashFlow.getPaymentType())
-                                            .paymentMode(cashFlow.getPaymentMode())
+                                            .paymentType(
+                                                    cashFlow.getDescription().contains(PREMIUM) ?
+                                                            PREM
+                                                            : (cashFlow.getDescription().contains(DOWN_PAYMENT) ? DEPO : "")
+                                            )
+                                            .paymentMode(getPaymentMode(cashFlow.getPaymentMode()))
                                             .build()
                             );
                         }
@@ -148,7 +159,10 @@ public class PremiumsMappingServiceImpl implements PremiumsMappingService {
                                         .period(getPeriod(premium.getFrequency()))
                                         .term(premium.getTerm())
                                         .dueAmount(BigDecimal.valueOf(premium.getModalPremiumAmount()))
+                                        .paidUp(true)
                                         .paidUpDate(premium.getPaymentDate())
+                                        .dueStatus(VLD)
+                                        .rowCreatedOn(LocalDate.now())
                                         .build()
                         );
                     }
@@ -238,6 +252,17 @@ public class PremiumsMappingServiceImpl implements PremiumsMappingService {
                         .findFirstByProductCodeAndPolicyNo(productCode, String.valueOf(number))
                         .map(ACPPolicyEntity::getStatus))
                 .orElse(null);
+    }
+
+    private String getPaymentMode(String paymentMode){
+        return switch (paymentMode) {
+            case "CASH" -> "Cash";
+            case "CHECK" -> "Cheque";
+            case "CLEARING" -> "Clearing";
+            case "IN ACCOUNT" -> "Direct Deposit";
+            case "TRANSFER" -> "Transfer";
+            default -> "";
+        };
     }
 }
 

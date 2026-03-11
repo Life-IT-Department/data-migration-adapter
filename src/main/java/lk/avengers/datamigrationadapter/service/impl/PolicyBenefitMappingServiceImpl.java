@@ -133,6 +133,17 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
                         .coverName(policyHolderFilterList.stream().filter(name -> name.toLowerCase().contains("_sa")).findFirst().orElse(null))
                         .coverPerMilRate(policyHolderFilterList.stream().filter(name -> name.toLowerCase().contains("mil")).findFirst().orElse(null))
                         .coverOccupationExtraRate(policyHolderFilterList.stream().filter(name -> name.toLowerCase().contains("occ")).findFirst().orElse(null))
+                        .coverSubRate(
+                                policyHolderFilterList.stream()
+                                        .filter(name -> {
+                                            String lower = name.toLowerCase();
+                                            return !lower.contains("_sa")
+                                                    && !lower.contains("mil")
+                                                    && !lower.contains("occ");
+                                        })
+                                        .findFirst()
+                                        .orElse(null)
+                        )
                         .build();
                 policyHolderBenefitMap.put(benefitCodeMapperEntity.getSoftlogicBenefitCode(), riderCoverColumnDTO);
             }
@@ -142,6 +153,17 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
                         .coverName(spouseFilterList.stream().filter(name -> name.toLowerCase().contains("_sa")).findFirst().orElse(null))
                         .coverPerMilRate(spouseFilterList.stream().filter(name -> name.toLowerCase().contains("mil")).findFirst().orElse(null))
                         .coverOccupationExtraRate(spouseFilterList.stream().filter(name -> name.toLowerCase().contains("occ")).findFirst().orElse(null))
+                        .coverSubRate(
+                                spouseFilterList.stream()
+                                        .filter(name -> {
+                                            String lower = name.toLowerCase();
+                                            return !lower.contains("_sa")
+                                                    && !lower.contains("mil")
+                                                    && !lower.contains("occ");
+                                        })
+                                        .findFirst()
+                                        .orElse(null)
+                        )
                         .build();
                 spouseBenefitMap.put(benefitCodeMapperEntity.getSoftlogicBenefitCode(), spouseRiderCoverColumnDTO);
             }
@@ -179,13 +201,14 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
             if (toBigDecimal(benefitSumAssuredFieldValue).compareTo(BigDecimal.ZERO) > 0) {
                 BigDecimal perMilRate = toBigDecimal(getSpecificFieldValue(mainDataReportEntity, value.getCoverPerMilRate()));
                 BigDecimal occupationExtraRate = toBigDecimal(getSpecificFieldValue(mainDataReportEntity, value.getCoverOccupationExtraRate()));
+                BigDecimal subStdRate = toBigDecimal(getSpecificFieldValue(mainDataReportEntity, value.getCoverSubRate()));
 
                 benefitsEntity.setId(new MigrPolicyBenefitsID(policyNo, key));
                 benefitsEntity.setPbCoverage((BigDecimal) benefitSumAssuredFieldValue);
                 benefitsEntity.setPbOccuExtra(occupationExtraRate);
-                benefitsEntity.setPbExtraMortalityRate(perMilRate);
+                benefitsEntity.setPbExtraMortalityRate(subStdRate);
                 benefitsEntity.setPbTerm(mainDataReportEntity.getTerm());
-                benefitsEntity.setPbExtraPremium(BigDecimal.ZERO);
+                benefitsEntity.setPbExtraPremium(perMilRate);
                 benefitsEntity.setPbPremPortion(BigDecimal.ZERO);
                 policyBenefitsEntityList.add(benefitsEntity);
             }
@@ -215,8 +238,9 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
                         MigrPolicyBenefitsEntity policyBenefitsEntity = getPolicyBenefitForACPData(policyNo, benefitCodeMapperEntityList, acpPolicyEntity, "DTH");
                         if (policyBenefitsEntity != null) {
                             policyBenefitsEntity.setPbOccuExtra(acpPolicyEntity.getDthOccupationalLoadingPerc());
-                            policyBenefitsEntity.setPbExtraMortalityRate(acpPolicyEntity.getSubRateMilDth());
+                            policyBenefitsEntity.setPbExtraMortalityRate(toBigDecimalFromString(acpPolicyEntity.getSubDth()));
                             policyBenefitsEntity.setPbCoverage(acpPolicyEntity.getDthSar());
+                            policyBenefitsEntity.setPbExtraPremium(acpPolicyEntity.getSubRateMilDth());
                             policyBenefitsEntityList.add(policyBenefitsEntity);
                         } else {
                             log.warn("No DTH benefit code found in benefit code mapper table for policy no: {}", policyNo);
@@ -227,8 +251,9 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
                         MigrPolicyBenefitsEntity policyBenefitsEntity = getPolicyBenefitForACPData(policyNo, benefitCodeMapperEntityList, acpPolicyEntity, "ACCD");
                         if (policyBenefitsEntity != null) {
                             policyBenefitsEntity.setPbOccuExtra(acpPolicyEntity.getAccdOccupationalLoadingPerc());
-                            policyBenefitsEntity.setPbExtraMortalityRate(acpPolicyEntity.getSubRateMilAccd());
+                            policyBenefitsEntity.setPbExtraMortalityRate(toBigDecimalFromString(acpPolicyEntity.getSubAccd()));
                             policyBenefitsEntity.setPbCoverage(acpPolicyEntity.getAccdSa());
+                            policyBenefitsEntity.setPbExtraPremium(acpPolicyEntity.getSubRateMilAccd());
                             policyBenefitsEntityList.add(policyBenefitsEntity);
                         } else {
                             log.warn("No ACCD benefit code found in benefit code mapper table for policy no: {}", policyNo);
@@ -239,8 +264,9 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
                         MigrPolicyBenefitsEntity policyBenefitsEntity = getPolicyBenefitForACPData(policyNo, benefitCodeMapperEntityList, acpPolicyEntity, "ACCP");
                         if (policyBenefitsEntity != null) {
                             policyBenefitsEntity.setPbOccuExtra(acpPolicyEntity.getAccpOccupationalLoadingPerc());
-                            policyBenefitsEntity.setPbExtraMortalityRate(acpPolicyEntity.getSubRateMilAccp());
+                            policyBenefitsEntity.setPbExtraMortalityRate(toBigDecimalFromString(acpPolicyEntity.getSubAccp()));
                             policyBenefitsEntity.setPbCoverage(acpPolicyEntity.getAccpSa());
+                            policyBenefitsEntity.setPbExtraPremium(acpPolicyEntity.getSubRateMilAccp());
                             policyBenefitsEntityList.add(policyBenefitsEntity);
                         } else {
                             log.warn("No ACCP benefit code found in benefit code mapper table for policy no: {}", policyNo);
@@ -251,8 +277,9 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
                         MigrPolicyBenefitsEntity policyBenefitsEntity = getPolicyBenefitForACPData(policyNo, benefitCodeMapperEntityList, acpPolicyEntity, "ACCT");
                         if (policyBenefitsEntity != null) {
                             policyBenefitsEntity.setPbOccuExtra(acpPolicyEntity.getAcctOccupationalLoadingPerc());
-                            policyBenefitsEntity.setPbExtraMortalityRate(acpPolicyEntity.getSubRateMilAcct());
+                            policyBenefitsEntity.setPbExtraMortalityRate(toBigDecimalFromString(acpPolicyEntity.getSubAcct()));
                             policyBenefitsEntity.setPbCoverage(acpPolicyEntity.getAcctSa());
+                            policyBenefitsEntity.setPbExtraPremium(acpPolicyEntity.getSubRateMilAcct());
                             policyBenefitsEntityList.add(policyBenefitsEntity);
                         } else {
                             log.warn("No ACCT benefit code found in benefit code mapper table for policy no: {}", policyNo);
@@ -263,8 +290,9 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
                         MigrPolicyBenefitsEntity policyBenefitsEntity = getPolicyBenefitForACPData(policyNo, benefitCodeMapperEntityList, acpPolicyEntity, "CILX");
                         if (policyBenefitsEntity != null) {
                             policyBenefitsEntity.setPbOccuExtra(acpPolicyEntity.getCilxOccupationalLoadingPerc());
-                            policyBenefitsEntity.setPbExtraMortalityRate(acpPolicyEntity.getSubRateMilCilx());
+                            policyBenefitsEntity.setPbExtraMortalityRate(toBigDecimalFromString(acpPolicyEntity.getSubCilx()));
                             policyBenefitsEntity.setPbCoverage(acpPolicyEntity.getCilxSa());
+                            policyBenefitsEntity.setPbExtraPremium(acpPolicyEntity.getSubRateMilCilx());
                             policyBenefitsEntityList.add(policyBenefitsEntity);
                         } else {
                             log.warn("No CILX benefit code found in benefit code mapper table for policy no: {}", policyNo);
@@ -275,8 +303,9 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
                         MigrPolicyBenefitsEntity policyBenefitsEntity = getPolicyBenefitForACPData(policyNo, benefitCodeMapperEntityList, acpPolicyEntity, "PTD");
                         if (policyBenefitsEntity != null) {
                             policyBenefitsEntity.setPbOccuExtra(acpPolicyEntity.getPtdOccupationalLoadingPerc());
-                            policyBenefitsEntity.setPbExtraMortalityRate(acpPolicyEntity.getSubRateMilPtd());
+                            policyBenefitsEntity.setPbExtraMortalityRate(toBigDecimalFromString(acpPolicyEntity.getSubPtd()));
                             policyBenefitsEntity.setPbCoverage(acpPolicyEntity.getPtdSa());
+                            policyBenefitsEntity.setPbExtraPremium(acpPolicyEntity.getSubRateMilPtd());
                             policyBenefitsEntityList.add(policyBenefitsEntity);
                         } else {
                             log.warn("No PTD benefit code found in benefit code mapper table for policy no: {}", policyNo);
@@ -297,8 +326,9 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
                         MigrPolicyBenefitsEntity policyBenefitsEntity = getPolicyBenefitForALHData(policyNo, benefitCodeMapperEntityList, mainDataALHReportEntity, "DTH");
                         if (policyBenefitsEntity != null) {
                             policyBenefitsEntity.setPbOccuExtra(BigDecimal.valueOf(mainDataALHReportEntity.getDth_OccLoadingPercentage()));
-                            policyBenefitsEntity.setPbExtraMortalityRate(mainDataALHReportEntity.getSubRateMilDth_());
+                            policyBenefitsEntity.setPbExtraMortalityRate(BigDecimal.valueOf(mainDataALHReportEntity.getSubDth_()));
                             policyBenefitsEntity.setPbCoverage(mainDataALHReportEntity.getDth_Sar());
+                            policyBenefitsEntity.setPbExtraPremium(mainDataALHReportEntity.getSubRateMilDth_());
                             policyBenefitsEntityList.add(policyBenefitsEntity);
                         } else {
                             log.warn("No DTH benefit code found in benefit code mapper table for policy no: {}", policyNo);
@@ -309,8 +339,9 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
                         MigrPolicyBenefitsEntity policyBenefitsEntity = getPolicyBenefitForALHData(policyNo, benefitCodeMapperEntityList, mainDataALHReportEntity, "HB");
                         if (policyBenefitsEntity != null) {
                             policyBenefitsEntity.setPbOccuExtra(BigDecimal.valueOf(mainDataALHReportEntity.getHb_OccupationalLoadingPercentage()));
-                            policyBenefitsEntity.setPbExtraMortalityRate(mainDataALHReportEntity.getSubRateMilHb_());
+                            policyBenefitsEntity.setPbExtraMortalityRate(mainDataALHReportEntity.getSubHb_());
                             policyBenefitsEntity.setPbCoverage(mainDataALHReportEntity.getHb_Sa());
+                            policyBenefitsEntity.setPbExtraPremium(mainDataALHReportEntity.getSubRateMilHb_());
                             policyBenefitsEntityList.add(policyBenefitsEntity);
                         } else {
                             log.warn("No HB benefit code found in benefit code mapper table for policy no: {}", policyNo);
@@ -321,8 +352,9 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
                         MigrPolicyBenefitsEntity policyBenefitsEntity = getPolicyBenefitForALHData(policyNo, benefitCodeMapperEntityList, mainDataALHReportEntity, "INP");
                         if (policyBenefitsEntity != null) {
                             policyBenefitsEntity.setPbOccuExtra(BigDecimal.valueOf(mainDataALHReportEntity.getInpOccLoadingPercentage()));
-                            policyBenefitsEntity.setPbExtraMortalityRate(mainDataALHReportEntity.getSubRateMilInp());
+                            policyBenefitsEntity.setPbExtraMortalityRate(mainDataALHReportEntity.getSubInp());
                             policyBenefitsEntity.setPbCoverage(mainDataALHReportEntity.getInpSar());
+                            policyBenefitsEntity.setPbExtraPremium(BigDecimal.valueOf(mainDataALHReportEntity.getInpOccLoadingPercentage()));
                             policyBenefitsEntityList.add(policyBenefitsEntity);
                         } else {
                             log.warn("No INP benefit code found in benefit code mapper table for policy no: {}", policyNo);
@@ -519,6 +551,16 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
 
         return status.toLowerCase().contains("In Force".toLowerCase())
                 || "Lapsed".equalsIgnoreCase(status);
+    }
+
+    private BigDecimal toBigDecimalFromString(String value){
+        try {
+            return (value == null || value.isBlank())
+                    ? BigDecimal.ZERO
+                    : new BigDecimal(value);
+        } catch (NumberFormatException e) {
+            return BigDecimal.ZERO;
+        }
     }
 
 }

@@ -1,5 +1,5 @@
 package lk.avengers.datamigrationadapter.service;
 
-public interface MigrationMigrService {
+public interface PolicyDataMigrationService {
     void migratePolicyData();
 }

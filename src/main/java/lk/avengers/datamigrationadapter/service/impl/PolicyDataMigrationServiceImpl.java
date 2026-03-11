@@ -9,7 +9,7 @@ import lk.avengers.datamigrationadapter.entity.softlogicdb.MigrPolicyData;
 import lk.avengers.datamigrationadapter.repository.postgresql.reportdb.*;
 import lk.avengers.datamigrationadapter.repository.softlogicdb.FundCurrentBalanceEntityRepository;
 import lk.avengers.datamigrationadapter.repository.softlogicdb.MigrPolicyRepository;
-import lk.avengers.datamigrationadapter.service.MigrationMigrService;
+import lk.avengers.datamigrationadapter.service.PolicyDataMigrationService;
 import lk.avengers.datamigrationadapter.util.MainExcelReader;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,7 +25,7 @@ import java.util.regex.Pattern;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class MigrationMigrServiceImpl implements MigrationMigrService {
+public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationService {
 
     private static final String DEFAULT_BRANCH_CODE = "6J";
 
@@ -410,7 +410,7 @@ public class MigrationMigrServiceImpl implements MigrationMigrService {
             return false;
         }
 
-        return status.toLowerCase().contains("In Force".toLowerCase())
+        return status.equalsIgnoreCase("In Force")
                 || "Lapsed".equalsIgnoreCase(status);
     }
 

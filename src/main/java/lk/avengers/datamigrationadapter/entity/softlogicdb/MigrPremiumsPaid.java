@@ -1,5 +1,6 @@
 package lk.avengers.datamigrationadapter.entity.softlogicdb;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -19,30 +20,31 @@ public class MigrPremiumsPaid {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "policy_no", nullable = false, length = 50)
+    @Column(name = "PR_PolicyNo", length = 30)
     private String policyNo;
 
-    @Column(name = "receipt_id", length = 100)
-    private String receiptId;
+    @Column(name = "PR_ReceiptId")
+    private Integer receiptId;
 
-    @Column(name = "cheque_no", length = 100)
+    @Column(name = "PR_ChequeNo", length = 30)
     private String chequeNo;
 
-    @Column(name = "bank", length = 150)
+    @Column(name = "PR_Bank", length = 50)
     private String bank;
 
-    @Column(name = "payment_date")
+    @Column(name = "PR_PaymentDate")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     private LocalDate paymentDate;
 
-    @Column(name = "paid_amount", precision = 18, scale = 2)
+    @Column(name = "PR_PaidAmount", precision = 18, scale = 2)
     private BigDecimal paidAmount;
 
-    @Column(name = "receipt_status", length = 50)
+    @Column(name = "PR_ReceiptStatus", length = 10)
     private String receiptStatus;
 
-    @Column(name = "payment_type", length = 50)
+    @Column(name = "PR_PaymentType", length = 10)
     private String paymentType;
 
-    @Column(name = "payment_mode", length = 50)
+    @Column(name = "PR_PaymentMode", length = 20)
     private String paymentMode;
 }

@@ -50,6 +50,7 @@ public class ClaimsMappingServiceImpl implements ClaimsMappingService {
     private final static String DECEASED  = "Deceased";
     private final static String IN_FORCE  = "In Force";
     private final static String UNPAID  = "*Unpaid";
+    private final static String SURRENDER_CASH_VALUE  = "Surrender Cash Value";
 
     private final static String ULV  = "ULV";
 
@@ -86,12 +87,8 @@ public class ClaimsMappingServiceImpl implements ClaimsMappingService {
 
                     boolean isPaid = paid.getTrnStatus().equalsIgnoreCase(PAID);
                     boolean isUnpaid = paid.getTrnStatus().equalsIgnoreCase(UNPAID);
-                    boolean isInForce = paid.getPolicyStatus().equalsIgnoreCase(IN_FORCE);
-                    boolean isSurrendered = paid.getPolicyStatus().equalsIgnoreCase(SURRENDERED);
-                    boolean isDeceased = paid.getPolicyStatus().equalsIgnoreCase(DECEASED);
-                    boolean isULV = policyNo.contains(ULV);
 
-                    if ((isPaid || isUnpaid) && ((isInForce && isULV) || isSurrendered || isDeceased)) {
+                    if ((isPaid || isUnpaid) && isEligiblePaidClaim(policyNo, paid)) {
                         claimEntityList.add(
                                 MigrAllClaimsEntity.builder()
                                         .clPolicyNo(policyNo)
@@ -291,6 +288,18 @@ public class ClaimsMappingServiceImpl implements ClaimsMappingService {
 
         return status.toLowerCase().contains("In Force".toLowerCase())
                 || "Lapsed".equalsIgnoreCase(status);
+    }
+
+    private boolean isEligiblePaidClaim(String policyNo, PaidClaimEntity paidClaimEntity){
+        boolean isInForce = paidClaimEntity.getPolicyStatus().equalsIgnoreCase(IN_FORCE);
+        boolean isSurrendered = paidClaimEntity.getPolicyStatus().equalsIgnoreCase(SURRENDERED);
+        boolean isDeceased = paidClaimEntity.getPolicyStatus().equalsIgnoreCase(DECEASED);
+        boolean isULV = policyNo.contains(ULV);
+        boolean isSurrenderCashValue = paidClaimEntity.getClaimType().equalsIgnoreCase(SURRENDER_CASH_VALUE);
+
+        return !isSurrenderCashValue ||
+                (isULV ? (isInForce || isSurrendered || isDeceased)
+                        : (isSurrendered || isDeceased));
     }
 }
 

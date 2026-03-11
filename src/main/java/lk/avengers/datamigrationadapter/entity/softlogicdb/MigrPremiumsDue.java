@@ -1,5 +1,6 @@
 package lk.avengers.datamigrationadapter.entity.softlogicdb;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -19,21 +20,32 @@ public class MigrPremiumsDue {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "policy_no", nullable = false, length = 50)
+    @Column(name = "DU_PolicyNo", length = 30)
     private String policyNo;
 
-    @Column(name = "due_date")
+    @Column(name = "DU_DueDate")
     private LocalDate dueDate;
 
-    @Column(name = "period")
+    @Column(name = "DU_Period")
     private Integer period;
 
-    @Column(name = "term")
+    @Column(name = "DU_Term")
     private Integer term;
 
-    @Column(name = "due_amount", precision = 15, scale = 2)
+    @Column(name = "DU_PaidUp")
+    private Boolean paidUp;
+
+    @Column(name = "DU_DueAmount", precision = 18, scale = 2)
     private BigDecimal dueAmount;
 
-    @Column(name = "paid_up_date")
+    @Column(name = "DU_RowCreatedOn")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
+    private LocalDate rowCreatedOn;
+
+    @Column(name = "DU_DueStatus", length = 3)
+    private String dueStatus;
+
+    @Column(name = "DU_PaidUpDate")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     private LocalDate paidUpDate;
 }

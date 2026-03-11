@@ -19,7 +19,7 @@ public class MigrPolicyData {
 
     // Life Assured (LA) fields
     @Id
-    @Column(name = "LA_PolicyNo", length = 30, nullable = false, updatable = false)
+    @Column(name = "LA_PolicyNo", length = 30)
     private String laPolicyNo;
 
     @Column(name = "LA_Title", length = 10)

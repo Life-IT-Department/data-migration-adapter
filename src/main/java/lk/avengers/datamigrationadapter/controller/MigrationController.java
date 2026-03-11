@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 public class MigrationController {
 
     private final ClaimsMappingService claimsMappingService;
-    private final MigrationMigrService migrationMigrService;
+    private final PolicyDataMigrationService policyDataMigrationService;
     private final PolicyBeneficiariesMappingService policyBeneficiariesMappingService;
     private final PolicyBenefitMappingService policyBenefitMappingService;
     private final PremiumsMappingService premiumsPaidMappingService;
@@ -23,7 +23,7 @@ public class MigrationController {
     public ResponseEntity<String> migrateMigrPolicyData() {
         log.info("MIGRATE_POLICY_DATA (STRING) METHOD ACCESSED.");
 
-        migrationMigrService.migratePolicyData();
+        policyDataMigrationService.migratePolicyData();
         return ResponseEntity.ok("Policy data migration successful") ;
     }
 
