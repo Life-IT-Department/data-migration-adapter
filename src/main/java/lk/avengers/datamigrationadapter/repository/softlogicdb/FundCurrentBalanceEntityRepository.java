@@ -11,6 +11,6 @@ import org.springframework.stereotype.Repository;
 public interface FundCurrentBalanceEntityRepository extends JpaRepository<FundCurrentBalanceEntity, Integer> {
     @Modifying
     @Transactional
-    @Query(value = "TRUNCATE TABLE fund_current_balance; DBCC CHECKIDENT ('policy', RESEED, 1)", nativeQuery = true)
+    @Query(value = "TRUNCATE TABLE Migr_FundCurrentBalance; DBCC CHECKIDENT ('policy', RESEED, 1)", nativeQuery = true)
     void truncate();
 }

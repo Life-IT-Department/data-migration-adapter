@@ -162,7 +162,7 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
             policyRequestDTO.setLaNationality(contact.getNationality().toUpperCase());
             policyRequestDTO.setLaEmail(getValidatedEmail(contact.getEmailAddress()));
             policyRequestDTO.setLaAgeAdmitted(false);
-            policyRequestDTO.setLaAddressCity(contact.getCity());
+            policyRequestDTO.setLaAddressCity(extractAddressCity(contact.getCity()));
             policyRequestDTO.setLaOccupation(String.valueOf(getOccupation(contact.getOccupation())));
 //            policyRequestDTO.setLaAnb(Integer.parseInt(getAdmittedAge(acpPolicy.getInception(), contact.getDateOfBirth()).toString()));
             policyRequestDTO.setLaAnb(acpPolicy.getAae());
@@ -285,7 +285,7 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
             policyRequestDTO.setLaNationality(contact.getNationality().toUpperCase());
             policyRequestDTO.setLaEmail(getValidatedEmail(contact.getEmailAddress()));
             policyRequestDTO.setLaAgeAdmitted(false);
-            policyRequestDTO.setLaAddressCity(contact.getCity());
+            policyRequestDTO.setLaAddressCity(extractAddressCity(contact.getCity()));
             policyRequestDTO.setLaOccupation(String.valueOf(getOccupation(contact.getOccupation())));
 //            policyRequestDTO.setLaAnb(Integer.parseInt(getAdmittedAge(mainDataReport.getInception(), contact.getDateOfBirth()).toString()));
             policyRequestDTO.setLaAnb(mainDataReport.getAae());
@@ -319,6 +319,8 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
         fundCurrentBalanceEntity.setPolicyNo(policyNo);
         fundCurrentBalanceEntity.setTotalBalance(mainDataReport.getValueToday());
         fundCurrentBalanceEntity.setTopupBalance(mainDataReport.getBstValueToday());
+        fundCurrentBalanceEntity.setPrmValueToday(mainDataReport.getPrmValueToday());
+
         fundCurrentBalanceEntityList.add(fundCurrentBalanceEntity);
 
         requestDTOList.add(policyRequestDTO);
@@ -370,7 +372,7 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
             policyRequestDTO.setLaNationality(contact.getNationality().toUpperCase());
             policyRequestDTO.setLaEmail(getValidatedEmail(contact.getEmailAddress()));
             policyRequestDTO.setLaAgeAdmitted(false);
-            policyRequestDTO.setLaAddressCity(contact.getCity());
+            policyRequestDTO.setLaAddressCity(extractAddressCity(contact.getCity()));
             policyRequestDTO.setLaOccupation(String.valueOf(getOccupation(contact.getOccupation())));
 //            policyRequestDTO.setLaAnb(Integer.parseInt(getAdmittedAge(alhReport.getInception(), contact.getDateOfBirth()).toString()));
             policyRequestDTO.setLaAnb(alhReport.getAae());
@@ -609,7 +611,7 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
                 .toList();
 
         if (advCodes.isEmpty()) {
-            return DEFAULT_BRANCH_CODE.concat("100");
+            return DEFAULT_BRANCH_CODE.concat("0");
         }
 
         if (advCodes.size() == 1) {
@@ -621,7 +623,7 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
                 .filter(e -> e.getValue() != null && e.getValue() > 100)
                 .max(Comparator.comparingInt(Map.Entry::getValue))
                 .map(Map.Entry::getKey)
-                .orElse(DEFAULT_BRANCH_CODE.concat("100"));
+                .orElse(DEFAULT_BRANCH_CODE.concat("0"));
     }
 
     private Integer extractTrailingNumber(String code) {
@@ -761,6 +763,14 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
         return new PolicyNumberResponseDTO(productCode, policyNo);
     }
 
-
-
+    private String extractAddressCity(String addressCity){
+        if (addressCity != null && addressCity.contains(",")) {
+            try{
+                return addressCity.split(",")[1].trim();
+            } catch (IndexOutOfBoundsException ex){
+                return addressCity;
+            }
+        }
+        return addressCity;
+    }
 }

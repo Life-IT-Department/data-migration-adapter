@@ -42,6 +42,7 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
     private final MainExcelReader mainExcelReader;
     private static final String SPOUSE = "Spouse";
     private static final String CHILD ="Child";
+    private static final String INFLATION_GUARD_BENEFIT = "ZIFG";
 
     @Transactional(transactionManager = "softlogicPlatformTransactionManager")
     @Override
@@ -198,6 +199,18 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
             Object benefitSumAssuredFieldValue = getSpecificFieldValue(mainDataReportEntity, value.getCoverName());
             MigrPolicyBenefitsEntity benefitsEntity = new MigrPolicyBenefitsEntity();
 
+            if(mainDataReportEntity.getPremiumEscalationBenefitPercentage() != 0){
+                benefitsEntity.setId(new MigrPolicyBenefitsID(policyNo, INFLATION_GUARD_BENEFIT));
+                benefitsEntity.setPbCoverage(BigDecimal.valueOf(mainDataReportEntity.getPremiumEscalationBenefitPercentage()));
+                benefitsEntity.setPbOccuExtra(BigDecimal.ZERO);
+                benefitsEntity.setPbExtraMortalityRate(BigDecimal.ZERO);
+                benefitsEntity.setPbTerm(mainDataReportEntity.getTerm());
+                benefitsEntity.setPbExtraPremium(BigDecimal.ZERO);
+                benefitsEntity.setPbPremPortion(BigDecimal.ZERO);
+
+                policyBenefitsEntityList.add(benefitsEntity);
+            }
+
             if (toBigDecimal(benefitSumAssuredFieldValue).compareTo(BigDecimal.ZERO) > 0) {
                 BigDecimal perMilRate = toBigDecimal(getSpecificFieldValue(mainDataReportEntity, value.getCoverPerMilRate()));
                 BigDecimal occupationExtraRate = toBigDecimal(getSpecificFieldValue(mainDataReportEntity, value.getCoverOccupationExtraRate()));
@@ -210,6 +223,7 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
                 benefitsEntity.setPbTerm(mainDataReportEntity.getTerm());
                 benefitsEntity.setPbExtraPremium(perMilRate);
                 benefitsEntity.setPbPremPortion(BigDecimal.ZERO);
+
                 policyBenefitsEntityList.add(benefitsEntity);
             }
         }
