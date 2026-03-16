@@ -89,25 +89,37 @@ public class ClaimsMappingServiceImpl implements ClaimsMappingService {
                     boolean isUnpaid = paid.getTrnStatus().equalsIgnoreCase(UNPAID);
 
                     if ((isPaid || isUnpaid) && isEligiblePaidClaim(policyNo, paid)) {
-                        claimEntityList.add(
-                                MigrAllClaimsEntity.builder()
-                                        .clPolicyNo(policyNo)
-                                        .clClaimNo(paid.getClaimOfficeNumber())
-                                        .clClaimType(paid.getClaimType())
-                                        .clDateofEvent(paid.getOccurredOn())
-                                        .clDateofIntimation(paid.getDeclaredOn())
-                                        .clPatientAdmitted(paid.getClaimedLifeAssured())
-                                        .clCauseofDeath(paid.getClaimType().equalsIgnoreCase(DEATH) ? paid.getCauseOfClaim() : "")
-                                        .clNatureofIllnuss(paid.getCauseOfClaim())
-                                        .clTotalClaimAmount(BigDecimal.valueOf(paid.getOriginalClaimAmt()))
-                                        .clTotalSettledAmount(BigDecimal.valueOf(paid.getTrnAmountCy()))
-                                        .clClaimStatus(getClaimStatusCode(PAID))
-                                        .clNameOftheHospital(paid.getPlaceOfClaim())
-                                        .clDateofPayment(paid.getTrnDate())
-                                        .clComments(paid.getClaimDescription())
-                                        .clPolicyYear(paid.getUnderwritingYear())
-                                        .build()
-                        );
+                        Optional<MigrAllClaimsEntity> previousClaimOptional = claimEntityList.stream().filter(preClaim ->
+                                preClaim.getClClaimNo().equalsIgnoreCase(paid.getClaimOfficeNumber()) &&
+                                        preClaim.getClClaimType().equalsIgnoreCase(paid.getClaimType()) &&
+                                        preClaim.getClClaimStatus().equalsIgnoreCase(getClaimStatusCode(PAID))
+                                        ).findFirst();
+                        if(previousClaimOptional.isPresent()){
+                            MigrAllClaimsEntity previousClaim = previousClaimOptional.get();
+
+                            BigDecimal settlementAmount =  previousClaim.getClTotalSettledAmount();
+                            previousClaim.setClTotalSettledAmount(settlementAmount.add(BigDecimal.valueOf(paid.getTrnAmountCy())));
+                        } else {
+                            claimEntityList.add(
+                                    MigrAllClaimsEntity.builder()
+                                            .clPolicyNo(policyNo)
+                                            .clClaimNo(paid.getClaimOfficeNumber())
+                                            .clClaimType(paid.getClaimType())
+                                            .clDateofEvent(paid.getOccurredOn())
+                                            .clDateofIntimation(paid.getDeclaredOn())
+                                            .clPatientAdmitted(paid.getClaimedLifeAssured())
+                                            .clCauseofDeath(paid.getClaimType().equalsIgnoreCase(DEATH) ? paid.getCauseOfClaim() : "")
+                                            .clNatureofIllnuss(paid.getCauseOfClaim())
+                                            .clTotalClaimAmount(BigDecimal.valueOf(paid.getOriginalClaimAmt()))
+                                            .clTotalSettledAmount(BigDecimal.valueOf(paid.getTrnAmountCy()))
+                                            .clClaimStatus(getClaimStatusCode(PAID))
+                                            .clNameOftheHospital(paid.getPlaceOfClaim())
+                                            .clDateofPayment(paid.getTrnDate())
+                                            .clComments(paid.getClaimDescription())
+                                            .clPolicyYear(paid.getUnderwritingYear())
+                                            .build()
+                            );
+                        }
                     }
                 });
 

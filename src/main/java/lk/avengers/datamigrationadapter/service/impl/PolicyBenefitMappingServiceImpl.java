@@ -204,7 +204,7 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
                 benefitsEntity.setPbCoverage(BigDecimal.valueOf(mainDataReportEntity.getPremiumEscalationBenefitPercentage()));
                 benefitsEntity.setPbOccuExtra(BigDecimal.ZERO);
                 benefitsEntity.setPbExtraMortalityRate(BigDecimal.ZERO);
-                benefitsEntity.setPbTerm(mainDataReportEntity.getTerm());
+                benefitsEntity.setPbTerm(mainDataReportEntity.getPremiumPaymentTerm().equalsIgnoreCase("sp") ? 1 : (int) Double.parseDouble(mainDataReportEntity.getPremiumPaymentTerm()));
                 benefitsEntity.setPbExtraPremium(BigDecimal.ZERO);
                 benefitsEntity.setPbPremPortion(BigDecimal.ZERO);
 
