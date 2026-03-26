@@ -7,10 +7,14 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
+
 @Repository
 public interface MigrPolicyRepository extends JpaRepository<MigrPolicyData, Integer> {
     @Modifying
     @Transactional
-    @Query(value = "TRUNCATE TABLE Migr_PolicyData; DBCC CHECKIDENT ('policy', RESEED, 1)", nativeQuery = true)
+    @Query(value = "TRUNCATE TABLE Migr_PolicyData", nativeQuery = true)
     void truncateTable();
+
+    Optional<MigrPolicyData> findFirstByLaPolicyNo (String policyNo);
 }

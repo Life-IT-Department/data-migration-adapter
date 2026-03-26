@@ -16,6 +16,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -108,6 +109,13 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
             policyBeneficiariesEntity.setBeType(SPOUSE_TYPE);
             java.math.BigDecimal spouseHbSa = mainDataALHReportEntity.getSpouseHbSa();
             policyBeneficiariesEntity.setBeIsHb(spouseHbSa != null && spouseHbSa.compareTo(java.math.BigDecimal.ZERO) != 0);
+
+            policyBeneficiariesEntity.setChildCode(0);
+            policyBeneficiariesEntity.setInpcSa(mainDataALHReportEntity.getSpouseInpSar());
+            policyBeneficiariesEntity.setHbcSa(mainDataALHReportEntity.getSpouseHbSa());
+            policyBeneficiariesEntity.setBonus(mainDataALHReportEntity.getSpouseBonus());
+            policyBeneficiariesEntity.setBasicSumAssured(mainDataALHReportEntity.getBasicSumAssured());
+
             return policyBeneficiariesEntity;
         }
         return null;
@@ -125,6 +133,13 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
             policyBeneficiariesEntity.setBeType(SPOUSE_TYPE);
             java.math.BigDecimal spouseHbSa = mainDataReportEntity.getSpouseChildHb_Sa();
             policyBeneficiariesEntity.setBeIsHb(spouseHbSa != null && spouseHbSa.compareTo(java.math.BigDecimal.ZERO) != 0);
+
+            policyBeneficiariesEntity.setChildCode(0);
+            policyBeneficiariesEntity.setInpcSa(BigDecimal.ZERO);
+            policyBeneficiariesEntity.setHbcSa(BigDecimal.ZERO);
+            policyBeneficiariesEntity.setBonus(BigDecimal.ZERO);
+            policyBeneficiariesEntity.setBasicSumAssured(mainDataReportEntity.getBasicSumAssured());
+
             return policyBeneficiariesEntity;
         }
         return null;
@@ -140,30 +155,65 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
                 .dob(mainDataReportEntity.getChild1Dob())
                 .age(mainDataReportEntity.getChild1Age())
                 .childHbc(String.valueOf(mainDataReportEntity.getChild1Hbc_()))
+
+                .childCode(1)
+                .inpcSa(BigDecimal.ZERO)
+                .hbcSa(BigDecimal.ZERO)
+                .bonus(BigDecimal.ZERO)
+                .basicSumAssured(mainDataReportEntity.getBasicSumAssured())
+
                 .build());
         childDtoList.add(ChildDto.builder()
                 .name(mainDataReportEntity.getChild2Name())
                 .dob(mainDataReportEntity.getChild2Dob())
                 .age(mainDataReportEntity.getChild2Age())
                 .childHbc(String.valueOf(mainDataReportEntity.getChild2Hbc_()))
+
+                .childCode(2)
+                .inpcSa(BigDecimal.ZERO)
+                .hbcSa(BigDecimal.ZERO)
+                .bonus(BigDecimal.ZERO)
+                .basicSumAssured(mainDataReportEntity.getBasicSumAssured())
+
                 .build());
         childDtoList.add(ChildDto.builder()
                 .name(mainDataReportEntity.getChild3Name())
                 .dob(mainDataReportEntity.getChild3Dob())
                 .age(mainDataReportEntity.getChild3Age())
                 .childHbc(String.valueOf(mainDataReportEntity.getChild3Hbc_()))
+
+                .childCode(3)
+                .inpcSa(BigDecimal.ZERO)
+                .hbcSa(BigDecimal.ZERO)
+                .bonus(BigDecimal.ZERO)
+                .basicSumAssured(mainDataReportEntity.getBasicSumAssured())
+
                 .build());
         childDtoList.add(ChildDto.builder()
                 .name(mainDataReportEntity.getChild4Name())
                 .dob(mainDataReportEntity.getChild4Dob())
                 .age(mainDataReportEntity.getChild4Age())
                 .childHbc(String.valueOf(mainDataReportEntity.getChild4Hbc_()))
+
+                .childCode(4)
+                .inpcSa(BigDecimal.ZERO)
+                .hbcSa(BigDecimal.ZERO)
+                .bonus(BigDecimal.ZERO)
+                .basicSumAssured(mainDataReportEntity.getBasicSumAssured())
+
                 .build());
         childDtoList.add(ChildDto.builder()
                 .name(mainDataReportEntity.getChild5Name())
                 .dob(mainDataReportEntity.getChild5Dob())
                 .age(mainDataReportEntity.getChild5Age())
                 .childHbc(String.valueOf(mainDataReportEntity.getChild5Hbc_()))
+
+                .childCode(5)
+                .inpcSa(BigDecimal.ZERO)
+                .hbcSa(BigDecimal.ZERO)
+                .bonus(BigDecimal.ZERO)
+                .basicSumAssured(mainDataReportEntity.getBasicSumAssured())
+
                 .build());
 
         setDataToPolicyBeneficiariesList(childDtoList, policyNumber, beneficiariesEntityList);
@@ -180,24 +230,52 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
                 .dob(mainDataALHReportEntity.getChild1Dob())
                 .age(mainDataALHReportEntity.getChild1Age())
                 .childHbc(String.valueOf(mainDataALHReportEntity.getChild1Hbc_()))
+
+                .childCode(1)
+                .inpcSa(mainDataALHReportEntity.getChild1InpSar())
+                .hbcSa(BigDecimal.valueOf(mainDataALHReportEntity.getChild1Hbc_()))
+                .bonus(mainDataALHReportEntity.getChild1Bonus())
+                .basicSumAssured(mainDataALHReportEntity.getBasicSumAssured())
+
                 .build());
         childDtoList.add(ChildDto.builder()
                 .name(mainDataALHReportEntity.getChild2Name())
                 .dob(mainDataALHReportEntity.getChild2Dob())
                 .age(mainDataALHReportEntity.getChild2Age())
                 .childHbc(String.valueOf(mainDataALHReportEntity.getChild2Hbc_()))
+
+                .childCode(2)
+                .inpcSa(mainDataALHReportEntity.getChild2InpSar())
+                .hbcSa(BigDecimal.valueOf(mainDataALHReportEntity.getChild2Hbc_()))
+                .bonus(mainDataALHReportEntity.getChild2Bonus())
+                .basicSumAssured(mainDataALHReportEntity.getBasicSumAssured())
+
                 .build());
         childDtoList.add(ChildDto.builder()
                 .name(mainDataALHReportEntity.getChild3Name())
                 .dob(mainDataALHReportEntity.getChild3Dob())
                 .age(mainDataALHReportEntity.getChild3Age())
                 .childHbc(String.valueOf(mainDataALHReportEntity.getChild3Hbc_().intValue()))
+
+                .childCode(3)
+                .inpcSa(mainDataALHReportEntity.getChild3InpSar())
+                .hbcSa(BigDecimal.valueOf(mainDataALHReportEntity.getChild3Hbc_()))
+                .bonus(mainDataALHReportEntity.getChild3Bonus())
+                .basicSumAssured(mainDataALHReportEntity.getBasicSumAssured())
+
                 .build());
         childDtoList.add(ChildDto.builder()
                 .name(mainDataALHReportEntity.getChild4Name())
                 .dob(mainDataALHReportEntity.getChild4Dob())
                 .age(mainDataALHReportEntity.getChild4Age())
                 .childHbc(String.valueOf(mainDataALHReportEntity.getChild4Hbc_().intValue()))
+
+                .childCode(4)
+                .inpcSa(mainDataALHReportEntity.getChild4InpSar())
+                .hbcSa(BigDecimal.valueOf(mainDataALHReportEntity.getChild4Hbc_()))
+                .bonus(mainDataALHReportEntity.getChild4Bonus())
+                .basicSumAssured(mainDataALHReportEntity.getBasicSumAssured())
+
                 .build());
         childDtoList.add(ChildDto.builder()
                 .name(mainDataALHReportEntity.getChild5Name())
@@ -310,6 +388,13 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
                 policyBeneficiariesEntity.setBeDob(childDto.getDob());
                 policyBeneficiariesEntity.setBeType(CHILD_TYPE);
                 policyBeneficiariesEntity.setBeIsHb(Double.parseDouble(childDto.getChildHbc()) != 0.0);
+
+                policyBeneficiariesEntity.setChildCode(childDto.getChildCode());
+                policyBeneficiariesEntity.setHbcSa(childDto.getHbcSa());
+                policyBeneficiariesEntity.setInpcSa(childDto.getInpcSa());
+                policyBeneficiariesEntity.setBonus(childDto.getBonus());
+                policyBeneficiariesEntity.setBasicSumAssured(childDto.getBasicSumAssured());
+
                 beneficiariesEntityList.add(policyBeneficiariesEntity);
             }
         });
@@ -337,7 +422,7 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
             return false;
         }
 
-        return status.toLowerCase().contains("In Force".toLowerCase())
+        return status.equalsIgnoreCase("In Force")
                 || "Lapsed".equalsIgnoreCase(status);
     }
 

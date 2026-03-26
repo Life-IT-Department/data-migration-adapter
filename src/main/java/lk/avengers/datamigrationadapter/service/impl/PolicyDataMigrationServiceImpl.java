@@ -170,6 +170,10 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
             policyRequestDTO.setLaIsPolicyAssign(false);
             policyRequestDTO.setLaWeight(0);
             policyRequestDTO.setLaHeight(0);
+
+            policyRequestDTO.setLaHbc(BigDecimal.ZERO);
+            policyRequestDTO.setLaInpc(BigDecimal.ZERO);
+            policyRequestDTO.setLaBonus(BigDecimal.ZERO);
         } else {
             log.error("Contact details not found for policy {}", policyNo);
         }
@@ -271,8 +275,8 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
         policyRequestDTO.setPoIllusMatuValue(BigDecimal.ZERO);
         // ===== Life Assured (LA) =====
         ContactDetailEntity contact = getContactDetailEntity(policyNo);
+        policyRequestDTO.setLaPolicyNo(policyNo);
         if (contact != null) {
-            policyRequestDTO.setLaPolicyNo(policyNo);
             policyRequestDTO.setLaTitle(contact.getTitle());
             policyRequestDTO.setLaFirstName(contact.getFirstName());
             policyRequestDTO.setLaLastName(contact.getLastName());
@@ -294,6 +298,10 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
             policyRequestDTO.setLaIsPolicyAssign(false);
             policyRequestDTO.setLaWeight(0);
             policyRequestDTO.setLaHeight(0);
+
+            policyRequestDTO.setLaHbc(BigDecimal.ZERO);
+            policyRequestDTO.setLaInpc(BigDecimal.ZERO);
+            policyRequestDTO.setLaBonus(BigDecimal.ZERO);
         } else {
             log.error("Contact details not found for policy {}", policyNo);
         }
@@ -381,6 +389,10 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
             policyRequestDTO.setLaIsPolicyAssign(false);
             policyRequestDTO.setLaWeight(0);
             policyRequestDTO.setLaHeight(0);
+
+            policyRequestDTO.setLaHbc(alhReport.getHb_Sa());
+            policyRequestDTO.setLaInpc(alhReport.getInpSar());
+            policyRequestDTO.setLaBonus(alhReport.getMlBonus());
         } else {
             log.error("Contact details not found for policy {}", policyNo);
         }

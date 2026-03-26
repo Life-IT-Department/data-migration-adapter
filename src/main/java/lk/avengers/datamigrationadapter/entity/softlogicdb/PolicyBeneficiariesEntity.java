@@ -9,7 +9,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "Migr_PolicyBeneficieries")
+@Table(name = "Migr_PolicyBeneficieries_New")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -49,4 +49,21 @@ public class PolicyBeneficiariesEntity {
 
     @Column(name = "BE_IsHB")
     private Boolean beIsHb;
+
+    // Remove when running actual list
+
+    @Column(name = "Child_Code")
+    private Integer childCode;
+
+    @Column(name = "Basic_Sum_Assured")
+    private BigDecimal basicSumAssured;
+
+    @Column(name = "HB_SA")
+    private BigDecimal hbcSa;
+
+    @Column(name = "INP_SA")
+    private BigDecimal inpcSa;
+
+    @Column(name = "Bonus")
+    private BigDecimal bonus;
 }

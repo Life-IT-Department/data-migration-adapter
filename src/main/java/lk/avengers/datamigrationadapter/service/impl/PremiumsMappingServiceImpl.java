@@ -230,7 +230,7 @@ public class PremiumsMappingServiceImpl implements PremiumsMappingService {
         if (status == null) {
             return false;
         }
-        return status.toLowerCase().contains("In Force".toLowerCase())
+        return status.equalsIgnoreCase("In Force")
                 || "Lapsed".equalsIgnoreCase(status);
     }
 

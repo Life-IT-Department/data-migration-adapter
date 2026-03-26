@@ -1,5 +1,6 @@
 package lk.avengers.datamigrationadapter.dto;
 
+import jakarta.persistence.Column;
 import lombok.Builder;
 import lombok.Data;
 
@@ -14,5 +15,12 @@ public class ChildDto {
     private Integer age;
     private String childHbc;
     private BigDecimal childInpSar;
+
+    // Remove when running actual list
+    private Integer childCode;
+    private BigDecimal basicSumAssured;
+    private BigDecimal hbcSa;
+    private BigDecimal inpcSa;
+    private BigDecimal bonus;
 
 }

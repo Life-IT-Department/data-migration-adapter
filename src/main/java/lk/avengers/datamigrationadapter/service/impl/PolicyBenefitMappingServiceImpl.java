@@ -9,10 +9,12 @@ import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.MainDataALHRe
 import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.MainDataReportEntity;
 import lk.avengers.datamigrationadapter.entity.softlogicdb.MigrPolicyBenefitsEntity;
 import lk.avengers.datamigrationadapter.entity.softlogicdb.MigrPolicyBenefitsID;
+import lk.avengers.datamigrationadapter.entity.softlogicdb.MigrPolicyData;
 import lk.avengers.datamigrationadapter.repository.postgresql.reportdb.ACPPolicyRepository;
 import lk.avengers.datamigrationadapter.repository.postgresql.reportdb.BenefitCodeMapperRepository;
 import lk.avengers.datamigrationadapter.repository.postgresql.reportdb.MainDataALHReportRepository;
 import lk.avengers.datamigrationadapter.repository.postgresql.reportdb.MainDataReportRepository;
+import lk.avengers.datamigrationadapter.repository.softlogicdb.MigrPolicyRepository;
 import lk.avengers.datamigrationadapter.repository.softlogicdb.PolicyBenefitsEntityRepository;
 import lk.avengers.datamigrationadapter.service.PolicyBenefitMappingService;
 import lk.avengers.datamigrationadapter.util.MainExcelReader;
@@ -28,6 +30,7 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -39,10 +42,23 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
     private final MainDataALHReportRepository mainDataALHReportRepository;
     private final ACPPolicyRepository acpPolicyRepository;
     private final PolicyBenefitsEntityRepository policyBenefitsEntityRepository;
+    private final MigrPolicyRepository migrPolicyRepository;
+
     private final MainExcelReader mainExcelReader;
     private static final String SPOUSE = "Spouse";
     private static final String CHILD ="Child";
     private static final String INFLATION_GUARD_BENEFIT = "ZIFG";
+
+    private static final String BASIC_LIFE_COVER = "BLIF";
+    private static final String BASIC_LIFE_COVER_SPOUSE = "ZSCB";
+    private static final String IN_PATIENT_COVER = "ZINP";
+    private static final String IN_PATIENT_COVER_SPOUSE = "ZINS";
+
+    private static final String ADDITIONAL_DEATH_BENEFIT = "ZSTB";
+    private static final String CRITICAL_ILLNESS = "ZCIC";
+    private static final String FAMILY_INCOME_BENEFIT = "ZFIB";
+
+    private static final String SUWASAHANA = "ASP";
 
     @Transactional(transactionManager = "softlogicPlatformTransactionManager")
     @Override
@@ -85,7 +101,8 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
                     });
         });
         if (!policyBenefitsEntityList.isEmpty()) {
-            policyBenefitsEntityRepository.saveAll(policyBenefitsEntityList);
+            setInPatientSA(policyList, policyBenefitsEntityList);
+//            policyBenefitsEntityRepository.saveAll(policyBenefitsEntityList);
         } else {
             log.warn("No policy benefits found to save. Please check the excel file and try again.");
             CommonResponseDTO.builder()
@@ -183,6 +200,24 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
 
                 policyBenefitsEntity.setId(new MigrPolicyBenefitsID(policyNo, softlogicBenefitCode));
                 policyBenefitsEntity.setPbCoverage(BigDecimal.valueOf(mainDataReportEntity.getChild1Hbc_()));
+                policyBenefitsEntity.setPbTerm(mainDataReportEntity.getTerm());
+                policyBenefitsEntity.setPbExtraPremium(BigDecimal.ZERO);
+                policyBenefitsEntity.setPbPremPortion(BigDecimal.ZERO);
+                policyBenefitsEntity.setPbOccuExtra(BigDecimal.ZERO);
+                policyBenefitsEntity.setPbExtraMortalityRate(BigDecimal.ZERO);
+
+                policyBenefitsEntityList.add(policyBenefitsEntity);
+            }
+            if (mainDataReportEntity.getChild1Hbcac_() != 0) {
+                MigrPolicyBenefitsEntity policyBenefitsEntity = new MigrPolicyBenefitsEntity();
+                String softlogicBenefitCode = benefitCodeMapperEntityList
+                        .stream()
+                        .filter(benefitCodeMapperEntity -> benefitCodeMapperEntity.getAllianzBenefitCode().equalsIgnoreCase("Child-HBCAC"))
+                        .findFirst().orElseThrow(() -> new RuntimeException("No Child-HBCAC benefit code found in benefit code mapper table for policy no: " + policyNo))
+                        .getSoftlogicBenefitCode();
+
+                policyBenefitsEntity.setId(new MigrPolicyBenefitsID(policyNo, softlogicBenefitCode));
+                policyBenefitsEntity.setPbCoverage(BigDecimal.valueOf(mainDataReportEntity.getChild1Hbcac_()));
                 policyBenefitsEntity.setPbTerm(mainDataReportEntity.getTerm());
                 policyBenefitsEntity.setPbExtraPremium(BigDecimal.ZERO);
                 policyBenefitsEntity.setPbPremPortion(BigDecimal.ZERO);
@@ -563,7 +598,7 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
             return false;
         }
 
-        return status.toLowerCase().contains("In Force".toLowerCase())
+        return status.equalsIgnoreCase("In Force")
                 || "Lapsed".equalsIgnoreCase(status);
     }
 
@@ -577,4 +612,100 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
         }
     }
 
+    private void setInPatientSA(List<String> policyNoList, List<MigrPolicyBenefitsEntity> policyBenefitsEntityList){
+        log.info("Setting In Patient Cover for all benefits");
+        if(!policyBenefitsEntityList.isEmpty()){
+            policyNoList.forEach(policyNo -> {
+                if(policyNo.contains(SUWASAHANA)){
+                    Optional<MigrPolicyBenefitsEntity> mainInsuredInp = policyBenefitsEntityList.
+                            stream().
+                            filter(policyBenefit -> policyBenefit.getId().getPbPolicyNo().equalsIgnoreCase(policyNo) &&
+                                    policyBenefit.getId().getPbBenefitCode().equalsIgnoreCase(IN_PATIENT_COVER)).findFirst();
+                    Optional<MigrPolicyBenefitsEntity> mainInsuredBasicLife = policyBenefitsEntityList.
+                            stream().
+                            filter(policyBenefit -> policyBenefit.getId().getPbPolicyNo().equalsIgnoreCase(policyNo) &&
+                                    policyBenefit.getId().getPbBenefitCode().equalsIgnoreCase(BASIC_LIFE_COVER)).findFirst();
+
+                    Optional<MigrPolicyBenefitsEntity> spouseInp = policyBenefitsEntityList.
+                            stream().
+                            filter(policyBenefit -> policyBenefit.getId().getPbPolicyNo().equalsIgnoreCase(policyNo) &&
+                                    policyBenefit.getId().getPbBenefitCode().equalsIgnoreCase(IN_PATIENT_COVER_SPOUSE)).findFirst();
+                    Optional<MigrPolicyBenefitsEntity> spouseBasicLife = policyBenefitsEntityList.
+                            stream().
+                            filter(policyBenefit -> policyBenefit.getId().getPbPolicyNo().equalsIgnoreCase(policyNo) &&
+                                    policyBenefit.getId().getPbBenefitCode().equalsIgnoreCase(BASIC_LIFE_COVER_SPOUSE)).findFirst();
+
+                    if(mainInsuredInp.isPresent() && mainInsuredBasicLife.isPresent()){
+                        mainInsuredInp.get().setPbCoverage(mainInsuredBasicLife.get().getPbCoverage());
+                    }
+                    if(spouseInp.isPresent() && spouseBasicLife.isPresent()){
+                        spouseInp.get().setPbCoverage(spouseBasicLife.get().getPbCoverage());
+                    }
+                }
+            });
+            log.info("Saving updated benefit data into MSSQL");
+            policyBenefitsEntityRepository.saveAll(policyBenefitsEntityList);
+
+            log.info("Completed benefits saving. Setting up SAR");
+            setSumAtRisk(policyNoList, policyBenefitsEntityList);
+        }
+    }
+
+    private void setSumAtRisk(List<String> policyNoList,
+                              List<MigrPolicyBenefitsEntity> policyBenefitsEntityList) {
+
+        log.info("Setting sum at risk now using the benefit cover values");
+        Map<String, List<MigrPolicyBenefitsEntity>> benefitsByPolicy =
+                policyBenefitsEntityList.stream()
+                        .collect(Collectors.groupingBy(e -> e.getId().getPbPolicyNo()));
+
+        List<MigrPolicyData> updatedPolicies = new ArrayList<>();
+
+        for (String policy : policyNoList) {
+            MigrPolicyData policyData = migrPolicyRepository
+                    .findFirstByLaPolicyNo(policy)
+                    .orElse(null);
+
+            if (policyData == null) continue;
+
+            List<MigrPolicyBenefitsEntity> benefits =
+                    benefitsByPolicy.getOrDefault(policy, Collections.emptyList());
+
+            Map<String, BigDecimal> benefitMap = benefits.stream()
+                    .filter(b -> b.getId().getPbBenefitCode() != null)
+                    .collect(Collectors.toMap(
+                            b -> b.getId().getPbBenefitCode().toUpperCase(),
+                            b -> safe(b.getPbCoverage()),
+                            (a, b) -> a
+                    ));
+
+            BigDecimal dthSa  = benefitMap.getOrDefault(BASIC_LIFE_COVER.toUpperCase(), BigDecimal.ZERO);
+            BigDecimal trSa   = benefitMap.getOrDefault(ADDITIONAL_DEATH_BENEFIT.toUpperCase(), BigDecimal.ZERO);
+            BigDecimal cilxSa = benefitMap.getOrDefault(CRITICAL_ILLNESS.toUpperCase(), BigDecimal.ZERO);
+            BigDecimal fibSa  = benefitMap.getOrDefault(FAMILY_INCOME_BENEFIT.toUpperCase(), BigDecimal.ZERO);
+
+            policyData.setPoSumAtRisk(
+                    getSumAtRiskValue(dthSa, trSa, cilxSa, fibSa, policyData.getPoTerm())
+            );
+            updatedPolicies.add(policyData);
+        }
+        log.info("Completed calculating sum at risk values. Saving data to policy table...");
+        migrPolicyRepository.saveAll(updatedPolicies);
+    }
+
+    private BigDecimal getSumAtRiskValue(BigDecimal dthSa, BigDecimal trSa,
+                                         BigDecimal cilxSa, BigDecimal fibSa,
+                                         Integer term) {
+
+        BigDecimal half = BigDecimal.valueOf(0.5);
+
+        return safe(dthSa)
+                .add(safe(trSa))
+                .add(safe(cilxSa).multiply(half))
+                .add(safe(fibSa).multiply(half).multiply(BigDecimal.valueOf(term != null ? term : 0)));
+    }
+
+    private BigDecimal safe(BigDecimal val) {
+        return val != null ? val : BigDecimal.ZERO;
+    }
 }

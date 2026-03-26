@@ -1,5 +1,6 @@
 package lk.avengers.datamigrationadapter.dto;
 
+import jakarta.persistence.Column;
 import lombok.*;
 import org.springframework.beans.BeanUtils;
 
@@ -82,6 +83,10 @@ public class MigrPolicyDataDTO {
     private Integer spHeight;
     private Integer spWeight;
     private String spOccupation;
+
+    private BigDecimal laHbc;
+    private BigDecimal laInpc;
+    private BigDecimal laBonus;
 
     public <E> E mapData(Class<E> receiverClass) {
         E receiver = BeanUtils.instantiateClass(receiverClass);

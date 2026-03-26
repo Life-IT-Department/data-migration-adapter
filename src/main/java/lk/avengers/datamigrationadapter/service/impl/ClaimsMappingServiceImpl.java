@@ -298,7 +298,7 @@ public class ClaimsMappingServiceImpl implements ClaimsMappingService {
             return false;
         }
 
-        return status.toLowerCase().contains("In Force".toLowerCase())
+        return status.equalsIgnoreCase("In Force")
                 || "Lapsed".equalsIgnoreCase(status);
     }
 

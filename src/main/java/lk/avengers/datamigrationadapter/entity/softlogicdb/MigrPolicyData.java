@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.DynamicUpdate;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -14,6 +15,7 @@ import java.time.LocalDate;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@DynamicUpdate
 @Table(name = "Migr_PolicyData")
 public class MigrPolicyData {
 
@@ -185,4 +187,13 @@ public class MigrPolicyData {
 
     @Column(name = "SP_Occupation", length = 30)
     private String spOccupation;
+
+    @Column(name = "LA_HB", precision = 18, scale = 2)
+    private BigDecimal laHbc;
+
+    @Column(name = "LA_INP", precision = 18, scale = 2)
+    private BigDecimal laInpc;
+
+    @Column(name = "LA_Bonus", precision = 18, scale = 2)
+    private BigDecimal laBonus;
 }

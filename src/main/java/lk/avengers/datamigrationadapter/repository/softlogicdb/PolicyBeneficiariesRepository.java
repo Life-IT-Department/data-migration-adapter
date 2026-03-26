@@ -11,6 +11,6 @@ import org.springframework.stereotype.Repository;
 public interface PolicyBeneficiariesRepository extends JpaRepository<PolicyBeneficiariesEntity, Long> {
     @Modifying
     @Transactional
-    @Query(value = "TRUNCATE TABLE Migr_PolicyBeneficieries; DBCC CHECKIDENT ('policy', RESEED, 0)", nativeQuery = true)
+    @Query(value = "TRUNCATE TABLE Migr_PolicyBeneficieries_New; DBCC CHECKIDENT ('policy', RESEED, 0)", nativeQuery = true)
     void truncate();
 }
