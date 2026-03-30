@@ -29,7 +29,6 @@ public class ReportUploadController {
 
     private final MainDataReportUploadService mainDataReportUploadService;
     private final CashFlowReportUploadService cashFlowReportUploadService;
-    private final ContactDetailReportService contactDetailReportService;
     private final PosSignatureReportService posSignatureReportService;
     private final PaidClaimsReportService paidClaimsReportService;
     private final RejectedClaimReportService rejectedClaimReportService;
@@ -43,13 +42,6 @@ public class ReportUploadController {
         log.info("CASH_FLOW_REPORT_UPLOAD API METHOD ACCESSED.");
         return cashFlowReportUploadService.uploadCashFlowReport(year);
     }
-
-    @GetMapping("/contact-detail-report")
-    public ResponseEntity<CommonResponseDTO> uploadContactDetail() {
-        log.info("CONTACT_DETAIL_REPORT_UPLOAD API METHOD ACCESSED.");
-        return contactDetailReportService.processExcel();
-    }
-
 
     @GetMapping("/pos-signature-report")
     public ResponseEntity<CommonResponseDTO> uploadPosSignatureReport(@RequestParam(name = "year") int year) {

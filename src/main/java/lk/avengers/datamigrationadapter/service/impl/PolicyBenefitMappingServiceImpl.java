@@ -666,6 +666,20 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
                     .findFirstByLaPolicyNo(policy)
                     .orElse(null);
 
+            String productCode =
+                    (policy != null && policy.length() >= 3)
+                            ? policy.replace("/", "").substring(0, 3)
+                            : null;
+            Integer number = (policy != null && policy.length() >= 3)
+                    ? Integer.valueOf(policy.replace("/", "").substring(3))
+                    : null;
+
+            Optional<MainDataReportEntity> mainDataReportEntityOptional = mainDataReportRepository.findFirstByProductCodeAndPolicyNo(productCode, number);
+            MainDataReportEntity mainDataReportEntity = null;
+            if(mainDataReportEntityOptional.isPresent()){
+                mainDataReportEntity = mainDataReportEntityOptional.get();
+            }
+
             if (policyData == null) continue;
 
             List<MigrPolicyBenefitsEntity> benefits =
@@ -684,8 +698,10 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
             BigDecimal cilxSa = benefitMap.getOrDefault(CRITICAL_ILLNESS.toUpperCase(), BigDecimal.ZERO);
             BigDecimal fibSa  = benefitMap.getOrDefault(FAMILY_INCOME_BENEFIT.toUpperCase(), BigDecimal.ZERO);
 
+            Integer retirementTerm = mainDataReportEntity != null ? mainDataReportEntity.getRetirementBenefitPayoutTerm() : 0;
+
             policyData.setPoSumAtRisk(
-                    getSumAtRiskValue(dthSa, trSa, cilxSa, fibSa, policyData.getPoTerm())
+                    getSumAtRiskValue(dthSa, trSa, cilxSa, fibSa, policyData.getPoTerm(), retirementTerm)
             );
             updatedPolicies.add(policyData);
         }
@@ -695,14 +711,14 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
 
     private BigDecimal getSumAtRiskValue(BigDecimal dthSa, BigDecimal trSa,
                                          BigDecimal cilxSa, BigDecimal fibSa,
-                                         Integer term) {
+                                         Integer term, Integer retirementTerm) {
 
         BigDecimal half = BigDecimal.valueOf(0.5);
 
         return safe(dthSa)
                 .add(safe(trSa))
                 .add(safe(cilxSa).multiply(half))
-                .add(safe(fibSa).multiply(half).multiply(BigDecimal.valueOf(term != null ? term : 0)));
+                .add(safe(fibSa).multiply(half).multiply(BigDecimal.valueOf(term - retirementTerm)));
     }
 
     private BigDecimal safe(BigDecimal val) {
