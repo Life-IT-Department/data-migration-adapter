@@ -16,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.Period;
 import java.util.*;
@@ -132,7 +133,7 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
         policyRequestDTO.setPoPaymentTerm(setPaymentTerm(acpPolicy.getPremiumPaymentTerm()));
         policyRequestDTO.setPoBsa(acpPolicy.getBasicSumAssured());
         policyRequestDTO.setPoSumAtRisk(acpPolicy.getDthSar());
-        policyRequestDTO.setPoBasicPremium(acpPolicy.getInsuredModalPremium());
+        policyRequestDTO.setPoBasicPremium(getModalPremium(acpPolicy.getInsuredModalPremium()));
         policyRequestDTO.setPoPremiumType(getPremiumType(acpPolicy.getPremiumPaymentTerm()));
         policyRequestDTO.setPoAdvCode(getAgentCodeMapping(acpPolicy.getAgentCode()));
         policyRequestDTO.setPoBeginDate(acpPolicy.getInception());
@@ -259,7 +260,7 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
         policyRequestDTO.setPoPaymentTerm(setPaymentTerm(mainDataReport.getPremiumPaymentTerm())); // dispute
         policyRequestDTO.setPoBsa(mainDataReport.getBasicSumAssured());
         policyRequestDTO.setPoSumAtRisk(mainDataReport.getDth_Sar());
-        policyRequestDTO.setPoBasicPremium(mainDataReport.getModalPremium());
+        policyRequestDTO.setPoBasicPremium(getModalPremium(mainDataReport.getModalPremium()));
         policyRequestDTO.setPoPremiumType(getPremiumType(mainDataReport.getPremiumPaymentTerm())); // dispute
         policyRequestDTO.setPoAdvCode(getAgentCodeMapping(mainDataReport.getAgentCode()));
         policyRequestDTO.setPoBeginDate(mainDataReport.getInception());
@@ -350,7 +351,7 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
         policyRequestDTO.setPoPaymentTerm(alhReport.getPremiumPaymentTerm());
         policyRequestDTO.setPoBsa(alhReport.getBasicSumAssured());
         policyRequestDTO.setPoSumAtRisk(alhReport.getDth_Sar());
-        policyRequestDTO.setPoBasicPremium(alhReport.getModalPremium());
+        policyRequestDTO.setPoBasicPremium(getModalPremium(alhReport.getModalPremium()));
         policyRequestDTO.setPoPremiumType("Regular");
         policyRequestDTO.setPoAdvCode(getAgentCodeMapping(alhReport.getAgentCode()));
         policyRequestDTO.setPoBeginDate(alhReport.getInception());
@@ -784,5 +785,9 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
             }
         }
         return addressCity;
+    }
+
+    private BigDecimal getModalPremium(BigDecimal insuredModalPremium){
+        return insuredModalPremium.setScale(0, RoundingMode.DOWN);
     }
 }
