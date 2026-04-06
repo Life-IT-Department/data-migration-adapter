@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Set;
 
 @Repository
 public interface CashFlowReportRepository extends JpaRepository<CashFlowReportEntity, Long> {
@@ -36,4 +37,15 @@ public interface CashFlowReportRepository extends JpaRepository<CashFlowReportEn
             @Param("policyNo1") String policyNo1,
             @Param("policyNo2") String policyNo2,
             @Param("paymentType") String paymentType);
+
+    @Query("""
+    SELECT c FROM CashFlowReportEntity c
+    WHERE (c.policyNo IN :withSlash OR c.policyNo IN :withoutSlash)
+    AND c.paymentType = :paymentType
+""")
+    List<CashFlowReportEntity> findByPolicyNosAndPaymentTypeBulk(
+            Set<String> withSlash,
+            Set<String> withoutSlash,
+            String paymentType
+    );
 }

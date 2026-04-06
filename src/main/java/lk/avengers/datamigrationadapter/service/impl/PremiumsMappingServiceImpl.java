@@ -12,6 +12,7 @@ import lk.avengers.datamigrationadapter.util.MainExcelReader;
 import lk.avengers.datamigrationadapter.util.SharedFunction;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -20,6 +21,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -55,6 +57,8 @@ public class PremiumsMappingServiceImpl implements PremiumsMappingService {
         log.info("MIGRATE PREMIUMS PAID & DUE STARTED");
 
         try {
+            List<MigrPremiumsPaid> premiumsPaidList = new ArrayList<>();
+            List<MigrPremiumsDue> premiumsDueList = new ArrayList<>();
 
             List<BankPinEntity> bankPins = bankPinRepository.findAll();
             log.info("{} BANK PIN MAPPINGS LOADED", bankPins.size());
@@ -69,29 +73,86 @@ public class PremiumsMappingServiceImpl implements PremiumsMappingService {
             List<String> policyList = mainExcelReader.readPolicyNumbers();
             log.info("{} POLICY NUMBERS READ FROM THE EXCEL SHEET", policyList.size());
 
-            List<MigrPremiumsPaid> premiumsPaidList = new ArrayList<>();
-            List<MigrPremiumsDue> premiumsDueList = new ArrayList<>();
+            List<PolicyNoDto> extractedPolicies = policyList.stream()
+                    .map(this::getProductCodeAndPolicyNo)
+                    .toList();
+
+            Set<String> productCodes = extractedPolicies.stream()
+                    .map(PolicyNoDto::productCode)
+                    .collect(Collectors.toSet());
+
+            Set<Integer> policyNos = extractedPolicies.stream()
+                    .map(PolicyNoDto::policyNo)
+                    .collect(Collectors.toSet());
+
+            Set<String> policyNosWithSlash = new HashSet<>(policyList);
+            Set<String> policyNosWithoutSlash = policyList.stream()
+                    .map(p -> p.replace("/", ""))
+                    .collect(Collectors.toSet());
+
+            List<PremiumDetailsEntity> allPremiumDetails =
+                    premiumDetailsRepository.findFiltered(productCodes, policyNos);
+
+            List<CashFlowReportEntity> allCashFlows =
+                    cashFlowReportRepository.findByPolicyNosAndPaymentTypeBulk(
+                            policyNosWithSlash,
+                            policyNosWithoutSlash,
+                            IN_COMING
+                    );
+
+            Map<String, List<PremiumDetailsEntity>> premiumMap =
+                    allPremiumDetails.stream()
+                            .collect(Collectors.groupingBy(
+                                    e -> e.getProductCode() + "/" + e.getPolicyNo()
+                            ));
+
+            Map<String, List<CashFlowReportEntity>> cashFlowMap =
+                    allCashFlows.stream()
+                            .collect(Collectors.groupingBy(c -> {
+                                String policy = c.getPolicyNo();
+                                return policy.contains("/") ? policy :
+                                        policy.substring(0, 3) + "/" + policy.substring(3);
+                            }));
+
+            Map<String, MainDataReportEntity> mainDataMap =
+                    mainDataReportRepository.findFiltered(productCodes, policyNos).stream()
+                            .collect(Collectors.toMap(
+                                    e -> e.getProductCode() + "/" + e.getPolicyNo(),
+                                    Function.identity(),
+                                    (a, b) -> a
+                            ));
+
+            Map<String, MainDataALHReportEntity> alhMap =
+                    mainDataALHReportRepository.findFiltered(productCodes, policyNos).stream()
+                            .collect(Collectors.toMap(
+                                    e -> e.getProductCode() + "/" + e.getPolicyNo(),
+                                    Function.identity(),
+                                    (a, b) -> a
+                            ));
+
+            Map<String, ACPPolicyEntity> acpMap =
+                    acpPolicyRepository.findFiltered(productCodes, policyNos).stream()
+                            .collect(Collectors.toMap(
+                                    e -> e.getProductCode() + "/" + e.getPolicyNo(),
+                                    Function.identity(),
+                                    (a, b) -> a
+                            ));
 
             for (String policy : policyList) {
-                String policyStatus = getStatus(policy);
+                String policyStatus = getStatus(policy, mainDataMap, alhMap, acpMap);
                 if (!sharedFunction.isEligiblePolicyStatus(policyStatus)) {
                     log.info("Skipping policy {} due to status {}", policy, policyStatus);
                     continue;
                 }
                 PolicyNoDto dto = getProductCodeAndPolicyNo(policy);
 
+                String key = dto.productCode() + "/" + dto.policyNo();
+
                 List<PremiumDetailsEntity> premiumDetails =
-                        premiumDetailsRepository.findByPolicyNoAndProductCode(
-                                dto.policyNo(),
-                                dto.productCode()
-                        );
+                        premiumMap.getOrDefault(key, Collections.emptyList());
 
                 List<CashFlowReportEntity> cashFlows =
-                        cashFlowReportRepository.findByPolicyNosAndPaymentType(
-                                policy,
-                                policy.replace("/", ""),
-                                IN_COMING
-                        );
+                        cashFlowMap.getOrDefault(policy, Collections.emptyList());
 
                 if(!premiumDetails.isEmpty()){
                     for (PremiumDetailsEntity premium : premiumDetails) {
@@ -174,8 +235,11 @@ public class PremiumsMappingServiceImpl implements PremiumsMappingService {
             migrPremiumsPaidRepository.truncate();
             migrPremiumsDueRepository.truncate();
 
-            migrPremiumsPaidRepository.saveAll(premiumsPaidList);
-            migrPremiumsDueRepository.saveAll(premiumsDueList);
+            log.info("SAVING PREMIUM PAID IN BATCHES...");
+            saveInBatches(premiumsPaidList, migrPremiumsPaidRepository);
+
+            log.info("SAVING PREMIUM DUE IN BATCHES...");
+            saveInBatches(premiumsDueList, migrPremiumsDueRepository);
 
             log.info("MIGRATE PREMIUMS PAID COMPLETED - {} records saved",
                     premiumsPaidList.size());
@@ -228,24 +292,36 @@ public class PremiumsMappingServiceImpl implements PremiumsMappingService {
         };
     }
 
-    private String getStatus(String policyNo){
-        String productCode =
-                (policyNo != null && policyNo.length() >= 3)
-                        ? policyNo.replace("/", "").substring(0, 3)
-                        : null;
-        Integer number = (policyNo != null && policyNo.length() >= 3)
-                ? Integer.valueOf(policyNo.replace("/", "").substring(3))
-                : null;
-        return mainDataReportRepository
-                .findFirstByProductCodeAndPolicyNo(productCode, number)
-                .map(MainDataReportEntity::getStatus)
-                .or(() -> mainDataALHReportRepository
-                        .findFirstByProductCodeAndPolicyNo(productCode, number)
-                        .map(MainDataALHReportEntity::getStatus))
-                .or(() -> acpPolicyRepository
-                        .findFirstByProductCodeAndPolicyNo(productCode, String.valueOf(number))
-                        .map(ACPPolicyEntity::getStatus))
-                .orElse(null);
+    private String getStatus(String policyNo,
+                             Map<String, MainDataReportEntity> mainDataMap,
+                             Map<String, MainDataALHReportEntity> alhMap,
+                             Map<String, ACPPolicyEntity> acpMap) {
+
+        if (policyNo == null || policyNo.length() < 3) {
+            return null;
+        }
+
+        String cleaned = policyNo.replace("/", "");
+        String productCode = cleaned.substring(0, 3);
+        String numberPart = cleaned.substring(3);
+
+        String key = productCode + "/" + Integer.parseInt(numberPart);
+
+        MainDataReportEntity main = mainDataMap.get(key);
+        if (main != null) {
+            return main.getStatus();
+        }
+
+        MainDataALHReportEntity alh = alhMap.get(key);
+        if (alh != null) {
+            return alh.getStatus();
+        }
+
+        ACPPolicyEntity acp = acpMap.get(key);
+        if (acp != null) {
+            return acp.getStatus();
+        }
+        return null;
     }
 
     private String getPaymentMode(String paymentMode){
@@ -258,7 +334,29 @@ public class PremiumsMappingServiceImpl implements PremiumsMappingService {
             default -> "";
         };
     }
-}
 
+    private <T> void saveInBatches(List<T> list, JpaRepository<T, ?> repository) {
+        int batchSize = 1000;
+        int totalSize = list.size();
+        int totalBatches = (int) Math.ceil((double) totalSize / batchSize);
+
+        log.info("Starting batch save: totalRecords={}, batchSize={}, totalBatches={}, repository={}",
+                totalSize, batchSize, totalBatches, repository.getClass().getSimpleName());
+
+        for (int i = 0; i < list.size(); i += 1000) {
+            int batchNumber = (i / batchSize) + 1;
+            int end = Math.min(i + 1000, list.size());
+
+            log.info("Saving batch {}/{} (records {} - {})",
+                    batchNumber, totalBatches, i + 1, end);
+
+            List<T> batch = list.subList(i, end);
+            repository.saveAll(batch);
+            repository.flush();
+        }
+        log.info("Completed batch save: totalRecords={}, repository={}",
+                totalSize, repository.getClass().getSimpleName());
+    }
+}
 
 record PolicyNoDto(String productCode, Integer policyNo){}
