@@ -16,5 +16,5 @@ public interface RejectedClaimRepository extends JpaRepository<RejectedClaimEnti
     @Query(value = "TRUNCATE TABLE rejected_claim RESTART IDENTITY", nativeQuery = true)
     void truncate();
 
-    List<RejectedClaimEntity> findByPolicy(String policyNo);
+    List<RejectedClaimEntity> findByPolicyIn(List<String> policyNoList);
 }

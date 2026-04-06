@@ -16,5 +16,5 @@ public interface ClosedClaimsReportRepository extends JpaRepository<ClosedClaimR
     @Query(value = "TRUNCATE TABLE closed_claim RESTART IDENTITY", nativeQuery = true)
     void truncate();
 
-    List<ClosedClaimReportEntity> findByPolicyNo(String policyNo);
+    List<ClosedClaimReportEntity> findByPolicyNoIn(List<String> policyNoList);
 }

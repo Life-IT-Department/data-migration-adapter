@@ -33,7 +33,7 @@ public class MigrPolicyData {
     @Column(name = "LA_LastName", length = 100)
     private String laLastName;
 
-    @Column(name = "LA_Address", length = 100)
+    @Column(name = "LA_Address", columnDefinition = "VARCHAR(MAX)")
     private String laAddress;
 
     @Column(name = "LA_NIC", length = 20)

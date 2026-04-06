@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collection;
 import java.util.List;
 
 @Repository
@@ -17,6 +18,5 @@ public interface PaidClaimReportRepository extends JpaRepository<PaidClaimEntity
     @Query(value = "TRUNCATE TABLE paid_claim RESTART IDENTITY", nativeQuery = true)
     void truncate();
 
-    List<PaidClaimEntity> findByPolicyNo(String policyNo);
-
+    List<PaidClaimEntity> findByPolicyNoIn(List<String> policyNoList);
 }

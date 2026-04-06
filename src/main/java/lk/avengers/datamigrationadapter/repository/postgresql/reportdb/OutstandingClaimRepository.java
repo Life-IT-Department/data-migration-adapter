@@ -16,5 +16,5 @@ public interface OutstandingClaimRepository extends JpaRepository<OutstandingCla
     @Query(value = "TRUNCATE TABLE outstanding_claim RESTART IDENTITY", nativeQuery = true)
     void truncate();
 
-    List<OutstandingClaimEntity> findByPolicyNumber(String policyNo);
+    List<OutstandingClaimEntity> findByPolicyNumberIn(List<String> policyNoList);
 }

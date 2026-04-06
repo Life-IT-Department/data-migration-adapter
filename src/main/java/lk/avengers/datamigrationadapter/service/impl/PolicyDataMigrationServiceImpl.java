@@ -2,11 +2,17 @@ package lk.avengers.datamigrationadapter.service.impl;
 
 import jakarta.annotation.PostConstruct;
 import lk.avengers.datamigrationadapter.dto.MigrPolicyDataDTO;
+import lk.avengers.datamigrationadapter.dto.PolicyKey;
 import lk.avengers.datamigrationadapter.dto.response.PolicyNumberResponseDTO;
 import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.*;
+import lk.avengers.datamigrationadapter.entity.softlogicdb.ExtraFields;
 import lk.avengers.datamigrationadapter.entity.softlogicdb.FundCurrentBalanceEntity;
 import lk.avengers.datamigrationadapter.entity.softlogicdb.MigrPolicyData;
+import lk.avengers.datamigrationadapter.mapper.ExtraFieldsMapper;
+import lk.avengers.datamigrationadapter.mapper.FundCurrentBalanceMapper;
+import lk.avengers.datamigrationadapter.mapper.PolicyMapper;
 import lk.avengers.datamigrationadapter.repository.postgresql.reportdb.*;
+import lk.avengers.datamigrationadapter.repository.softlogicdb.ExtraFieldsRepository;
 import lk.avengers.datamigrationadapter.repository.softlogicdb.FundCurrentBalanceEntityRepository;
 import lk.avengers.datamigrationadapter.repository.softlogicdb.MigrPolicyRepository;
 import lk.avengers.datamigrationadapter.service.PolicyDataMigrationService;
@@ -21,8 +27,10 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.Period;
 import java.util.*;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -42,9 +50,12 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
     private final OccupationCodeMappingRepository occupationCodeMappingRepository;
     private final FundCurrentBalanceEntityRepository fundCurrentBalanceEntityRepository;
     private final PremiumDetailsRepository premiumDetailsRepository;
+    private final ExtraFieldsRepository extraFieldsRepository;
 
     private final MainExcelReader mainExcelReader;
     private final SharedFunction sharedFunction;
+
+    private static final int BATCH_SIZE = 1000;
 
     private List<ProductCodeMappingEntity> productCodeMappingList;
     private List<AdvisorCodeMappingEntity> advisorCodeMappingList;
@@ -64,126 +75,432 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
         log.info("Loaded {} OCCUPATION_CODE_MAPPING records", occupationMappingList.size());
     }
 
-    private final List<MigrPolicyDataDTO> requestDTOList = new ArrayList<>();
-    private final List<FundCurrentBalanceEntity> fundCurrentBalanceEntityList = new ArrayList<>();
-
     @Override
     public void migratePolicyData() {
 
         List<String> policyList = mainExcelReader.readPolicyNumbers();
 
-        policyList.forEach(policy -> {
-            Object policyEntity = findPolicyInRepositories(policy);
+        List<PolicyNumberResponseDTO> extractedPolicies = policyList.stream()
+                .map(this::extractPolicyNumberHelper)
+                .toList();
 
-            LocalDate premiumDueDate = null;
-            String productCode =
-                    (policy != null && policy.length() >= 3)
-                            ? policy.replace("/", "").substring(0, 3)
-                            : null;
-            Integer number = (policy != null && policy.length() >= 3)
-                    ? Integer.valueOf(policy.replace("/", "").substring(3))
-                    : null;
+        Set<String> productCodes = extractedPolicies.stream()
+                .map(PolicyNumberResponseDTO::getProductCode)
+                .collect(Collectors.toSet());
 
-            Optional<PremiumDetailsEntity> premiumDetailsEntityOptional = premiumDetailsRepository.findFirstByPolicyNoAndProductCodeOrderByIdDesc(number, productCode);
-            if(premiumDetailsEntityOptional.isPresent()){
-                premiumDueDate = premiumDetailsEntityOptional.get().getPremiumDueDate();
+        Set<Integer> policyNos = extractedPolicies.stream()
+                .map(PolicyNumberResponseDTO::getPolicyNo)
+                .collect(Collectors.toSet());
+
+        log.info("Preloading required data...");
+
+        Map<String, MainDataReportEntity> mainDataMap =
+                mainDataReportRepository.findFiltered(productCodes, policyNos).stream()
+                        .collect(Collectors.toMap(
+                                e -> e.getProductCode() + "/" + e.getPolicyNo(),
+                                Function.identity(),
+                                (a, b) -> a
+                        ));
+
+        Map<String, MainDataALHReportEntity> alhMap =
+                mainDataALHReportRepository.findFiltered(productCodes, policyNos).stream()
+                        .collect(Collectors.toMap(
+                                e -> e.getProductCode() + "/" + e.getPolicyNo(),
+                                Function.identity(),
+                                (a, b) -> a
+                        ));
+
+        Map<String, ACPPolicyEntity> acpMap =
+                acpPolicyRepository.findFiltered(productCodes, policyNos).stream()
+                        .collect(Collectors.toMap(
+                                e -> e.getProductCode() + "/" + e.getPolicyNo(),
+                                Function.identity(),
+                                (a, b) -> a
+                        ));
+
+        Map<String, ContactDetailEntity> contactMap =
+                contactDetailRepository.findFiltered(productCodes, policyNos).stream()
+                        .collect(Collectors.toMap(
+                                e -> e.getProduct() + "/" + e.getPolicyNo(),
+                                Function.identity(),
+                                (a, b) -> a
+                        ));
+
+        Map<String, PremiumDetailsEntity> premiumMap =
+                premiumDetailsRepository.findFiltered(productCodes, policyNos).stream()
+                        .collect(Collectors.toMap(
+                                e -> e.getProductCode() + "/" + e.getPolicyNo(),
+                                Function.identity(),
+                                (a, b) -> a
+                        ));
+
+        log.info("Preloading completed");
+
+        policyRepository.truncateTable();
+        fundCurrentBalanceEntityRepository.truncate();
+        extraFieldsRepository.truncate();
+
+        List<MigrPolicyData> policyBatch = new ArrayList<>();
+        List<FundCurrentBalanceEntity> fundBatch = new ArrayList<>();
+        List<ExtraFields> extraBatch = new ArrayList<>();
+
+        int count = 0;
+
+        for (String policy : policyList) {
+
+            PolicyNumberResponseDTO extracted = sharedFunction.extractPolicyNumber(policy);
+            String key = extracted.getProductCode() + "/" + extracted.getPolicyNo();
+
+            MainDataReportEntity mainData = mainDataMap.get(key);
+            MainDataALHReportEntity alh = alhMap.get(key);
+            ACPPolicyEntity acp = acpMap.get(key);
+            ContactDetailEntity contact = contactMap.get(key);
+            PremiumDetailsEntity premium = premiumMap.get(key);
+
+            LocalDate premiumDueDate = premium != null ? premium.getPremiumDueDate() : null;
+
+            if (mainData != null) {
+                processMainDataFast(mainData, policy, premiumDueDate, contact, policyBatch, fundBatch, extraBatch);
+            } else if (alh != null) {
+                processALHFast(alh, policy, premiumDueDate, contact, policyBatch, extraBatch);
+            } else if (acp != null) {
+                processACPFast(acp, policy, premiumDueDate, contact, policyBatch, extraBatch);
+            } else {
+                log.warn("Policy {} not found", policy);
             }
 
-            switch (policyEntity) {
-                case MainDataReportEntity mainDataReport ->
-                    // Use mainDataReport with full type safety
-                        processMainDataReport(mainDataReport, policy, premiumDueDate);
-                case MainDataALHReportEntity alhReport ->
-                    // Use alhReport with full type safety
-                        processALHReport(alhReport, policy, premiumDueDate);
-                case ACPPolicyEntity acpPolicy ->
-                    // Use acpPolicy with full type safety
-                        processACPPolicy(acpPolicy, policy, premiumDueDate);
-                case null -> log.error("Policy {} not found in any repository", policy);
-                default -> {
-                }
+            count++;
+
+            // 📦 Batch logging
+            if (count % BATCH_SIZE == 0) {
+
+                log.info("Processed {} policies so far. Saving batch...", count);
+
+                long batchStart = System.currentTimeMillis();
+
+                saveBatch(policyBatch, fundBatch, extraBatch);
+
+                long batchEnd = System.currentTimeMillis();
+
+                log.info("Batch saved. Time taken: {} ms", (batchEnd - batchStart));
             }
 
-        });
-        if (!requestDTOList.isEmpty()) {
-            List<MigrPolicyData> policyEntityList = requestDTOList.stream()
-                    .map(dto -> dto.mapData(MigrPolicyData.class))
-                    .toList();
-            log.info("Existing table truncating in MSSQL DB...");
-            policyRepository.truncateTable();
-            fundCurrentBalanceEntityRepository.truncate();
-            log.info("Saving data into MSSQL DB...");
-            policyRepository.saveAll(policyEntityList);
-            fundCurrentBalanceEntityRepository.saveAll(fundCurrentBalanceEntityList);
-            log.info("Saved {} policies to the MSSQL DB", policyEntityList.size());
+            if (count % BATCH_SIZE == 0) {
+                saveBatch(policyBatch, fundBatch, extraBatch);
+            }
         }
-        log.info("Migration completed");
+
+        log.info("Final batch save...");
+        saveBatch(policyBatch, fundBatch, extraBatch);
+
+        log.info("Migration completed. Total processed: {}", count);
     }
 
-    private void processACPPolicy(ACPPolicyEntity acpPolicy, String policyNo, LocalDate premiumDueDate) {
 
-        if (!sharedFunction.isEligiblePolicyStatus(acpPolicy.getStatus())) {
-            log.info("Skipping policy {} due to status {}", policyNo, acpPolicy.getStatus());
+    private <T> void processPolicyFast(
+            T entity,
+            String policyNo,
+            LocalDate premiumDueDate,
+            ContactDetailEntity contact,
+            List<MigrPolicyData> policyBatch,
+            List<FundCurrentBalanceEntity> fundBatch,
+            List<ExtraFields> extraBatch,
+            PolicyMapper<T> policyMapper,
+            ExtraFieldsMapper<T> extraMapper,
+            FundCurrentBalanceMapper<T> fundMapper,
+            Function<T, String> statusExtractor,
+            Function<T, Integer> aaeExtractor
+    ) {
+
+        if (!sharedFunction.isEligiblePolicyStatus(statusExtractor.apply(entity))) {
+            log.info("Skipping policy {} due to status {}", policyNo, statusExtractor.apply(entity));
             return;
         }
-        MigrPolicyDataDTO policyRequestDTO = new MigrPolicyDataDTO();
-        // ===== Policy (PO) =====
-        policyRequestDTO.setPoPlanCode(getSoftLogicProductCodeMapping(policyNo));
-        policyRequestDTO.setPoPlanVersion(acpPolicy.getPlanNo());
-        policyRequestDTO.setPoTerm(acpPolicy.getTerm());
-        policyRequestDTO.setPoDateOfProposal(acpPolicy.getInception());
-        policyRequestDTO.setPoPaymentTerm(setPaymentTerm(acpPolicy.getPremiumPaymentTerm()));
-        policyRequestDTO.setPoBsa(acpPolicy.getBasicSumAssured());
-        policyRequestDTO.setPoSumAtRisk(acpPolicy.getDthSar());
-        policyRequestDTO.setPoBasicPremium(getModalPremium(acpPolicy.getInsuredModalPremium()));
-        policyRequestDTO.setPoPremiumType(getPremiumType(acpPolicy.getPremiumPaymentTerm()));
-        policyRequestDTO.setPoAdvCode(getAgentCodeMapping(acpPolicy.getAgentCode()));
-        policyRequestDTO.setPoBeginDate(acpPolicy.getInception());
-        policyRequestDTO.setPoPolicyYear(getPolicyYear(acpPolicy.getInception()));
-        policyRequestDTO.setPoDateUnderwritten(acpPolicy.getInception());
-        policyRequestDTO.setPoPremiumDueDate(premiumDueDate != null ? premiumDueDate : acpPolicy.getNextPremium());
-        policyRequestDTO.setPoMode(getFrequencyString(Integer.parseInt(acpPolicy.getFrequency())));
-        policyRequestDTO.setPoPolicyStatusCode(getPolicyStatusCode(acpPolicy.getStatus(), acpPolicy.getLastPremiumDueDate()));
-        policyRequestDTO.setPoExpirationDate(acpPolicy.getExpiry());
-        policyRequestDTO.setPoBranchCode(getBranchCodeMapping(Integer.parseInt(acpPolicy.getSalesBranchCode())));
-        policyRequestDTO.setPoPremium(acpPolicy.getInsuredModalPremium());
-        policyRequestDTO.setPoAdminFee(BigDecimal.ZERO);
-        policyRequestDTO.setPoIllusMatuValue(BigDecimal.ZERO);
-        // ===== Life Assured (LA) =====
-        ContactDetailEntity contact = getContactDetailEntity(policyNo);
-        if (contact != null) {
-            policyRequestDTO.setLaPolicyNo(policyNo);
-            policyRequestDTO.setLaTitle(contact.getTitle());
-            policyRequestDTO.setLaFirstName(contact.getFirstName());
-            policyRequestDTO.setLaLastName(contact.getLastName());
-            policyRequestDTO.setLaAddress(contact.getAddress());
-            policyRequestDTO.setLaNic(contact.getNicNumber());
-            policyRequestDTO.setLaSex(getSexChar(contact.getGender()));
-            policyRequestDTO.setLaDob(contact.getDateOfBirth());
-            policyRequestDTO.setLaPhone1(getTenDigitMobile(contact.getMobile()));
-            policyRequestDTO.setLaPhone2(getOtherTelephoneNumber(contact.getOtherTelephoneNumber()));
-            policyRequestDTO.setLaNationality(contact.getNationality().toUpperCase());
-            policyRequestDTO.setLaEmail(getValidatedEmail(contact.getEmailAddress()));
-            policyRequestDTO.setLaAgeAdmitted(false);
-            policyRequestDTO.setLaAddressCity(extractAddressCity(contact.getCity()));
-            policyRequestDTO.setLaOccupation(String.valueOf(getOccupation(contact.getOccupation())));
-//            policyRequestDTO.setLaAnb(Integer.parseInt(getAdmittedAge(acpPolicy.getInception(), contact.getDateOfBirth()).toString()));
-            policyRequestDTO.setLaAnb(acpPolicy.getAae());
-            policyRequestDTO.setLaNameWithInitials(getNameWithInitials(contact.getFirstName(), contact.getLastName()));
-            policyRequestDTO.setLaIsPolicyAssign(false);
-            policyRequestDTO.setLaWeight(0);
-            policyRequestDTO.setLaHeight(0);
 
-            policyRequestDTO.setLaHbc(BigDecimal.ZERO);
-            policyRequestDTO.setLaInpc(BigDecimal.ZERO);
-            policyRequestDTO.setLaBonus(BigDecimal.ZERO);
-        } else {
-            log.error("Contact details not found for policy {}", policyNo);
+        MigrPolicyDataDTO dto = new MigrPolicyDataDTO();
+
+        // ===== Policy Mapping =====
+        policyMapper.map(dto, entity, policyNo, premiumDueDate);
+
+        // ===== Life Assured =====
+        mapLifeAssured(dto, contact, policyNo, aaeExtractor.apply(entity));
+
+        // ===== Convert + Add =====
+        policyBatch.add(dto.mapData(MigrPolicyData.class));
+
+        // ===== Extra Fields =====
+        ExtraFields extra = new ExtraFields();
+        extraMapper.map(extra, entity, policyNo);
+        extraBatch.add(extra);
+
+        // ===== Fund =====
+        if (fundMapper != null) {
+            FundCurrentBalanceEntity fund = new FundCurrentBalanceEntity();
+            fundMapper.map(fund, entity);
+            fundBatch.add(fund);
         }
+    }
 
-        // ===== No Spouse (SP) =====
+    private void processACPFast(
+            ACPPolicyEntity e,
+            String policyNo,
+            LocalDate premiumDueDate,
+            ContactDetailEntity contact,
+            List<MigrPolicyData> policyBatch,
+            List<ExtraFields> extraBatch
+    ) {
 
-        requestDTOList.add(policyRequestDTO);
+        processPolicyFast(
+                e, policyNo, premiumDueDate, contact,
+                policyBatch, new ArrayList<>(), extraBatch,
+
+                (dto, entity, polNo, dueDate) -> {
+                    dto.setPoPlanCode(getSoftLogicProductCodeMapping(polNo));
+                    dto.setPoPlanVersion(entity.getPlanNo());
+                    dto.setPoTerm(entity.getTerm());
+                    dto.setPoDateOfProposal(entity.getInception());
+                    dto.setPoPaymentTerm(setPaymentTerm(entity.getPremiumPaymentTerm()));
+                    dto.setPoBsa(entity.getBasicSumAssured());
+                    dto.setPoSumAtRisk(entity.getDthSar());
+                    dto.setPoBasicPremium(getModalPremium(entity.getInsuredModalPremium()));
+                    dto.setPoPremiumType(getPremiumType(entity.getPremiumPaymentTerm()));
+                    dto.setPoAdvCode(getAgentCodeMapping(entity.getAgentCode()));
+                    dto.setPoBeginDate(entity.getInception());
+                    dto.setPoPolicyYear(getPolicyYear(entity.getInception()));
+                    dto.setPoDateUnderwritten(entity.getInception());
+                    dto.setPoPremiumDueDate(dueDate != null ? dueDate : entity.getNextPremium());
+                    dto.setPoMode(getFrequencyString(Integer.parseInt(entity.getFrequency())));
+                    dto.setPoPolicyStatusCode(getPolicyStatusCode(entity.getStatus(), entity.getLastPremiumDueDate()));
+                    dto.setPoExpirationDate(entity.getExpiry());
+                    dto.setPoBranchCode(getBranchCodeMapping(Integer.parseInt(entity.getSalesBranchCode())));
+                    dto.setPoPremium(entity.getInsuredModalPremium());
+                    dto.setPoAdminFee(BigDecimal.ZERO);
+                    dto.setPoIllusMatuValue(BigDecimal.ZERO);
+
+                    mapSpouse(dto, null, null, null, null, 0);
+                },
+
+                (extra, entity, polNo) -> {
+                    extra.setPolicyNo(polNo);
+                    extra.setProposalNo(entity.getProductCode() + "/" + entity.getProposalNo());
+                    extra.setCompanyBranchCode(String.valueOf(entity.getCompanyBranchCode()));
+                    extra.setCompanyBranchName(entity.getCompanyBranchName());
+                    extra.setPolicyBranchCode(String.valueOf(entity.getCompanyBranchCode()));
+                    extra.setPolicyBranchName(entity.getCompanyBranchName());
+                },
+
+                null,
+
+                ACPPolicyEntity::getStatus,
+                ACPPolicyEntity::getAae
+        );
+    }
+
+    private void processMainDataFast(
+            MainDataReportEntity e,
+            String policyNo,
+            LocalDate premiumDueDate,
+            ContactDetailEntity contact,
+            List<MigrPolicyData> policyBatch,
+            List<FundCurrentBalanceEntity> fundBatch,
+            List<ExtraFields> extraBatch
+    ) {
+
+        processPolicyFast(
+                e, policyNo, premiumDueDate, contact,
+                policyBatch, fundBatch, extraBatch,
+
+                (dto, entity, polNo, dueDate) -> {
+
+                    dto.setPoPlanCode(getSoftLogicProductCodeMapping(polNo));
+                    dto.setPoPlanVersion(entity.getPlanNo());
+                    dto.setPoTerm(entity.getTerm());
+                    dto.setPoDateOfProposal(entity.getInception());
+                    dto.setPoPaymentTerm(setPaymentTerm(entity.getPremiumPaymentTerm()));
+                    dto.setPoBsa(entity.getBasicSumAssured());
+                    dto.setPoSumAtRisk(entity.getDth_Sar());
+                    dto.setPoBasicPremium(getModalPremium(entity.getModalPremium()));
+                    dto.setPoPremiumType(getPremiumType(entity.getPremiumPaymentTerm()));
+                    dto.setPoAdvCode(getAgentCodeMapping(entity.getAgentCode()));
+                    dto.setPoBeginDate(entity.getInception());
+                    dto.setPoPolicyYear(getPolicyYear(entity.getInception()));
+                    dto.setPoDateUnderwritten(entity.getInception());
+                    dto.setPoPremiumDueDate(dueDate != null ? dueDate : entity.getNextPremium());
+                    dto.setPoMode(getFrequencyString(entity.getFrequency()));
+                    dto.setPoPolicyStatusCode(getPolicyStatusCode(entity.getStatus(), entity.getLastPremiumDueDate()));
+                    dto.setPoExpirationDate(entity.getExpiry());
+                    dto.setPoBranchCode(getBranchCodeMapping(entity.getSalesBranchCode()));
+                    dto.setPoPremium(entity.getModalPremium());
+                    dto.setPoAdminFee(BigDecimal.ZERO);
+                    dto.setPoIllusMatuValue(BigDecimal.ZERO);
+
+                    mapSpouse(dto,
+                            entity.getSpouseChildFullName(),
+                            entity.getSpouseChildTitle(),
+                            entity.getSpouseChildGender(),
+                            entity.getSpouseChildDob(),
+                            entity.getSpouseChildAge());
+                },
+
+                (extra, entity, polNo) -> {
+                    extra.setPolicyNo(polNo);
+                    extra.setProposalNo(entity.getProductCode() + "/" + entity.getProposalNo());
+                    extra.setCompanyBranchCode(String.valueOf(entity.getCompanyBranchCode()));
+                    extra.setCompanyBranchName(entity.getCompanyBranchName());
+                    extra.setPolicyBranchCode(String.valueOf(entity.getCompanyBranchCode()));
+                    extra.setPolicyBranchName(entity.getCompanyBranchName());
+
+                    extra.setInterestRate(BigDecimal.valueOf(entity.getInterestRate()));
+                    extra.setTpdPremiumLife1(entity.getTpdPremiumLife1());
+                    extra.setTpdPremiumLife2(entity.getTpdPremiumLife2());
+                    extra.setInterestCredited(entity.getInterestCredited());
+                    extra.setSurrenderValue(entity.getSurrenderValue());
+                    extra.setPrmSurrenderValue(entity.getPrmSurrenderValue());
+                    extra.setBstSurrenderValue(entity.getBstSurrenderValue());
+                },
+
+                (fund, entity) -> {
+                    fund.setPolicyNo(policyNo);
+                    fund.setTotalBalance(entity.getValueToday());
+                    fund.setTopupBalance(entity.getBstValueToday());
+                    fund.setPrmValueToday(entity.getPrmValueToday());
+                },
+
+                MainDataReportEntity::getStatus,
+                MainDataReportEntity::getAae
+        );
+    }
+
+    private void processALHFast(
+            MainDataALHReportEntity e,
+            String policyNo,
+            LocalDate premiumDueDate,
+            ContactDetailEntity contact,
+            List<MigrPolicyData> policyBatch,
+            List<ExtraFields> extraBatch
+    ) {
+
+        processPolicyFast(
+                e,
+                policyNo,
+                premiumDueDate,
+                contact,
+                policyBatch,
+                new ArrayList<>(), // ALH has no fund mapping
+                extraBatch,
+
+                // ===== Policy Mapper =====
+                (dto, entity, polNo, dueDate) -> {
+
+                    dto.setPoPlanCode(getSoftLogicProductCodeMapping(polNo));
+                    dto.setPoPlanVersion(entity.getPlanNo());
+                    dto.setPoTerm(entity.getTerm());
+                    dto.setPoDateOfProposal(entity.getInception());
+                    dto.setPoPaymentTerm(entity.getPremiumPaymentTerm());
+                    dto.setPoBsa(entity.getBasicSumAssured());
+                    dto.setPoSumAtRisk(entity.getDth_Sar());
+                    dto.setPoBasicPremium(getModalPremium(entity.getModalPremium()));
+                    dto.setPoPremiumType("Regular");
+                    dto.setPoAdvCode(getAgentCodeMapping(entity.getAgentCode()));
+                    dto.setPoBeginDate(entity.getInception());
+                    dto.setPoPolicyYear(getPolicyYear(entity.getInception()));
+                    dto.setPoDateUnderwritten(entity.getInception());
+                    dto.setPoPremiumDueDate(dueDate != null ? dueDate : entity.getNextPremium());
+                    dto.setPoMode(getFrequencyString(entity.getFrequency()));
+                    dto.setPoPolicyStatusCode(getPolicyStatusCode(entity.getStatus(), entity.getLastPremiumDueDate()));
+                    dto.setPoExpirationDate(entity.getExpiry());
+                    dto.setPoBranchCode(getBranchCodeMapping(entity.getSalesBranchCode()));
+                    dto.setPoPremium(entity.getModalPremium());
+                    dto.setPoAdminFee(BigDecimal.ZERO);
+                    dto.setPoIllusMatuValue(BigDecimal.ZERO);
+
+                    // ===== Spouse =====
+                    mapSpouse(dto,
+                            entity.getSpouseFullName(),
+                            entity.getSpouseTitle(),
+                            entity.getSpouseGender(),
+                            entity.getSpouseDob(),
+                            entity.getSpouseAge());
+
+                    // ===== ALH-specific LA fields =====
+                    dto.setLaHbc(entity.getHb_Sa());
+                    dto.setLaInpc(entity.getInpSar());
+                    dto.setLaBonus(entity.getMlBonus());
+                },
+
+                // ===== Extra Fields Mapper =====
+                (extra, entity, polNo) -> {
+                    extra.setPolicyNo(polNo);
+                    extra.setProposalNo(entity.getProductCode() + "/" + entity.getProposalNo());
+                    extra.setCompanyBranchCode(String.valueOf(entity.getCompanyBranchCode()));
+                    extra.setCompanyBranchName(entity.getCompanyBranchName());
+                    extra.setPolicyBranchCode(String.valueOf(entity.getCompanyBranchCode()));
+                    extra.setPolicyBranchName(entity.getCompanyBranchName());
+
+                    // ALH defaults
+                    extra.setInterestRate(BigDecimal.ZERO);
+                    extra.setTpdPremiumLife1(BigDecimal.ZERO);
+                    extra.setTpdPremiumLife2(BigDecimal.ZERO);
+                    extra.setInterestCredited(BigDecimal.ZERO);
+                    extra.setSurrenderValue(BigDecimal.ZERO);
+                    extra.setPrmSurrenderValue(BigDecimal.ZERO);
+                    extra.setBstSurrenderValue(BigDecimal.ZERO);
+                },
+
+                // ===== No Fund Mapper =====
+                null,
+
+                // ===== Status extractor =====
+                MainDataALHReportEntity::getStatus,
+
+                // ===== AAE extractor =====
+                MainDataALHReportEntity::getAae
+        );
+    }
+
+
+    private void mapLifeAssured(MigrPolicyDataDTO dto, ContactDetailEntity contact, String policyNo, int aae) {
+        if (contact == null) {
+            log.error("Contact details not found for policy {}", policyNo);
+            return;
+        }
+        dto.setLaPolicyNo(policyNo);
+        dto.setLaTitle(contact.getTitle());
+        dto.setLaFirstName(contact.getFirstName());
+        dto.setLaLastName(contact.getLastName());
+        dto.setLaAddress(contact.getAddress());
+        dto.setLaNic(contact.getNicNumber());
+        dto.setLaSex(getSexChar(contact.getGender()));
+        dto.setLaDob(contact.getDateOfBirth());
+        dto.setLaPhone1(getTenDigitMobile(contact.getMobile()));
+        dto.setLaPhone2(getOtherTelephoneNumber(contact.getOtherTelephoneNumber()));
+        dto.setLaNationality(contact.getNationality().toUpperCase());
+        dto.setLaEmail(getValidatedEmail(contact.getEmailAddress()));
+        dto.setLaAgeAdmitted(false);
+        dto.setLaAddressCity(extractAddressCity(contact.getCity()));
+        dto.setLaOccupation(String.valueOf(getOccupation(contact.getOccupation())));
+        dto.setLaAnb(aae);
+        dto.setLaPrefLanguage(getLanguageChar(contact.getLanguagePreference()));
+        dto.setLaNameWithInitials(getNameWithInitials(contact.getFirstName(), contact.getLastName()));
+        dto.setLaIsPolicyAssign(false);
+        dto.setLaWeight(0);
+        dto.setLaHeight(0);
+    }
+
+    private void mapSpouse(MigrPolicyDataDTO dto, String name, String title, String gender, LocalDate dob, int age) {
+        if (name != null && !name.trim().isEmpty()) {
+            dto.setSpTitle(title);
+            dto.setSpFirstName(name);
+            dto.setSpSex(getSexChar(gender));
+            dto.setSpDob(dob);
+            dto.setSpAnb(age);
+        } else {
+            dto.setSpSex("");
+            dto.setSpAnb(0);
+        }
+        dto.setSpAgeAdmitted(false);
+        dto.setSpHeight(0);
+        dto.setSpWeight(0);
     }
 
     public String getNameWithInitials(String firstName, String lastName) {
@@ -243,182 +560,6 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
             throw new IllegalArgumentException(
                     "Invalid payment term: " + paymentTerm, ex);
         }
-    }
-
-    private void processMainDataReport(MainDataReportEntity mainDataReport, String policyNo, LocalDate premiumDueDate) {
-
-        if (!sharedFunction.isEligiblePolicyStatus(mainDataReport.getStatus())) {
-            log.info("Skipping policy {} due to status {}", policyNo, mainDataReport.getStatus());
-            return;
-        }
-
-        MigrPolicyDataDTO policyRequestDTO = new MigrPolicyDataDTO();
-        FundCurrentBalanceEntity fundCurrentBalanceEntity = new FundCurrentBalanceEntity();
-        // ===== Policy (PO) =====
-        policyRequestDTO.setPoPlanCode(getSoftLogicProductCodeMapping(policyNo));
-        policyRequestDTO.setPoPlanVersion(mainDataReport.getPlanNo());
-        policyRequestDTO.setPoTerm(mainDataReport.getTerm());
-        policyRequestDTO.setPoDateOfProposal(mainDataReport.getInception());
-        policyRequestDTO.setPoPaymentTerm(setPaymentTerm(mainDataReport.getPremiumPaymentTerm())); // dispute
-        policyRequestDTO.setPoBsa(mainDataReport.getBasicSumAssured());
-        policyRequestDTO.setPoSumAtRisk(mainDataReport.getDth_Sar());
-        policyRequestDTO.setPoBasicPremium(getModalPremium(mainDataReport.getModalPremium()));
-        policyRequestDTO.setPoPremiumType(getPremiumType(mainDataReport.getPremiumPaymentTerm())); // dispute
-        policyRequestDTO.setPoAdvCode(getAgentCodeMapping(mainDataReport.getAgentCode()));
-        policyRequestDTO.setPoBeginDate(mainDataReport.getInception());
-        policyRequestDTO.setPoPolicyYear(getPolicyYear(mainDataReport.getInception()));
-        policyRequestDTO.setPoDateUnderwritten(mainDataReport.getInception());
-        policyRequestDTO.setPoPremiumDueDate(premiumDueDate != null ? premiumDueDate : mainDataReport.getNextPremium());
-        policyRequestDTO.setPoMode(getFrequencyString(mainDataReport.getFrequency()));
-        policyRequestDTO.setPoPolicyStatusCode(getPolicyStatusCode(mainDataReport.getStatus(), mainDataReport.getLastPremiumDueDate()));
-        policyRequestDTO.setPoExpirationDate(mainDataReport.getExpiry());
-        policyRequestDTO.setPoBranchCode(getBranchCodeMapping(mainDataReport.getSalesBranchCode()));
-        policyRequestDTO.setPoPremium(mainDataReport.getModalPremium());
-        policyRequestDTO.setPoAdminFee(BigDecimal.ZERO);
-        policyRequestDTO.setPoIllusMatuValue(BigDecimal.ZERO);
-        // ===== Life Assured (LA) =====
-        ContactDetailEntity contact = getContactDetailEntity(policyNo);
-        policyRequestDTO.setLaPolicyNo(policyNo);
-        if (contact != null) {
-            policyRequestDTO.setLaTitle(contact.getTitle());
-            policyRequestDTO.setLaFirstName(contact.getFirstName());
-            policyRequestDTO.setLaLastName(contact.getLastName());
-            policyRequestDTO.setLaAddress(contact.getAddress());
-            policyRequestDTO.setLaNic(contact.getNicNumber());
-            policyRequestDTO.setLaSex(getSexChar(contact.getGender()));
-            policyRequestDTO.setLaDob(contact.getDateOfBirth());
-            policyRequestDTO.setLaPhone1(getTenDigitMobile(contact.getMobile()));
-            policyRequestDTO.setLaPhone2(getOtherTelephoneNumber(contact.getOtherTelephoneNumber()));
-            policyRequestDTO.setLaNationality(contact.getNationality().toUpperCase());
-            policyRequestDTO.setLaEmail(getValidatedEmail(contact.getEmailAddress()));
-            policyRequestDTO.setLaAgeAdmitted(false);
-            policyRequestDTO.setLaAddressCity(extractAddressCity(contact.getCity()));
-            policyRequestDTO.setLaOccupation(String.valueOf(getOccupation(contact.getOccupation())));
-//            policyRequestDTO.setLaAnb(Integer.parseInt(getAdmittedAge(mainDataReport.getInception(), contact.getDateOfBirth()).toString()));
-            policyRequestDTO.setLaAnb(mainDataReport.getAae());
-            policyRequestDTO.setLaPrefLanguage(getLanguageChar(contact.getLanguagePreference()));
-            policyRequestDTO.setLaNameWithInitials(getNameWithInitials(contact.getFirstName(), contact.getLastName()));
-            policyRequestDTO.setLaIsPolicyAssign(false);
-            policyRequestDTO.setLaWeight(0);
-            policyRequestDTO.setLaHeight(0);
-
-            policyRequestDTO.setLaHbc(BigDecimal.ZERO);
-            policyRequestDTO.setLaInpc(BigDecimal.ZERO);
-            policyRequestDTO.setLaBonus(BigDecimal.ZERO);
-        } else {
-            log.error("Contact details not found for policy {}", policyNo);
-        }
-        // ===== Spouse (SP) =====
-        String spouseName = mainDataReport.getSpouseChildFullName();
-        if (spouseName != null && !spouseName.trim().isEmpty()) {
-            policyRequestDTO.setSpTitle(mainDataReport.getSpouseChildTitle());
-            policyRequestDTO.setSpFirstName(mainDataReport.getSpouseChildFullName());
-            policyRequestDTO.setSpSex(getSexChar(mainDataReport.getSpouseChildGender()));
-            policyRequestDTO.setSpDob(mainDataReport.getSpouseChildDob());
-            policyRequestDTO.setSpAnb(mainDataReport.getSpouseChildAge());
-            policyRequestDTO.setSpAgeAdmitted(false);
-            policyRequestDTO.setSpHeight(0);
-            policyRequestDTO.setSpWeight(0);
-        } else {
-            policyRequestDTO.setSpSex("");
-            policyRequestDTO.setSpAnb(0);
-            policyRequestDTO.setSpAgeAdmitted(false);
-            policyRequestDTO.setSpHeight(0);
-            policyRequestDTO.setSpWeight(0);
-        }
-
-        fundCurrentBalanceEntity.setPolicyNo(policyNo);
-        fundCurrentBalanceEntity.setTotalBalance(mainDataReport.getValueToday());
-        fundCurrentBalanceEntity.setTopupBalance(mainDataReport.getBstValueToday());
-        fundCurrentBalanceEntity.setPrmValueToday(mainDataReport.getPrmValueToday());
-
-        fundCurrentBalanceEntityList.add(fundCurrentBalanceEntity);
-
-        requestDTOList.add(policyRequestDTO);
-    }
-
-    private void processALHReport(MainDataALHReportEntity alhReport, String policyNo, LocalDate premiumDueDate) {
-
-        if (!sharedFunction.isEligiblePolicyStatus(alhReport.getStatus())) {
-            log.info("Skipping policy {} due to status {}", policyNo, alhReport.getStatus());
-            return;
-        }
-
-        MigrPolicyDataDTO policyRequestDTO = new MigrPolicyDataDTO();
-        // ===== Policy (PO) =====
-        policyRequestDTO.setPoPlanCode(getSoftLogicProductCodeMapping(policyNo));
-        policyRequestDTO.setPoPlanVersion(alhReport.getPlanNo());
-        policyRequestDTO.setPoTerm(alhReport.getTerm());
-        policyRequestDTO.setPoDateOfProposal(alhReport.getInception());
-        policyRequestDTO.setPoPaymentTerm(alhReport.getPremiumPaymentTerm());
-        policyRequestDTO.setPoBsa(alhReport.getBasicSumAssured());
-        policyRequestDTO.setPoSumAtRisk(alhReport.getDth_Sar());
-        policyRequestDTO.setPoBasicPremium(getModalPremium(alhReport.getModalPremium()));
-        policyRequestDTO.setPoPremiumType("Regular");
-        policyRequestDTO.setPoAdvCode(getAgentCodeMapping(alhReport.getAgentCode()));
-        policyRequestDTO.setPoBeginDate(alhReport.getInception());
-        policyRequestDTO.setPoPolicyYear(getPolicyYear(alhReport.getInception()));
-        policyRequestDTO.setPoDateUnderwritten(alhReport.getInception());
-        policyRequestDTO.setPoPremiumDueDate(premiumDueDate != null ? premiumDueDate : alhReport.getNextPremium());
-        policyRequestDTO.setPoMode(getFrequencyString(alhReport.getFrequency()));
-        policyRequestDTO.setPoPolicyStatusCode(getPolicyStatusCode(alhReport.getStatus(), alhReport.getLastPremiumDueDate()));
-        policyRequestDTO.setPoExpirationDate(alhReport.getExpiry());
-        policyRequestDTO.setPoBranchCode(getBranchCodeMapping(alhReport.getSalesBranchCode()));
-        policyRequestDTO.setPoPremium(alhReport.getModalPremium());
-        policyRequestDTO.setPoAdminFee(BigDecimal.ZERO);
-        policyRequestDTO.setPoIllusMatuValue(BigDecimal.ZERO);
-        // ===== Life Assured (LA) =====
-        ContactDetailEntity contact = getContactDetailEntity(policyNo);
-        if (contact != null) {
-            policyRequestDTO.setLaPolicyNo(policyNo);
-            policyRequestDTO.setLaTitle(contact.getTitle());
-            policyRequestDTO.setLaFirstName(contact.getFirstName());
-            policyRequestDTO.setLaLastName(contact.getLastName());
-            policyRequestDTO.setLaAddress(contact.getAddress());
-            policyRequestDTO.setLaNic(contact.getNicNumber());
-            policyRequestDTO.setLaSex(getSexChar(contact.getGender()));
-            policyRequestDTO.setLaDob(contact.getDateOfBirth());
-            policyRequestDTO.setLaPhone1(getTenDigitMobile(contact.getMobile()));
-            policyRequestDTO.setLaPhone2(getOtherTelephoneNumber(contact.getOtherTelephoneNumber()));
-            policyRequestDTO.setLaNationality(contact.getNationality().toUpperCase());
-            policyRequestDTO.setLaEmail(getValidatedEmail(contact.getEmailAddress()));
-            policyRequestDTO.setLaAgeAdmitted(false);
-            policyRequestDTO.setLaAddressCity(extractAddressCity(contact.getCity()));
-            policyRequestDTO.setLaOccupation(String.valueOf(getOccupation(contact.getOccupation())));
-//            policyRequestDTO.setLaAnb(Integer.parseInt(getAdmittedAge(alhReport.getInception(), contact.getDateOfBirth()).toString()));
-            policyRequestDTO.setLaAnb(alhReport.getAae());
-            policyRequestDTO.setLaPrefLanguage(getLanguageChar(contact.getLanguagePreference()));
-            policyRequestDTO.setLaNameWithInitials(getNameWithInitials(contact.getFirstName(), contact.getLastName()));
-            policyRequestDTO.setLaIsPolicyAssign(false);
-            policyRequestDTO.setLaWeight(0);
-            policyRequestDTO.setLaHeight(0);
-
-            policyRequestDTO.setLaHbc(alhReport.getHb_Sa());
-            policyRequestDTO.setLaInpc(alhReport.getInpSar());
-            policyRequestDTO.setLaBonus(alhReport.getMlBonus());
-        } else {
-            log.error("Contact details not found for policy {}", policyNo);
-        }
-        // ===== Spouse (SP) =====
-        String spouseName = alhReport.getSpouseFullName();
-        if (spouseName != null && !spouseName.trim().isEmpty()) {
-            policyRequestDTO.setSpTitle(alhReport.getSpouseTitle());
-            policyRequestDTO.setSpFirstName(alhReport.getSpouseFullName());
-            policyRequestDTO.setSpSex(getSexChar(alhReport.getSpouseGender()));
-            policyRequestDTO.setSpDob(alhReport.getSpouseDob());
-            policyRequestDTO.setSpAnb(alhReport.getSpouseAge());
-            policyRequestDTO.setSpAgeAdmitted(false);
-            policyRequestDTO.setSpHeight(0);
-            policyRequestDTO.setSpWeight(0);
-        } else {
-            policyRequestDTO.setSpSex("");
-            policyRequestDTO.setSpAnb(0);
-            policyRequestDTO.setSpAgeAdmitted(false);
-            policyRequestDTO.setSpHeight(0);
-            policyRequestDTO.setSpWeight(0);
-        }
-
-        requestDTOList.add(policyRequestDTO);
     }
 
 
@@ -529,7 +670,7 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
         if (policyNo == null || policyNo.trim().isEmpty()) {
             return null;
         }
-        PolicyNumberResponseDTO policyNumber = extractPolicyNumber(policyNo);
+        PolicyNumberResponseDTO policyNumber = sharedFunction.extractPolicyNumber(policyNo);
 
         return contactDetailRepository
                 .findFirstByProductAndPolicyNo(
@@ -649,7 +790,7 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
 
     private String getSoftLogicProductCodeMapping(String policyNo) {
 
-        PolicyNumberResponseDTO policyNumber = extractPolicyNumber(policyNo);
+        PolicyNumberResponseDTO policyNumber = sharedFunction.extractPolicyNumber(policyNo);
         String productCode = policyNumber.getProductCode();
 
         return productCodeMappingList.stream()
@@ -657,114 +798,6 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
                 .map(ProductCodeMappingEntity::getSlProductCode)
                 .findFirst()
                 .orElse(null);
-    }
-
-
-    private Object findPolicyInRepositories(String policyNumber) {
-
-        PolicyNumberResponseDTO extracted = extractPolicyNumber(policyNumber);
-        String productCode = extracted.getProductCode();
-        Integer policyNo = extracted.getPolicyNo();
-
-        // 1. Try mainDataReportRepository
-        Optional<MainDataReportEntity> mainDataReportOpt =
-                mainDataReportRepository.findFirstByProductCodeAndPolicyNo(productCode, policyNo);
-        if (mainDataReportOpt.isPresent()) {
-            log.info("Policy {} found in MainDataReportRepository", policyNumber);
-            return mainDataReportOpt.get();
-        }
-        // 2. Try mainDataALHReportRepository
-        Optional<MainDataALHReportEntity> mainDataALHOpt =
-                mainDataALHReportRepository.findFirstByProductCodeAndPolicyNo(productCode, policyNo);
-        if (mainDataALHOpt.isPresent()) {
-            log.info("Policy {} found in MainDataALHReportRepository", policyNumber);
-            return mainDataALHOpt.get();
-        }
-        // 3. Try acpPolicyRepository
-        Optional<ACPPolicyEntity> acpPolicyOpt =
-                acpPolicyRepository.findFirstByProductCodeAndPolicyNo(productCode, policyNo.toString());
-        if (acpPolicyOpt.isPresent()) {
-            log.info("Policy {} found in ACPPolicyRepository", policyNumber);
-            return acpPolicyOpt.get();
-        }
-
-        // Policy isn't found anywhere
-        log.warn("Policy {} not found in any repository", policyNumber);
-        return null;
-    }
-
-
-//    private PolicyNumberResponseDTO extractPolicyNumber(String policyRef) {
-//
-//        if (policyRef == null || !policyRef.contains("/")) {
-//            throw new IllegalArgumentException("Invalid policy reference: " + policyRef);
-//        }
-//
-//        String[] parts = policyRef.split("/");
-//
-//        if (parts.length != 2) {
-//            throw new IllegalArgumentException("Invalid policy reference format: " + policyRef);
-//        }
-//
-//        String productCode = parts[0].trim();
-//        int policyNo;
-//
-//        try {
-//            policyNo = Integer.parseInt(parts[1].trim());
-//        } catch (NumberFormatException e) {
-//            throw new IllegalArgumentException("Invalid policy number: " + parts[1], e);
-//        }
-//
-//        return new PolicyNumberResponseDTO(productCode, policyNo);
-//    }
-
-    private PolicyNumberResponseDTO extractPolicyNumber(String policyRef) {
-
-        if (policyRef == null || policyRef.isBlank()) {
-            throw new IllegalArgumentException("Policy reference cannot be null or empty");
-        }
-
-        policyRef = policyRef.trim();
-
-        String productCode;
-        int policyNo;
-
-        // Case 1: Format with slash (ASP/1082429)
-        if (policyRef.contains("/")) {
-
-            String[] parts = policyRef.split("/");
-
-            if (parts.length != 2) {
-                throw new IllegalArgumentException("Invalid policy reference format: " + policyRef);
-            }
-
-            productCode = parts[0].trim();
-
-            try {
-                policyNo = Integer.parseInt(parts[1].trim());
-            } catch (NumberFormatException e) {
-                throw new IllegalArgumentException("Invalid policy number: " + parts[1], e);
-            }
-
-        }
-        // Case 2: Format without slash (ULF527879)
-        else {
-
-            // Expect: 3 letters + digits
-            if (!policyRef.matches("[A-Z]{3}\\d+")) {
-                throw new IllegalArgumentException("Invalid policy reference format: " + policyRef);
-            }
-
-            productCode = policyRef.substring(0, 3);
-
-            try {
-                policyNo = Integer.parseInt(policyRef.substring(3));
-            } catch (NumberFormatException e) {
-                throw new IllegalArgumentException("Invalid policy number: " + policyRef, e);
-            }
-        }
-
-        return new PolicyNumberResponseDTO(productCode, policyNo);
     }
 
     private String extractAddressCity(String addressCity){
@@ -781,4 +814,29 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
     private BigDecimal getModalPremium(BigDecimal insuredModalPremium){
         return insuredModalPremium.setScale(0, RoundingMode.DOWN);
     }
+
+    private void saveBatch(List<MigrPolicyData> policyBatch,
+                           List<FundCurrentBalanceEntity> fundBatch,
+                           List<ExtraFields> extraBatch) {
+
+        if (!policyBatch.isEmpty()) {
+            policyRepository.saveAll(policyBatch);
+            policyBatch.clear();
+        }
+
+        if (!fundBatch.isEmpty()) {
+            fundCurrentBalanceEntityRepository.saveAll(fundBatch);
+            fundBatch.clear();
+        }
+
+        if (!extraBatch.isEmpty()) {
+            extraFieldsRepository.saveAll(extraBatch);
+            extraBatch.clear();
+        }
+    }
+
+    private PolicyNumberResponseDTO extractPolicyNumberHelper (String policyRef) {
+        return sharedFunction.extractPolicyNumber(policyRef);
+    }
 }
+
