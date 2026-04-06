@@ -16,5 +16,5 @@ public interface ContactDetailRepository extends JpaRepository<ContactDetailEnti
     @Query(value = "TRUNCATE TABLE contact_detail RESTART IDENTITY CASCADE", nativeQuery = true)
     void truncateTable();
 
-    Optional<ContactDetailEntity> findByProductAndPolicyNo(String product, String policyNo);
+    Optional<ContactDetailEntity> findFirstByProductAndPolicyNo(String product, String policyNo);
 }

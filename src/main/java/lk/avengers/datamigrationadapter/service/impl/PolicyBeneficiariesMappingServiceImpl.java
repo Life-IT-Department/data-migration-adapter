@@ -10,6 +10,7 @@ import lk.avengers.datamigrationadapter.repository.postgresql.reportdb.MainDataA
 import lk.avengers.datamigrationadapter.repository.postgresql.reportdb.MainDataReportRepository;
 import lk.avengers.datamigrationadapter.service.PolicyBeneficiariesMappingService;
 import lk.avengers.datamigrationadapter.util.MainExcelReader;
+import lk.avengers.datamigrationadapter.util.SharedFunction;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -18,7 +19,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 @Slf4j
@@ -30,6 +30,7 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
     private final MainDataALHReportRepository mainDataALHReportRepository;
     private final PolicyBeneficiariesRepository policyBeneficiariesRepository;
     private final MainExcelReader mainExcelReader;
+    private final SharedFunction sharedFunction;
 
     private final static String SPOUSE_TYPE = "Spouse";
     private final static String CHILD_TYPE = "Child";
@@ -48,7 +49,7 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
             String[] policyNoSplit = policyNo.trim().split("/");
             mainDataReportRepository.findFirstByProductCodeAndPolicyNo(policyNoSplit[0], Integer.parseInt(policyNoSplit[1]))
                     .ifPresentOrElse(mainDataReportEntity -> {
-                        if (!isEligiblePolicyStatus(mainDataReportEntity.getStatus())) {
+                        if (!sharedFunction.isEligiblePolicyStatus(mainDataReportEntity.getStatus())) {
                             log.info("Skipping policy {} due to status {}", policyNo, mainDataReportEntity.getStatus());
                             return;
                         }
@@ -82,7 +83,7 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
     private void getDetailsFromALHMainData(String policyNo, String[] policyNoSplit, List<PolicyBeneficiariesEntity> allBeneficiariesEntityList) {
         mainDataALHReportRepository.findFirstByProductCodeAndPolicyNo(policyNoSplit[0], Integer.parseInt(policyNoSplit[1]))
                 .ifPresentOrElse(mainDataALHReportEntity -> {
-                    if (!isEligiblePolicyStatus(mainDataALHReportEntity.getStatus())) {
+                    if (!sharedFunction.isEligiblePolicyStatus(mainDataALHReportEntity.getStatus())) {
                         log.info("Skipping policy {} due to status {}", policyNo, mainDataALHReportEntity.getStatus());
                     } else {
                         PolicyBeneficiariesEntity spouseDetailsFromALHMainData = getSpouseDetailsFromALHMainData(mainDataALHReportEntity, policyNo);
@@ -414,16 +415,6 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
             // Default value
             return 'M';
         }
-    }
-
-    private boolean isEligiblePolicyStatus(String status) {
-
-        if (status == null) {
-            return false;
-        }
-
-        return status.equalsIgnoreCase("In Force")
-                || "Lapsed".equalsIgnoreCase(status);
     }
 
 }

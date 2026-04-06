@@ -9,6 +9,7 @@ import lk.avengers.datamigrationadapter.repository.softlogicdb.MigrPremiumsDueRe
 import lk.avengers.datamigrationadapter.repository.softlogicdb.MigrPremiumsPaidRepository;
 import lk.avengers.datamigrationadapter.service.PremiumsMappingService;
 import lk.avengers.datamigrationadapter.util.MainExcelReader;
+import lk.avengers.datamigrationadapter.util.SharedFunction;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -37,6 +38,7 @@ public class PremiumsMappingServiceImpl implements PremiumsMappingService {
     private final ACPPolicyRepository acpPolicyRepository;
 
     private final MainExcelReader mainExcelReader;
+    private final SharedFunction sharedFunction;
 
     private static final String IN_COMING = "In Coming";
     private static final String PREMIUM = "Premium";
@@ -72,7 +74,7 @@ public class PremiumsMappingServiceImpl implements PremiumsMappingService {
 
             for (String policy : policyList) {
                 String policyStatus = getStatus(policy);
-                if (!isEligiblePolicyStatus(policyStatus)) {
+                if (!sharedFunction.isEligiblePolicyStatus(policyStatus)) {
                     log.info("Skipping policy {} due to status {}", policy, policyStatus);
                     continue;
                 }
@@ -224,14 +226,6 @@ public class PremiumsMappingServiceImpl implements PremiumsMappingService {
             case 4 -> 1;
             default -> 0;
         };
-    }
-
-    private boolean isEligiblePolicyStatus(String status) {
-        if (status == null) {
-            return false;
-        }
-        return status.equalsIgnoreCase("In Force")
-                || "Lapsed".equalsIgnoreCase(status);
     }
 
     private String getStatus(String policyNo){

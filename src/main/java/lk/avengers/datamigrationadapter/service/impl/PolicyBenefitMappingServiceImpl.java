@@ -18,6 +18,7 @@ import lk.avengers.datamigrationadapter.repository.softlogicdb.MigrPolicyReposit
 import lk.avengers.datamigrationadapter.repository.softlogicdb.PolicyBenefitsEntityRepository;
 import lk.avengers.datamigrationadapter.service.PolicyBenefitMappingService;
 import lk.avengers.datamigrationadapter.util.MainExcelReader;
+import lk.avengers.datamigrationadapter.util.SharedFunction;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -43,6 +44,8 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
     private final ACPPolicyRepository acpPolicyRepository;
     private final PolicyBenefitsEntityRepository policyBenefitsEntityRepository;
     private final MigrPolicyRepository migrPolicyRepository;
+
+    private final SharedFunction sharedFunction;
 
     private final MainExcelReader mainExcelReader;
     private static final String SPOUSE = "Spouse";
@@ -84,7 +87,7 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
             String[] policyNoSplit = policyNo.trim().split("/");
             mainDataReportRepository.findFirstByProductCodeAndPolicyNo(policyNoSplit[0], Integer.parseInt(policyNoSplit[1]))
                     .ifPresentOrElse(mainDataReportEntity -> {
-                        if (!isEligiblePolicyStatus(mainDataReportEntity.getStatus())) {
+                        if (!sharedFunction.isEligiblePolicyStatus(mainDataReportEntity.getStatus())) {
                             log.info("Skipping policy {} due to status {}", policyNo, mainDataReportEntity.getStatus());
                             return;
                         }
@@ -279,7 +282,7 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
     private void getDetailsFromACPData(String policyNo, String[] policyNoSplit, List<BenefitCodeMapperEntity> benefitCodeMapperEntityList, List<MigrPolicyBenefitsEntity> policyBenefitsEntityList) {
         acpPolicyRepository.findFirstByProductCodeAndPolicyNo(policyNoSplit[0].trim(), policyNoSplit[1].trim())
                 .ifPresentOrElse(acpPolicyEntity -> {
-                    if (!isEligiblePolicyStatus(acpPolicyEntity.getStatus())) {
+                    if (!sharedFunction.isEligiblePolicyStatus(acpPolicyEntity.getStatus())) {
                         log.info("Skipping policy {} due to status {}", policyNo, acpPolicyEntity.getStatus());
                         return;
                     }
@@ -367,7 +370,7 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
         AtomicReference<Boolean> booleanOptional = new AtomicReference<>(true);
         mainDataALHReportRepository.findFirstByProductCodeAndPolicyNo(policyNoSplit[0], Integer.parseInt(policyNoSplit[1]))
                 .ifPresentOrElse(mainDataALHReportEntity -> {
-                    if (!isEligiblePolicyStatus(mainDataALHReportEntity.getStatus())) {
+                    if (!sharedFunction.isEligiblePolicyStatus(mainDataALHReportEntity.getStatus())) {
                         log.info("Skipping policy {} due to status {}", policyNo, mainDataALHReportEntity.getStatus());
                         return;
                     }
@@ -590,16 +593,6 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
         }
 
         throw new IllegalArgumentException("Cannot convert type " + value.getClass() + " to BigDecimal");
-    }
-
-    private boolean isEligiblePolicyStatus(String status) {
-
-        if (status == null) {
-            return false;
-        }
-
-        return status.equalsIgnoreCase("In Force")
-                || "Lapsed".equalsIgnoreCase(status);
     }
 
     private BigDecimal toBigDecimalFromString(String value){

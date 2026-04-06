@@ -8,6 +8,7 @@ import lk.avengers.datamigrationadapter.repository.postgresql.reportdb.*;
 import lk.avengers.datamigrationadapter.repository.softlogicdb.MigrAllClaimsEntityRepository;
 import lk.avengers.datamigrationadapter.service.ClaimsMappingService;
 import lk.avengers.datamigrationadapter.util.MainExcelReader;
+import lk.avengers.datamigrationadapter.util.SharedFunction;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -38,6 +39,7 @@ public class ClaimsMappingServiceImpl implements ClaimsMappingService {
     private final ACPPolicyRepository acpPolicyRepository;
 
     private final MainExcelReader mainExcelReader;
+    private final SharedFunction sharedFunction;
 
     private final static String PAID = "Paid";
     private final static String OUTSTANDING = "Outstanding";
@@ -66,7 +68,7 @@ public class ClaimsMappingServiceImpl implements ClaimsMappingService {
 
             policyList.forEach(policyNo -> {
                 String policyStatus = getStatus(policyNo);
-                if (!isEligiblePolicyStatus(policyStatus)) {
+                if (!sharedFunction.isEligiblePolicyStatus(policyStatus)) {
                     log.info("Skipping policy {} due to status {}", policyNo, policyStatus);
                     return;
                 }
@@ -85,8 +87,8 @@ public class ClaimsMappingServiceImpl implements ClaimsMappingService {
                 // ================= PAID =================
                 paidClaimEntityList.forEach(paid -> {
 
-                    boolean isPaid = paid.getTrnStatus().equalsIgnoreCase(PAID);
-                    boolean isUnpaid = paid.getTrnStatus().equalsIgnoreCase(UNPAID);
+                    boolean isPaid = paid.getTrnStatus() != null && paid.getTrnStatus().equalsIgnoreCase(PAID);
+                    boolean isUnpaid = paid.getTrnStatus() != null && paid.getTrnStatus().equalsIgnoreCase(UNPAID);
 
                     if ((isPaid || isUnpaid) && isEligiblePaidClaim(policyNo, paid)) {
                         Optional<MigrAllClaimsEntity> previousClaimOptional = claimEntityList.stream().filter(preClaim ->
@@ -292,16 +294,6 @@ public class ClaimsMappingServiceImpl implements ClaimsMappingService {
                 .orElse(null);
     }
 
-    private boolean isEligiblePolicyStatus(String status) {
-
-        if (status == null) {
-            return false;
-        }
-
-        return status.equalsIgnoreCase("In Force")
-                || "Lapsed".equalsIgnoreCase(status);
-    }
-
     private boolean isEligiblePaidClaim(String policyNo, PaidClaimEntity paidClaimEntity){
         boolean isInForce = paidClaimEntity.getPolicyStatus().equalsIgnoreCase(IN_FORCE);
         boolean isSurrendered = paidClaimEntity.getPolicyStatus().equalsIgnoreCase(SURRENDERED);
@@ -314,32 +306,3 @@ public class ClaimsMappingServiceImpl implements ClaimsMappingService {
                         : (isSurrendered || isDeceased));
     }
 }
-
-
-//
-//if(!declaredClaimEntityList.isEmpty()){
-//        declaredClaimEntityList.forEach(declaredClaimEntity -> {
-//String claimNo = declaredClaimEntity.getClaimOfficeNumber();
-//                        if(claimEntityList.stream().noneMatch(claimEntity -> claimEntity.getClaimNo().equalsIgnoreCase(claimNo))){
-//        claimEntityList.add(
-//        ClaimEntity.builder()
-//                                            .policyNo(policyNo)
-//                                            .claimNo(declaredClaimEntity.getClaimOfficeNumber())
-//        .claimType(declaredClaimEntity.getClaimType())
-//        .dateOfEvent(declaredClaimEntity.getOccurredDate())
-//        .dateOfIntimation(declaredClaimEntity.getDeclaredDate())
-//        .patientAdmitted(declaredClaimEntity.getClaimedLifeAssured())
-//        .causeOfDeath(declaredClaimEntity.getCauseOfClaims())
-//        .natureOfIllness(declaredClaimEntity.getCauseOfClaims())
-//        .totalClaimAmount(BigDecimal.valueOf(declaredClaimEntity.getOriginalClaimAmt()))
-//        .totalSettledAmount(BigDecimal.valueOf(declaredClaimEntity.getOriginalClaimAmt()))
-//        .claimStatus(DECLARED)
-//                                            .nameOfTheHospital(declaredClaimEntity.getPlaceOfClaims())
-//        .dateOfPayment(declaredClaimEntity.getClaimClosedDate())
-//        .comments(declaredClaimEntity.getClaimDescription())
-//        .policyYear(declaredClaimEntity.getUnderwritingYear())
-//        .build()
-//                            );
-//                                    }
-//                                    });
-//                                    }

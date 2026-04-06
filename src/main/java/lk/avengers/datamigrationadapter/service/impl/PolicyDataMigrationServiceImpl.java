@@ -11,6 +11,7 @@ import lk.avengers.datamigrationadapter.repository.softlogicdb.FundCurrentBalanc
 import lk.avengers.datamigrationadapter.repository.softlogicdb.MigrPolicyRepository;
 import lk.avengers.datamigrationadapter.service.PolicyDataMigrationService;
 import lk.avengers.datamigrationadapter.util.MainExcelReader;
+import lk.avengers.datamigrationadapter.util.SharedFunction;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -43,6 +44,7 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
     private final PremiumDetailsRepository premiumDetailsRepository;
 
     private final MainExcelReader mainExcelReader;
+    private final SharedFunction sharedFunction;
 
     private List<ProductCodeMappingEntity> productCodeMappingList;
     private List<AdvisorCodeMappingEntity> advisorCodeMappingList;
@@ -120,7 +122,7 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
 
     private void processACPPolicy(ACPPolicyEntity acpPolicy, String policyNo, LocalDate premiumDueDate) {
 
-        if (!isEligiblePolicyStatus(acpPolicy.getStatus())) {
+        if (!sharedFunction.isEligiblePolicyStatus(acpPolicy.getStatus())) {
             log.info("Skipping policy {} due to status {}", policyNo, acpPolicy.getStatus());
             return;
         }
@@ -245,7 +247,7 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
 
     private void processMainDataReport(MainDataReportEntity mainDataReport, String policyNo, LocalDate premiumDueDate) {
 
-        if (!isEligiblePolicyStatus(mainDataReport.getStatus())) {
+        if (!sharedFunction.isEligiblePolicyStatus(mainDataReport.getStatus())) {
             log.info("Skipping policy {} due to status {}", policyNo, mainDataReport.getStatus());
             return;
         }
@@ -337,7 +339,7 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
 
     private void processALHReport(MainDataALHReportEntity alhReport, String policyNo, LocalDate premiumDueDate) {
 
-        if (!isEligiblePolicyStatus(alhReport.getStatus())) {
+        if (!sharedFunction.isEligiblePolicyStatus(alhReport.getStatus())) {
             log.info("Skipping policy {} due to status {}", policyNo, alhReport.getStatus());
             return;
         }
@@ -419,16 +421,6 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
         requestDTOList.add(policyRequestDTO);
     }
 
-    private boolean isEligiblePolicyStatus(String status) {
-
-        if (status == null) {
-            return false;
-        }
-
-        return status.equalsIgnoreCase("In Force")
-                || "Lapsed".equalsIgnoreCase(status);
-    }
-
 
     private String getLanguageChar(String languagePreference) {
         if (languagePreference == null || languagePreference.isBlank()) {
@@ -441,7 +433,6 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
             default -> "N";
         };
     }
-
 
     private String getPremiumType(String premiumPaymentTerm) {
         if (premiumPaymentTerm == null || premiumPaymentTerm.isBlank()) {
@@ -541,7 +532,7 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
         PolicyNumberResponseDTO policyNumber = extractPolicyNumber(policyNo);
 
         return contactDetailRepository
-                .findByProductAndPolicyNo(
+                .findFirstByProductAndPolicyNo(
                         policyNumber.getProductCode(),
                         policyNumber.getPolicyNo().toString()
                 )
