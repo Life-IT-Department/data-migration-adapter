@@ -707,7 +707,7 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
                 policyBenefitsEntityList.stream()
                         .collect(Collectors.groupingBy(e -> e.getId().getPbPolicyNo()));
 
-        List<MigrPolicyData> allPolicies = migrPolicyRepository.findByLaPolicyNoIn(policyNoList);
+        List<MigrPolicyData> allPolicies = findPoliciesInBatches(policyNoList);
 
         Map<String, MigrPolicyData> policyDataMap = allPolicies.stream()
                 .collect(Collectors.toMap(MigrPolicyData::getLaPolicyNo, Function.identity()));
@@ -793,5 +793,25 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
 
     private PolicyNumberResponseDTO extractPolicyNumberHelper (String policyRef) {
         return sharedFunction.extractPolicyNumber(policyRef);
+    }
+
+    private List<MigrPolicyData> findPoliciesInBatches(List<String> policyNoList) {
+
+        int batchSize = 2000;
+        List<MigrPolicyData> result = new ArrayList<>();
+
+        for (int i = 0; i < policyNoList.size(); i += batchSize) {
+            int end = Math.min(i + batchSize, policyNoList.size());
+
+            List<String> batch = policyNoList.subList(i, end);
+
+            log.info("Fetching policies batch {} - {}", i + 1, end);
+
+            result.addAll(migrPolicyRepository.findByLaPolicyNoIn(batch));
+        }
+
+        log.info("Fetched total {} policies", result.size());
+
+        return result;
     }
 }

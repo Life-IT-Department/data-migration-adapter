@@ -17,5 +17,5 @@ public interface MigrPolicyRepository extends JpaRepository<MigrPolicyData, Inte
     @Query(value = "TRUNCATE TABLE Migr_PolicyData", nativeQuery = true)
     void truncateTable();
 
-    List<MigrPolicyData> findByLaPolicyNoIn(List<String> policyNo);
+    List<MigrPolicyData> findByLaPolicyNoIn(List<String> policyNoList);
 }
