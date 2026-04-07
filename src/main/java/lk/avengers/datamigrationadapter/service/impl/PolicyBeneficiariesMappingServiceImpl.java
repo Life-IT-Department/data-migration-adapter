@@ -14,6 +14,7 @@ import lk.avengers.datamigrationadapter.util.MainExcelReader;
 import lk.avengers.datamigrationadapter.util.SharedFunction;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -135,7 +136,7 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
 
         // ================= SAVE =================
         if (!allBeneficiariesEntityList.isEmpty()) {
-            policyBeneficiariesRepository.saveAll(allBeneficiariesEntityList);
+            saveInBatches(allBeneficiariesEntityList, policyBeneficiariesRepository);
         } else {
             log.warn("No beneficiaries records found to save. Please check the excel file and try again.");
             return CommonResponseDTO.builder()
@@ -475,6 +476,29 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
 
     private PolicyNumberResponseDTO extractPolicyNumberHelper (String policyRef) {
         return sharedFunction.extractPolicyNumber(policyRef);
+    }
+
+    private <T> void saveInBatches(List<T> list, JpaRepository<T, ?> repository) {
+        int batchSize = 1000;
+        int totalSize = list.size();
+        int totalBatches = (int) Math.ceil((double) totalSize / batchSize);
+
+        log.info("Starting batch save: totalRecords={}, batchSize={}, totalBatches={}, repository={}",
+                totalSize, batchSize, totalBatches, repository.getClass().getSimpleName());
+
+        for (int i = 0; i < list.size(); i += 1000) {
+            int batchNumber = (i / batchSize) + 1;
+            int end = Math.min(i + 1000, list.size());
+
+            log.info("Saving batch {}/{} (records {} - {})",
+                    batchNumber, totalBatches, i + 1, end);
+
+            List<T> batch = list.subList(i, end);
+            repository.saveAll(batch);
+            repository.flush();
+        }
+        log.info("Completed batch save: totalRecords={}, repository={}",
+                totalSize, repository.getClass().getSimpleName());
     }
 
 }

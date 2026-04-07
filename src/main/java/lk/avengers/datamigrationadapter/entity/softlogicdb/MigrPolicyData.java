@@ -27,7 +27,7 @@ public class MigrPolicyData {
     @Column(name = "LA_Title", length = 10)
     private String laTitle;
 
-    @Column(name = "LA_FirstName", length = 100)
+    @Column(name = "LA_FirstName", columnDefinition = "VARCHAR(MAX)")
     private String laFirstName;
 
     @Column(name = "LA_LastName", length = 100)

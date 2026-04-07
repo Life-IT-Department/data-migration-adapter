@@ -23,7 +23,7 @@ public class PolicyBeneficiariesEntity {
     @Column(name = "BE_PolicyNo", length = 30)
     private String bePolicyNo;
 
-    @Column(name = "BE_FullName", length = 100)
+    @Column(name = "BE_FullName", columnDefinition = "VARCHAR(MAX)")
     private String beFullName;
 
     @Column(name = "BE_Age")
