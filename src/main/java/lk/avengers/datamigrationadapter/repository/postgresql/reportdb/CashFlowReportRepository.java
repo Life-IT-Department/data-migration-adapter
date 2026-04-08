@@ -30,7 +30,7 @@ public interface CashFlowReportRepository extends JpaRepository<CashFlowReportEn
 
     @Query("""
     SELECT c FROM CashFlowReportEntity c
-    WHERE (c.policyNo IN :withSlash OR c.policyNo IN :withoutSlash)
+    WHERE c.policyNo IN :policies
       AND c.paymentType = :paymentType
 """)
     @Transactional(readOnly = true)
@@ -38,8 +38,7 @@ public interface CashFlowReportRepository extends JpaRepository<CashFlowReportEn
             @QueryHint(name = "org.hibernate.fetchSize", value = "500")
     })
     Stream<CashFlowReportEntity> findBulkStream(
-            @Param("withSlash") List<String> withSlash,
-            @Param("withoutSlash") List<String> withoutSlash,
+            @Param("policies") List<String> policies,
             @Param("paymentType") String paymentType
     );
 }

@@ -59,105 +59,141 @@ public class PremiumsMappingServiceImpl implements PremiumsMappingService {
 
         log.info("MIGRATE PREMIUMS PAID & DUE STARTED");
 
-        int batchSize = 500;
+        int batchSize = 500;          // insert batch
+        int queryBatchSize = 1000;    // IN clause batch (safe < 65k params)
 
         List<MigrPremiumsPaid> batchPaid = new ArrayList<>(batchSize);
         List<MigrPremiumsDue> batchDue = new ArrayList<>(batchSize);
 
         try {
-            // Load mappings once
+            // 🔹 Load mappings once
             Map<Integer, String> bankPinMap = bankPinRepository.findAll().stream()
                     .collect(Collectors.toMap(BankPinEntity::getPin, BankPinEntity::getBank, (a, b) -> a));
 
-            // Policy list from Excel
+            // 🔹 Read policies
             List<String> policyList = mainExcelReader.readPolicyNumbers();
 
-            // Split into with-slash and without-slash lists
-            List<String> policyWithSlash = policyList.stream().distinct().toList();
-            List<String> policyWithoutSlash = policyList.stream()
-                    .map(p -> p.replace("/", ""))
+            // 🔥 Merge with/without slash into ONE list
+            List<String> allPolicies = policyList.stream()
+                    .flatMap(p -> Stream.of(p, p.replace("/", "")))
                     .distinct()
                     .toList();
 
+            // 🔹 Extract product codes & numbers
             List<PolicyNoDto> extractedPolicies = policyList.stream()
                     .map(this::getProductCodeAndPolicyNo)
                     .toList();
 
-            Set<String> productCodes = extractedPolicies.stream().map(PolicyNoDto::productCode).collect(Collectors.toSet());
-            Set<Integer> policyNos = extractedPolicies.stream().map(PolicyNoDto::policyNo).collect(Collectors.toSet());
+            Set<String> productCodes = extractedPolicies.stream()
+                    .map(PolicyNoDto::productCode)
+                    .collect(Collectors.toSet());
 
-            Map<String, List<PremiumDetailsEntity>> premiumMap = premiumDetailsRepository.findFiltered(productCodes, policyNos)
-                    .stream().collect(Collectors.groupingBy(e -> e.getProductCode() + "/" + e.getPolicyNo()));
+            Set<Integer> policyNos = extractedPolicies.stream()
+                    .map(PolicyNoDto::policyNo)
+                    .collect(Collectors.toSet());
 
-            Map<String, MainDataReportEntity> mainDataMap = mainDataReportRepository.findFiltered(productCodes, policyNos)
-                    .stream().collect(Collectors.toMap(e -> e.getProductCode() + "/" + e.getPolicyNo(), Function.identity(), (a,b)->a));
+            // 🔹 Load supporting data
+            Map<String, List<PremiumDetailsEntity>> premiumMap =
+                    premiumDetailsRepository.findFiltered(productCodes, policyNos)
+                            .stream()
+                            .collect(Collectors.groupingBy(e -> e.getProductCode() + "/" + e.getPolicyNo()));
 
-            Map<String, MainDataALHReportEntity> alhMap = mainDataALHReportRepository.findFiltered(productCodes, policyNos)
-                    .stream().collect(Collectors.toMap(e -> e.getProductCode() + "/" + e.getPolicyNo(), Function.identity(), (a,b)->a));
+            Map<String, MainDataReportEntity> mainDataMap =
+                    mainDataReportRepository.findFiltered(productCodes, policyNos)
+                            .stream()
+                            .collect(Collectors.toMap(e -> e.getProductCode() + "/" + e.getPolicyNo(), Function.identity(), (a, b) -> a));
 
-            Map<String, ACPPolicyEntity> acpMap = acpPolicyRepository.findFiltered(productCodes, policyNos)
-                    .stream().collect(Collectors.toMap(e -> e.getProductCode() + "/" + e.getPolicyNo(), Function.identity(), (a,b)->a));
+            Map<String, MainDataALHReportEntity> alhMap =
+                    mainDataALHReportRepository.findFiltered(productCodes, policyNos)
+                            .stream()
+                            .collect(Collectors.toMap(e -> e.getProductCode() + "/" + e.getPolicyNo(), Function.identity(), (a, b) -> a));
 
-            // Stream cash flows with both withSlash and withoutSlash lists
-            try (Stream<CashFlowReportEntity> stream = cashFlowReportRepository.findBulkStream(policyWithSlash, policyWithoutSlash, IN_COMING)) {
-                stream.forEach(cashFlow -> {
+            Map<String, ACPPolicyEntity> acpMap =
+                    acpPolicyRepository.findFiltered(productCodes, policyNos)
+                            .stream()
+                            .collect(Collectors.toMap(e -> e.getProductCode() + "/" + e.getPolicyNo(), Function.identity(), (a, b) -> a));
 
-                    String policy = cashFlow.getPolicyNo();
-                    PolicyNoDto dto = getProductCodeAndPolicyNo(policy);
-                    String key = dto.productCode() + "/" + dto.policyNo();
+            // 🔥 Process in query batches (CRITICAL FIX)
+            for (List<String> policyBatch : partition(allPolicies, queryBatchSize)) {
 
-                    String policyStatus = getStatus(policy, mainDataMap, alhMap, acpMap);
-                    if (!sharedFunction.isEligiblePolicyStatus(policyStatus)) return;
+                try (Stream<CashFlowReportEntity> stream =
+                             cashFlowReportRepository.findBulkStream(policyBatch, IN_COMING)) {
 
-                    List<PremiumDetailsEntity> premiums = premiumMap.getOrDefault(key, Collections.emptyList());
-                    premiums.forEach(premium -> {
+                    stream.forEach(cashFlow -> {
 
-                        LocalDate paidDate = premium.getPaymentDate();
-                        BigDecimal paidAmount = premium.getModalPremiumAmount() == null ? BigDecimal.ZERO : BigDecimal.valueOf(premium.getModalPremiumAmount());
+                        String policy = cashFlow.getPolicyNo();
+                        PolicyNoDto dto = getProductCodeAndPolicyNo(policy);
+                        String key = dto.productCode() + "/" + dto.policyNo();
 
-                        boolean match = (cashFlow.getCheckNo() != null && paidDate != null)
-                                ? YearMonth.from(cashFlow.getOperationDate()).equals(YearMonth.from(paidDate))
-                                : Objects.equals(cashFlow.getOperationDate(), paidDate);
+                        // 🔹 Status check
+                        String policyStatus = getStatus(policy, mainDataMap, alhMap, acpMap);
+                        if (!sharedFunction.isEligiblePolicyStatus(policyStatus)) return;
 
-                        if (!match) return;
+                        List<PremiumDetailsEntity> premiums =
+                                premiumMap.getOrDefault(key, Collections.emptyList());
 
-                        String bank = cashFlow.getCheckNo() != null ? cashFlow.getDrawnBank() : bankPinMap.getOrDefault(cashFlow.getAccPin(), "IMS-Direct");
+                        for (PremiumDetailsEntity premium : premiums) {
 
-                        if (cashFlow.getReceiptNo() != 0) {
-                            batchPaid.add(MigrPremiumsPaid.builder()
+                            LocalDate paidDate = premium.getPaymentDate();
+                            BigDecimal paidAmount = premium.getModalPremiumAmount() == null
+                                    ? BigDecimal.ZERO
+                                    : BigDecimal.valueOf(premium.getModalPremiumAmount());
+
+                            boolean match = (cashFlow.getCheckNo() != null && paidDate != null)
+                                    ? YearMonth.from(cashFlow.getOperationDate()).equals(YearMonth.from(paidDate))
+                                    : Objects.equals(cashFlow.getOperationDate(), paidDate);
+
+                            if (!match) continue;
+
+                            String bank = cashFlow.getCheckNo() != null
+                                    ? cashFlow.getDrawnBank()
+                                    : bankPinMap.getOrDefault(cashFlow.getAccPin(), "IMS-Direct");
+
+                            // 🔹 Paid
+                            if (cashFlow.getReceiptNo() != 0) {
+                                batchPaid.add(MigrPremiumsPaid.builder()
+                                        .policyNo(policy)
+                                        .receiptId(cashFlow.getReceiptNo())
+                                        .chequeNo(cashFlow.getCheckNo() == null ? "" : String.valueOf(cashFlow.getCheckNo()))
+                                        .bank(bank)
+                                        .paymentDate(paidDate)
+                                        .paidAmount(paidAmount)
+                                        .receiptStatus(NO.equalsIgnoreCase(cashFlow.getReceiptCancellation()) ? VLD : CNL)
+                                        .paymentType(cashFlow.getDescription().contains(PREMIUM) ? PREM :
+                                                cashFlow.getDescription().contains(DOWN_PAYMENT) ? DEPO : "")
+                                        .paymentMode(getPaymentMode(cashFlow.getPaymentMode()))
+                                        .build());
+                            }
+
+                            // 🔹 Due
+                            batchDue.add(MigrPremiumsDue.builder()
                                     .policyNo(policy)
-                                    .receiptId(cashFlow.getReceiptNo())
-                                    .chequeNo(cashFlow.getCheckNo() == null ? "" : String.valueOf(cashFlow.getCheckNo()))
-                                    .bank(bank)
-                                    .paymentDate(paidDate)
-                                    .paidAmount(paidAmount)
-                                    .receiptStatus(NO.equalsIgnoreCase(cashFlow.getReceiptCancellation()) ? VLD : CNL)
-                                    .paymentType(cashFlow.getDescription().contains(PREMIUM) ? PREM :
-                                            cashFlow.getDescription().contains(DOWN_PAYMENT) ? DEPO : "")
-                                    .paymentMode(getPaymentMode(cashFlow.getPaymentMode()))
+                                    .dueDate(premium.getPremiumDueDate())
+                                    .period(getPeriod(premium.getFrequency()))
+                                    .term(premium.getTerm())
+                                    .dueAmount(BigDecimal.valueOf(premium.getModalPremiumAmount()))
+                                    .paidUp(true)
+                                    .paidUpDate(premium.getPaymentDate())
+                                    .dueStatus(VLD)
+                                    .rowCreatedOn(LocalDate.now())
                                     .build());
+
+                            // 🔥 Flush batches
+                            if (batchPaid.size() >= batchSize) {
+                                saveAndFlush(batchPaid, migrPremiumsPaidRepository);
+                                batchPaid.clear();
+                            }
+
+                            if (batchDue.size() >= batchSize) {
+                                saveAndFlush(batchDue, migrPremiumsDueRepository);
+                                batchDue.clear();
+                            }
                         }
-
-                        batchDue.add(MigrPremiumsDue.builder()
-                                .policyNo(policy)
-                                .dueDate(premium.getPremiumDueDate())
-                                .period(getPeriod(premium.getFrequency()))
-                                .term(premium.getTerm())
-                                .dueAmount(BigDecimal.valueOf(premium.getModalPremiumAmount()))
-                                .paidUp(true)
-                                .paidUpDate(premium.getPaymentDate())
-                                .dueStatus(VLD)
-                                .rowCreatedOn(LocalDate.now())
-                                .build());
-
-                        // Flush batch
-                        if (batchPaid.size() >= batchSize) { saveAndFlush(batchPaid, migrPremiumsPaidRepository); batchPaid.clear(); }
-                        if (batchDue.size() >= batchSize) { saveAndFlush(batchDue, migrPremiumsDueRepository); batchDue.clear(); }
                     });
-                });
+                }
             }
 
-            // Flush remaining
+            // 🔹 Flush remaining
             if (!batchPaid.isEmpty()) saveAndFlush(batchPaid, migrPremiumsPaidRepository);
             if (!batchDue.isEmpty()) saveAndFlush(batchDue, migrPremiumsDueRepository);
 
@@ -212,9 +248,9 @@ public class PremiumsMappingServiceImpl implements PremiumsMappingService {
         if (policyNo == null || policyNo.length() < 3) {
             return null;
         }
-
+        
         String cleaned = policyNo.indexOf('/') >= 0 ? policyNo.replace("/", "") : policyNo;
-
+        
         String key = cleaned.substring(0, 3) + "/" + Integer.parseInt(cleaned.substring(3));
 
         MainDataReportEntity main = mainDataMap.get(key);
@@ -236,6 +272,21 @@ public class PremiumsMappingServiceImpl implements PremiumsMappingService {
             case "TRANSFER" -> "Transfer";
             default -> "";
         };
+    }
+
+    public static <T> List<List<T>> partition(List<T> list, int size) {
+        if (list == null || list.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        int numBatches = (int) Math.ceil((double) list.size() / size);
+        List<List<T>> partitions = new ArrayList<>(numBatches);
+
+        for (int i = 0; i < list.size(); i += size) {
+            partitions.add(list.subList(i, Math.min(i + size, list.size())));
+        }
+
+        return partitions;
     }
 
     private <T> void saveAndFlush(List<T> list, JpaRepository<T, ?> repo) {
