@@ -660,43 +660,56 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
         }
     }
 
-    private void setInPatientSA(List<String> policyNoList, List<MigrPolicyBenefitsEntity> policyBenefitsEntityList){
+    private void setInPatientSA(List<String> policyNoList, List<MigrPolicyBenefitsEntity> policyBenefitsEntityList) {
+
         log.info("Setting In Patient Cover for all benefits");
-        if(!policyBenefitsEntityList.isEmpty()){
-            policyNoList.forEach(policyNo -> {
-                if(policyNo.contains(SUWASAHANA)){
-                    Optional<MigrPolicyBenefitsEntity> mainInsuredInp = policyBenefitsEntityList.
-                            stream().
-                            filter(policyBenefit -> policyBenefit.getId().getPbPolicyNo().equalsIgnoreCase(policyNo) &&
-                                    policyBenefit.getId().getPbBenefitCode().equalsIgnoreCase(IN_PATIENT_COVER)).findFirst();
-                    Optional<MigrPolicyBenefitsEntity> mainInsuredBasicLife = policyBenefitsEntityList.
-                            stream().
-                            filter(policyBenefit -> policyBenefit.getId().getPbPolicyNo().equalsIgnoreCase(policyNo) &&
-                                    policyBenefit.getId().getPbBenefitCode().equalsIgnoreCase(BASIC_LIFE_COVER)).findFirst();
 
-                    Optional<MigrPolicyBenefitsEntity> spouseInp = policyBenefitsEntityList.
-                            stream().
-                            filter(policyBenefit -> policyBenefit.getId().getPbPolicyNo().equalsIgnoreCase(policyNo) &&
-                                    policyBenefit.getId().getPbBenefitCode().equalsIgnoreCase(IN_PATIENT_COVER_SPOUSE)).findFirst();
-                    Optional<MigrPolicyBenefitsEntity> spouseBasicLife = policyBenefitsEntityList.
-                            stream().
-                            filter(policyBenefit -> policyBenefit.getId().getPbPolicyNo().equalsIgnoreCase(policyNo) &&
-                                    policyBenefit.getId().getPbBenefitCode().equalsIgnoreCase(BASIC_LIFE_COVER_SPOUSE)).findFirst();
-
-                    if(mainInsuredInp.isPresent() && mainInsuredBasicLife.isPresent()){
-                        mainInsuredInp.get().setPbCoverage(mainInsuredBasicLife.get().getPbCoverage());
-                    }
-                    if(spouseInp.isPresent() && spouseBasicLife.isPresent()){
-                        spouseInp.get().setPbCoverage(spouseBasicLife.get().getPbCoverage());
-                    }
-                }
-            });
-            log.info("Saving updated benefit data into MSSQL");
-            saveInBatches(policyBenefitsEntityList, policyBenefitsEntityRepository);
-
-            log.info("Completed benefits saving. Setting up SAR");
-            setSumAtRisk(policyNoList, policyBenefitsEntityList);
+        if (policyBenefitsEntityList.isEmpty()) {
+            return;
         }
+
+        // 🔥 Step 1: Group by policyNo + benefitCode
+        Map<String, Map<String, MigrPolicyBenefitsEntity>> benefitMap =
+                policyBenefitsEntityList.stream()
+                        .collect(Collectors.groupingBy(
+                                e -> e.getId().getPbPolicyNo(),
+                                Collectors.toMap(
+                                        e -> e.getId().getPbBenefitCode(),
+                                        Function.identity(),
+                                        (a, b) -> a
+                                )
+                        ));
+
+        // 🔥 Step 2: Process policies
+        for (String policyNo : policyNoList) {
+
+            if (!policyNo.contains(SUWASAHANA)) {
+                continue;
+            }
+
+            Map<String, MigrPolicyBenefitsEntity> benefits = benefitMap.get(policyNo);
+            if (benefits == null) continue;
+
+            MigrPolicyBenefitsEntity mainInp = benefits.get(IN_PATIENT_COVER);
+            MigrPolicyBenefitsEntity mainBasic = benefits.get(BASIC_LIFE_COVER);
+
+            MigrPolicyBenefitsEntity spouseInp = benefits.get(IN_PATIENT_COVER_SPOUSE);
+            MigrPolicyBenefitsEntity spouseBasic = benefits.get(BASIC_LIFE_COVER_SPOUSE);
+
+            if (mainInp != null && mainBasic != null) {
+                mainInp.setPbCoverage(mainBasic.getPbCoverage());
+            }
+
+            if (spouseInp != null && spouseBasic != null) {
+                spouseInp.setPbCoverage(spouseBasic.getPbCoverage());
+            }
+        }
+
+        log.info("Saving updated benefit data into MSSQL");
+        saveInBatches(policyBenefitsEntityList, policyBenefitsEntityRepository);
+
+        log.info("Completed benefits saving. Setting up SAR");
+        setSumAtRisk(policyNoList, policyBenefitsEntityList);
     }
 
     private void setSumAtRisk(List<String> policyNoList,
@@ -704,69 +717,84 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
 
         log.info("Setting sum at risk now using the benefit cover values");
 
+        // 🔥 Group benefits once
         Map<String, List<MigrPolicyBenefitsEntity>> benefitsByPolicy =
                 policyBenefitsEntityList.stream()
                         .collect(Collectors.groupingBy(e -> e.getId().getPbPolicyNo()));
 
-        List<MigrPolicyData> allPolicies = findPoliciesInBatches(policyNoList);
-
-        Map<String, MigrPolicyData> policyDataMap = allPolicies.stream()
+        // 🔥 Load policies
+        Map<String, MigrPolicyData> policyDataMap = findPoliciesInBatches(policyNoList)
+                .stream()
                 .collect(Collectors.toMap(MigrPolicyData::getLaPolicyNo, Function.identity()));
 
+        // 🔥 Precompute productCodes & policyNumbers efficiently
         Set<String> productCodes = new HashSet<>();
         Set<Integer> policyNumbers = new HashSet<>();
 
+        Map<String, String> cleanedPolicyMap = new HashMap<>();
+
         for (String policy : policyNoList) {
-            if (policy != null && policy.length() >= 3) {
-                String code = policy.replace("/", "").substring(0, 3);
-                Integer number = Integer.valueOf(policy.replace("/", "").substring(3));
-                productCodes.add(code);
-                policyNumbers.add(number);
-            }
+            if (policy == null || policy.length() < 3) continue;
+
+            String cleaned = policy.replace("/", "");
+            cleanedPolicyMap.put(policy, cleaned);
+
+            productCodes.add(cleaned.substring(0, 3));
+            policyNumbers.add(Integer.parseInt(cleaned.substring(3)));
         }
 
+        // 🔥 MainData map
         Map<String, MainDataReportEntity> mainDataMap =
-                mainDataReportRepository.findFiltered(productCodes, policyNumbers).stream()
+                mainDataReportRepository.findFiltered(productCodes, policyNumbers)
+                        .stream()
                         .collect(Collectors.toMap(
                                 e -> e.getProductCode() + "/" + e.getPolicyNo(),
                                 Function.identity()
                         ));
 
-        List<MigrPolicyData> updatedPolicies = new ArrayList<>();
+        List<MigrPolicyData> updatedPolicies = new ArrayList<>(policyNoList.size());
 
+        // 🔥 Main loop
         for (String policy : policyNoList) {
+
             MigrPolicyData policyData = policyDataMap.get(policy);
             if (policyData == null) continue;
 
-            String key = null;
-            if (policy != null && policy.length() >= 3) {
-                String code = policy.replace("/", "").substring(0, 3);
-                int number = Integer.parseInt(policy.replace("/", "").substring(3));
-                key = code + "/" + number;
-            }
+            String cleaned = cleanedPolicyMap.get(policy);
+            if (cleaned == null) continue;
 
-            MainDataReportEntity mainData = key != null ? mainDataMap.get(key) : null;
+            String key = cleaned.substring(0, 3) + "/" + Integer.parseInt(cleaned.substring(3));
+
+            MainDataReportEntity mainData = mainDataMap.get(key);
 
             List<MigrPolicyBenefitsEntity> benefits =
                     benefitsByPolicy.getOrDefault(policy, Collections.emptyList());
 
-            Map<String, BigDecimal> benefitMap = benefits.stream()
-                    .filter(b -> b.getId().getPbBenefitCode() != null)
-                    .collect(Collectors.toMap(
-                            b -> b.getId().getPbBenefitCode().toUpperCase(),
-                            b -> safe(b.getPbCoverage()),
-                            (a, b) -> a
-                    ));
+            // 🔥 Instead of building a map, compute directly
+            BigDecimal dthSa = BigDecimal.ZERO;
+            BigDecimal trSa = BigDecimal.ZERO;
+            BigDecimal cilxSa = BigDecimal.ZERO;
+            BigDecimal fibSa = BigDecimal.ZERO;
 
-            BigDecimal dthSa  = benefitMap.getOrDefault(BASIC_LIFE_COVER.toUpperCase(), BigDecimal.ZERO);
-            BigDecimal trSa   = benefitMap.getOrDefault(ADDITIONAL_DEATH_BENEFIT.toUpperCase(), BigDecimal.ZERO);
-            BigDecimal cilxSa = benefitMap.getOrDefault(CRITICAL_ILLNESS.toUpperCase(), BigDecimal.ZERO);
-            BigDecimal fibSa  = benefitMap.getOrDefault(FAMILY_INCOME_BENEFIT.toUpperCase(), BigDecimal.ZERO);
+            for (MigrPolicyBenefitsEntity b : benefits) {
+                String code = b.getId().getPbBenefitCode();
+                if (code == null) continue;
+
+                BigDecimal value = safe(b.getPbCoverage());
+
+                switch (code.toUpperCase()) {
+                    case BASIC_LIFE_COVER -> dthSa = value;
+                    case ADDITIONAL_DEATH_BENEFIT -> trSa = value;
+                    case CRITICAL_ILLNESS -> cilxSa = value;
+                    case FAMILY_INCOME_BENEFIT -> fibSa = value;
+                }
+            }
 
             Integer retirementTerm = mainData != null ? mainData.getRetirementBenefitPayoutTerm() : 0;
 
             policyData.setPoSumAtRisk(
-                    getSumAtRiskValue(dthSa, trSa, cilxSa, fibSa, policyData.getPoTerm(), retirementTerm)
+                    getSumAtRiskValue(dthSa, trSa, cilxSa, fibSa,
+                            policyData.getPoTerm(), retirementTerm)
             );
 
             updatedPolicies.add(policyData);
