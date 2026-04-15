@@ -2,7 +2,6 @@ package lk.avengers.datamigrationadapter.service.impl;
 
 import jakarta.annotation.PostConstruct;
 import lk.avengers.datamigrationadapter.dto.MigrPolicyDataDTO;
-import lk.avengers.datamigrationadapter.dto.PolicyKey;
 import lk.avengers.datamigrationadapter.dto.response.PolicyNumberResponseDTO;
 import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.*;
 import lk.avengers.datamigrationadapter.entity.softlogicdb.ExtraFields;
@@ -287,6 +286,10 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
                     extra.setCompanyBranchName(entity.getCompanyBranchName());
                     extra.setPolicyBranchCode(String.valueOf(entity.getCompanyBranchCode()));
                     extra.setPolicyBranchName(entity.getCompanyBranchName());
+
+                    extra.setInsuranceCoveragePeriod(Integer.valueOf(entity.getInsuranceCoveragePeriod()));
+                    extra.setTotalPremiumAllocation(BigDecimal.ZERO);
+                    extra.setBankName(contact.getSalesBranch());
                 },
 
                 null,
@@ -357,6 +360,10 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
                     extra.setSurrenderValue(entity.getSurrenderValue());
                     extra.setPrmSurrenderValue(entity.getPrmSurrenderValue());
                     extra.setBstSurrenderValue(entity.getBstSurrenderValue());
+
+                    extra.setInsuranceCoveragePeriod(entity.getInsuranceCoveragePeriod());
+                    extra.setTotalPremiumAllocation(entity.getTransactionAmount());
+                    extra.setBankName(contact.getSalesBranch());
                 },
 
                 (fund, entity) -> {
@@ -445,6 +452,10 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
                     extra.setSurrenderValue(BigDecimal.ZERO);
                     extra.setPrmSurrenderValue(BigDecimal.ZERO);
                     extra.setBstSurrenderValue(BigDecimal.ZERO);
+
+                    extra.setInsuranceCoveragePeriod(entity.getInsuranceCoveragePeriod());
+                    extra.setTotalPremiumAllocation(BigDecimal.ZERO);
+                    extra.setBankName(contact.getSalesBranch());
                 },
 
                 // ===== No Fund Mapper =====
@@ -600,9 +611,9 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
         if (mobile == null || mobile.trim().isEmpty()) {
             return null;
         }
-        // Remove any spaces just in case
+
         String sanitized = mobile.trim();
-        // Only digits allowed
+
         if (!sanitized.matches("\\d+")) {
             return null;
         }
@@ -697,6 +708,16 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
         }
 
         return switch (status.trim().toUpperCase()) {
+            case "AMENDED" -> "AMND";
+            case "BORN DEAD" -> "BRND";
+            case "CANCELLED", "CANCELLED / PAID UP" -> "CNLD";
+            case "DECEASED", "DECEASED / PAID UP" -> "PRMD";
+            case "DISABILITY CLAIM" -> "DCLM";
+            case "EXPIRED", "EXPIRED / PAID UP" -> "EXPD";
+            case "SURRENDED", "SURRENDED / PAID UP" -> "SRND";
+            case "SUSPENDED" -> "SPND";
+            case "WAITING FOR CANCELLATION" -> "CNLD";
+            case "WAITING FOR PAID UP" -> "PDUP";
             case "IN FORCE" -> "INFC";
             case "LAPSED" -> {
                 LocalDate today = LocalDate.now();

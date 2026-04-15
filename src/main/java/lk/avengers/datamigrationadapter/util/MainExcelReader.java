@@ -19,6 +19,9 @@ public class MainExcelReader {
     @Value("${policy.number.list.file}")
     private String policyNumberListFilePath;
 
+    @Value("${policy.no.sheet}")
+    private String policyNoSheet;
+
     public List<String> readPolicyNumbers(){
         File file = new File(policyNumberListFilePath);
 
@@ -32,22 +35,7 @@ public class MainExcelReader {
         try (InputStream is = new FileInputStream(file);
              Workbook workbook = new XSSFWorkbook(is)) {
 
-//            Sheet sheet = workbook.getSheet("POC_3_UAT");
-//            Sheet sheet = workbook.getSheet("POC_3_INTERMEDIATE");
-//            Sheet sheet = workbook.getSheet("POC_4");
-
-//            Sheet sheet = workbook.getSheet("ACTUARIAL");
-//            Sheet sheet = workbook.getSheet("TEST");
-//            Sheet sheet = workbook.getSheet("AFP");
-//            Sheet sheet = workbook.getSheet("NISHADI2");
-//            Sheet sheet = workbook.getSheet("ULN");
-//            Sheet sheet = workbook.getSheet("ASP");
-//            Sheet sheet = workbook.getSheet("MRT");
-//              Sheet sheet = workbook.getSheet("ACTUARIAL2");
-//              Sheet sheet = workbook.getSheet("NADEEKA-TEST");
-//            Sheet sheet = workbook.getSheet("NISHADI4");
-            Sheet sheet = workbook.getSheet("FULL");
-
+            Sheet sheet = workbook.getSheet(policyNoSheet);
 
             for (Row row : sheet) {
 

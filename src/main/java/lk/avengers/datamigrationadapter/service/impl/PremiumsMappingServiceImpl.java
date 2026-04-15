@@ -66,6 +66,10 @@ public class PremiumsMappingServiceImpl implements PremiumsMappingService {
         List<MigrPremiumsDue> batchDue = new ArrayList<>(batchSize);
 
         try {
+            log.info("Truncating premium history tables");
+            migrPremiumsPaidRepository.truncate();
+            migrPremiumsDueRepository.truncate();
+            log.info("Tables were truncated");
             // 🔹 Load mappings once
             Map<Integer, String> bankPinMap = bankPinRepository.findAll().stream()
                     .collect(Collectors.toMap(BankPinEntity::getPin, BankPinEntity::getBank, (a, b) -> a));

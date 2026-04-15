@@ -1,19 +1,25 @@
 package lk.avengers.datamigrationadapter.util;
 
 import lk.avengers.datamigrationadapter.dto.response.PolicyNumberResponseDTO;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
 public class SharedFunction {
 
+    @Value("${filter.by.status}")
+    private boolean filterByStatus;
+
+    private static final String IN_FORCE = "In Force";
+    private static final String LAPSED = "Lapsed";
+
     public boolean isEligiblePolicyStatus(String status) {
 
-        if (status == null) {
-            return false;
+        if (!filterByStatus) {
+            return true;
         }
 
-        return status.equalsIgnoreCase("In Force")
-                || "Lapsed".equalsIgnoreCase(status);
+        return (IN_FORCE.equalsIgnoreCase(status) || LAPSED.equalsIgnoreCase(status));
     }
 
     public PolicyNumberResponseDTO extractPolicyNumber(String policyRef) {

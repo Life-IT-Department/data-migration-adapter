@@ -16,9 +16,6 @@ import java.util.stream.Stream;
 @Repository
 public interface CashFlowReportRepository extends JpaRepository<CashFlowReportEntity, Long> {
 
-    @Query("SELECT c FROM CashFlowReportEntity c WHERE c.details LIKE %:keyword%")
-    List<CashFlowReportEntity> findByDetailsContaining(@Param("keyword") String keyword);
-
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Transactional
     @Query(value = "TRUNCATE TABLE cash_flow RESTART IDENTITY", nativeQuery = true)

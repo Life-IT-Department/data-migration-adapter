@@ -54,4 +54,15 @@ public class ExtraFields {
 
     @Column(name = "bst_surrender_value", precision = 18, scale = 2)
     private BigDecimal bstSurrenderValue;
+
+    @Column(name = "insurance_coverage_period")
+    private Integer insuranceCoveragePeriod;
+
+    @Column(name = "total_premium_allocation", precision = 18, scale = 2)
+    private BigDecimal totalPremiumAllocation;
+
+    @Column(name = "bank_name")
+    private String bankName;
+
+
 }
