@@ -157,6 +157,7 @@ public class DeclaredClaimReportServiceImpl implements DeclaredClaimReportServic
                 "Policyholder / Insured",
                 "Title",
                 "Claimed Life Assured",
+                "Child Identification",
                 "Claim Closed Date",
                 "Remarks",
                 "Profession / Activity",
@@ -223,19 +224,20 @@ public class DeclaredClaimReportServiceImpl implements DeclaredClaimReportServic
         claim.setClaimedTitle(getString(row, 23));
         claim.setClaimedLifeAssured(getString(row, 24));
 
-        claim.setClaimClosedDate(getDate(row, 25));
+        claim.setChildIdentification(getString(row, 25));
+        claim.setClaimClosedDate(getDate(row, 26));
 
-        claim.setRemarks(getString(row, 26));
-        claim.setProfessionOrActivity(getString(row, 27));
-        claim.setDistrict(getString(row, 28));
-        claim.setPlaceOfClaims(getString(row, 29));
-        claim.setCauseOfLoss(getString(row, 30));
-        claim.setCauseOfClaims(getString(row, 31));
-        claim.setStatusNotes(getString(row, 32));
-        claim.setClaimDescription(getString(row, 33));
-        claim.setClaimType(getString(row, 34));
+        claim.setRemarks(getString(row, 27));
+        claim.setProfessionOrActivity(getString(row, 28));
+        claim.setDistrict(getString(row, 29));
+        claim.setPlaceOfClaims(getString(row, 30));
+        claim.setCauseOfLoss(getString(row, 31));
+        claim.setCauseOfClaims(getString(row, 32));
+        claim.setStatusNotes(getString(row, 33));
+        claim.setClaimDescription(getString(row, 34));
+        claim.setClaimType(getString(row, 35));
 
-        claim.setUnderwritingYear(getInt(row, 35));
+        claim.setUnderwritingYear(getInt(row, 36));
 
         return claim;
     }

@@ -62,6 +62,8 @@ public class DeclaredClaimEntity {
     private String claimedTitle;
     @Column(name = "claimed_life_assured", columnDefinition = "TEXT")
     private String claimedLifeAssured;
+    @Column(name = "child_identification")
+    private String childIdentification;
     @Column(name = "claim_closed_date")
     private LocalDate claimClosedDate;
     @Column(columnDefinition = "TEXT")

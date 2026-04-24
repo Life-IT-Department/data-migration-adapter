@@ -65,6 +65,8 @@ public class OutstandingClaimEntity {
     private String policyholderOrInsured;
     @Column(name = "claimed_life_assured")
     private String ClaimedLifeAssured;
+    @Column(name = "child_identification")
+    private String childIdentification;
     @Column(name = "profession_or_activity")
     private String professionOrActivity;
     @Column(name = "district")

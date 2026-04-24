@@ -33,7 +33,13 @@ public class RejectedClaimReportServiceImpl implements RejectedClaimReportServic
 
     private final RejectedClaimRepository rejectedClaimRepository;
 
-    private static final DateTimeFormatter DMY = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    private static final DateTimeFormatter OUTPUT_FORMAT =
+            DateTimeFormatter.ofPattern("dd/MM/yyyy");
+
+    private static final DateTimeFormatter[] INPUT_FORMATS = new DateTimeFormatter[]{
+            DateTimeFormatter.ofPattern("dd/MM/yyyy"),
+            DateTimeFormatter.ofPattern("dd/MM/yy")
+    };
     private static final int BATCH_SIZE = 2000;
 
     @SneakyThrows
@@ -87,6 +93,8 @@ public class RejectedClaimReportServiceImpl implements RejectedClaimReportServic
                     "Occurred Date",
                     "Declared Date",
                     "PolicyHolder Name",
+                    "Claimed Life Assured",
+                    "Child Identification",
                     "Claimant Name",
                     "Rider",
                     "Rejected Date",
@@ -132,17 +140,21 @@ public class RejectedClaimReportServiceImpl implements RejectedClaimReportServic
                 claim.setDeclaredDate(parseDate(getCellValue(row.getCell(8, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL), evaluator)));
 
                 claim.setPolicyholderName(getCellValue(row.getCell(9, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL), evaluator));
-                claim.setClaimantName(getCellValue(row.getCell(10, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL), evaluator));
-                claim.setRider(getCellValue(row.getCell(11, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL), evaluator));
 
-                claim.setRejectedDate(parseDate(getCellValue(row.getCell(12, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL), evaluator)));
-                claim.setReason(getCellValue(row.getCell(13, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL), evaluator));
+                claim.setClaimedLifeAssured(getCellValue(row.getCell(10, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL), evaluator));
+                claim.setChildIdentification(getCellValue(row.getCell(11, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL), evaluator));
 
-                claim.setClaimedAmount(parseDouble(getCellValue(row.getCell(14, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL), evaluator)));
-                claim.setExpertFee(parseDouble(getCellValue(row.getCell(15, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL), evaluator)));
-                claim.setPaidFee(parseDouble(getCellValue(row.getCell(16, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL), evaluator)));
+                claim.setClaimantName(getCellValue(row.getCell(12, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL), evaluator));
+                claim.setRider(getCellValue(row.getCell(13, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL), evaluator));
 
-                claim.setCurr(getCellValue(row.getCell(17, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL), evaluator));
+                claim.setRejectedDate(parseDate(getCellValue(row.getCell(14, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL), evaluator)));
+                claim.setReason(getCellValue(row.getCell(15, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL), evaluator));
+
+                claim.setClaimedAmount(parseDouble(getCellValue(row.getCell(16, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL), evaluator)));
+                claim.setExpertFee(parseDouble(getCellValue(row.getCell(17, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL), evaluator)));
+                claim.setPaidFee(parseDouble(getCellValue(row.getCell(18, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL), evaluator)));
+
+                claim.setCurr(getCellValue(row.getCell(19, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL), evaluator));
 
                 claim.setCurrentYear(currentYear);
                 claim.setCurrentMonth(currentMonth);
@@ -248,25 +260,43 @@ public class RejectedClaimReportServiceImpl implements RejectedClaimReportServic
         return switch (type) {
             case STRING -> {
                 String v = cell.getStringCellValue();
-                yield (v == null || v.isBlank()) ? null : v.trim();
+                if (v == null || v.isBlank()) yield null;
+
+                v = v.trim();
+
+                // Try parsing as date
+                LocalDate parsedDate = parseDate(v);
+                if (parsedDate != null) {
+                    yield parsedDate.format(OUTPUT_FORMAT);
+                }
+
+                yield v;
             }
+
             case NUMERIC -> {
                 if (DateUtil.isCellDateFormatted(cell)) {
                     yield cell.getLocalDateTimeCellValue()
                             .toLocalDate()
-                            .format(DMY);
+                            .format(OUTPUT_FORMAT);
                 }
                 double n = cell.getNumericCellValue();
                 yield (n == (long) n) ? String.valueOf((long) n) : String.valueOf(n);
             }
+
             case BOOLEAN -> String.valueOf(cell.getBooleanCellValue());
+
             default -> null; // BLANK, ERROR, _NONE
         };
     }
 
     private LocalDate parseDate(String val) {
-        if (val == null || val.isBlank()) return null;
-        return LocalDate.parse(val, DMY);
+        for (DateTimeFormatter formatter : INPUT_FORMATS) {
+            try {
+                return LocalDate.parse(val, formatter);
+            } catch (Exception ignored) {
+            }
+        }
+        return null;
     }
 
     private Double parseDouble(String val) {

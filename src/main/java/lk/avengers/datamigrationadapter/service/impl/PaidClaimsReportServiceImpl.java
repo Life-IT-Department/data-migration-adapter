@@ -151,37 +151,39 @@ public class PaidClaimsReportServiceImpl implements PaidClaimsReportService {
         claim.setPayeePin(getString(row, 24));
         claim.setPolicyHolder(getString(row, 25));
         claim.setClaimedLifeAssured(getString(row, 26));
-        claim.setClaimantName(getString(row, 27));
 
-        claim.setProfessionCode(getLong(row, 28));
-        claim.setProfessionOrActivity(getString(row, 29));
-        claim.setNoOfPreviousClaims(getInt(row, 30));
-        claim.setPreviousClaimsTotalSettlement(getDouble(row, 31));
-        claim.setPreviousClaimNumbers(getString(row, 32));
-        claim.setLifeAssuredCurrentAge(getInt(row, 33));
-        claim.setLongRiskNo(getInt(row, 34));
-        claim.setGender(getString(row, 35));
-        claim.setPolicyAgeAtClaimDate(getInt(row, 36));
-        claim.setNoOfDaysHospitalizedStandard(getInt(row, 37));
-        claim.setNoOfDaysHospitalizedIcu(getInt(row, 38));
+        claim.setChildIdentification(getString(row, 27));
+        claim.setClaimantName(getString(row, 28));
 
-        claim.setPolicyHolderAddress(getString(row, 39));
-        claim.setPhoneNumber(getString(row, 40));
-        claim.setDistrict(getString(row, 41));
-        claim.setPlaceOfClaim(getString(row, 42));
-        claim.setCauseOfLoss(getString(row, 43));
-        claim.setCauseOfClaim(getString(row, 44));
-        claim.setStatusNotes(getString(row, 45));
-        claim.setClaimDescription(getString(row, 46));
+        claim.setProfessionCode(getLong(row, 29));
+        claim.setProfessionOrActivity(getString(row, 30));
+        claim.setNoOfPreviousClaims(getInt(row, 31));
+        claim.setPreviousClaimsTotalSettlement(getDouble(row, 32));
+        claim.setPreviousClaimNumbers(getString(row, 33));
+        claim.setLifeAssuredCurrentAge(getInt(row, 34));
+        claim.setLongRiskNo(getInt(row, 35));
+        claim.setGender(getString(row, 36));
+        claim.setPolicyAgeAtClaimDate(getInt(row, 37));
+        claim.setNoOfDaysHospitalizedStandard(getInt(row, 38));
+        claim.setNoOfDaysHospitalizedIcu(getInt(row, 39));
 
-        claim.setUnderwritingYear(getInt(row, 47));
-        claim.setExpert(getInt(row, 48));
+        claim.setPolicyHolderAddress(getString(row, 40));
+        claim.setPhoneNumber(getString(row, 41));
+        claim.setDistrict(getString(row, 42));
+        claim.setPlaceOfClaim(getString(row, 43));
+        claim.setCauseOfLoss(getString(row, 44));
+        claim.setCauseOfClaim(getString(row, 45));
+        claim.setStatusNotes(getString(row, 46));
+        claim.setClaimDescription(getString(row, 47));
 
-        claim.setPayTo(getString(row, 49));
-        claim.setXGracia(getString(row, 50));
-        claim.setHcpName(getString(row, 51));
-        claim.setClaimType(getString(row, 52));
-        claim.setPolicyStatus(getString(row, 53));
+        claim.setUnderwritingYear(getInt(row, 48));
+        claim.setExpert(getInt(row, 49));
+
+        claim.setPayTo(getString(row, 50));
+        claim.setXGracia(getString(row, 51));
+        claim.setHcpName(getString(row, 52));
+        claim.setClaimType(getString(row, 53));
+        claim.setPolicyStatus(getString(row, 54));
 
         return claim;
     }
@@ -213,7 +215,12 @@ public class PaidClaimsReportServiceImpl implements PaidClaimsReportService {
 
     private Double getDouble(Row row, int col) {
         String val = getString(row, col);
-        return val == null ? null : Double.parseDouble(val);
+
+        if (val == null || val.trim().isEmpty()) {
+            return null;
+        }
+
+        return Double.parseDouble(val.trim());
     }
 
     private Integer getInt(Row row, int col) {
@@ -228,7 +235,28 @@ public class PaidClaimsReportServiceImpl implements PaidClaimsReportService {
 
     private LocalDate getDate(Row row, int col) {
         String val = getString(row, col);
-        return val == null ? null : LocalDate.parse(val, DMY);
+
+        if (val == null) {
+            return null;
+        }
+
+        val = val.trim();
+
+        // empty → ignore
+        if (val.isEmpty()) {
+            return null;
+        }
+
+        // ignore numeric values like "0.5", "123", "0,5"
+        if (val.matches("^[0-9]+([.,][0-9]+)?$")) {
+            return null;
+        }
+
+        try {
+            return LocalDate.parse(val, DMY);
+        } catch (Exception e) {
+            return null; // or log if needed
+        }
     }
 
     private boolean isRowBlank(Row row) {

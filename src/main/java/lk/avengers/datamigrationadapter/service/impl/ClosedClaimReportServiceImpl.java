@@ -159,11 +159,14 @@ public class ClosedClaimReportServiceImpl implements ClosedClaimReportService {
         claim.setDeclarationDate(getDate(row, 12));
         claim.setStatusDate(getDate(row, 13));
 
-        claim.setClaimAmount(getDouble(row, 14));
-        claim.setPreLastEvaluation(getDouble(row, 15));
-        claim.setEvaluationAmount(getDouble(row, 16));
+        claim.setClaimedLifeAssured(getString(row, 14));
+        claim.setChildIdentification(getString(row, 15));
 
-        claim.setRemarks(getString(row, 17));
+        claim.setClaimAmount(getDouble(row, 16));
+        claim.setPreLastEvaluation(getDouble(row, 17));
+        claim.setEvaluationAmount(getDouble(row, 18));
+
+        claim.setRemarks(getString(row, 19));
         return claim;
     }
 
@@ -184,6 +187,8 @@ public class ClosedClaimReportServiceImpl implements ClosedClaimReportService {
                 "Occurrence Date",
                 "Declaration Date",
                 "Status Date",
+                "Claimed Life Assured",
+                "Child Identification",
                 "Claim Amount",
                 "Pre-Last Evaluation",
                 "Evaluation Amount",

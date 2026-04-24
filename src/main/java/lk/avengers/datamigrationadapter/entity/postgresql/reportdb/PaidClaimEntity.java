@@ -71,6 +71,8 @@ public class PaidClaimEntity {
     private String policyHolder;
     @Column(name = "claimed_life_assured")
     private String claimedLifeAssured;
+    @Column(name = "child_identification")
+    private String childIdentification;
     @Column(name = "claimant_name")
     private String claimantName;
     @Column(name = "profession_code")

@@ -58,6 +58,12 @@ public class ClosedClaimReportEntity {
     @Column(name = "status_date")
     private LocalDate statusDate;
 
+    @Column(name = "claimed_life_assured")
+    private String claimedLifeAssured;
+
+    @Column(name = "child_identification")
+    private String childIdentification;
+
     @Column(name = "claim_amount")
     private Double claimAmount;
 
@@ -78,4 +84,6 @@ public class ClosedClaimReportEntity {
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
+
+
 }

@@ -38,6 +38,10 @@ public class RejectedClaimEntity {
     private LocalDate declaredDate;
     @Column(name = "policyholder_name")
     private String policyholderName;
+    @Column(name = "claimed_life_assured")
+    private String claimedLifeAssured;
+    @Column(name = "child_identification")
+    private String childIdentification;
     @Column(name = "claimant_name")
     private String claimantName;
     @Column(name = "rider")

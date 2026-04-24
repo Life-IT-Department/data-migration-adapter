@@ -99,6 +99,7 @@ public class OutstandingClaimReportServiceImpl implements OutstandingClaimReport
                     "O/S Recovery",
                     "Policyholder / Insured",
                     "Claimed Life Assured",
+                    "Child Identification",
                     "Profession / Activity",
                     "District",
                     "Place of Claim",
@@ -163,16 +164,19 @@ public class OutstandingClaimReportServiceImpl implements OutstandingClaimReport
 
                 claim.setPolicyholderOrInsured(getCellValue(row.getCell(START_COL + 21, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL)));
                 claim.setClaimedLifeAssured(getCellValue(row.getCell(START_COL + 22, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL)));
-                claim.setProfessionOrActivity(getCellValue(row.getCell(START_COL + 23, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL)));
-                claim.setDistrict(getCellValue(row.getCell(START_COL + 24, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL)));
-                claim.setPlaceOfClaim(getCellValue(row.getCell(START_COL + 25, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL)));
-                claim.setCauseOfLoss(getCellValue(row.getCell(START_COL + 26, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL)));
-                claim.setCauseOfClaim(getCellValue(row.getCell(START_COL + 27, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL)));
-                claim.setStatusNotes(getCellValue(row.getCell(START_COL + 28, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL)));
-                claim.setClaimDescription(getCellValue(row.getCell(START_COL + 29, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL)));
-                claim.setClaimType(getCellValue(row.getCell(START_COL + 30, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL)));
 
-                claim.setUnderwritingYear(parseInt(getCellValue(row.getCell(START_COL + 31, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL))));
+                claim.setChildIdentification(getCellValue(row.getCell(START_COL + 23, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL)));
+
+                claim.setProfessionOrActivity(getCellValue(row.getCell(START_COL + 24, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL)));
+                claim.setDistrict(getCellValue(row.getCell(START_COL + 25, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL)));
+                claim.setPlaceOfClaim(getCellValue(row.getCell(START_COL + 26, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL)));
+                claim.setCauseOfLoss(getCellValue(row.getCell(START_COL + 27, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL)));
+                claim.setCauseOfClaim(getCellValue(row.getCell(START_COL + 28, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL)));
+                claim.setStatusNotes(getCellValue(row.getCell(START_COL + 29, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL)));
+                claim.setClaimDescription(getCellValue(row.getCell(START_COL + 30, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL)));
+                claim.setClaimType(getCellValue(row.getCell(START_COL + 31, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL)));
+
+                claim.setUnderwritingYear(parseInt(getCellValue(row.getCell(START_COL + 32, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL))));
 
                 claim.setCurrentYear(currentYear);
                 claim.setCurrentMonth(currentMonth);
