@@ -277,11 +277,6 @@ public class DeclaredClaimReportServiceImpl implements DeclaredClaimReportServic
         return d == null ? null : d.intValue();
     }
 
-    private Long getLong(Row row, int col) {
-        Double d = getDouble(row, col);
-        return d == null ? null : d.longValue();
-    }
-
     private LocalDate getDate(Row row, int col) {
         String val = getString(row, col);
         return val == null ? null : LocalDate.parse(val, DMY);

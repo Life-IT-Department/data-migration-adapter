@@ -117,7 +117,7 @@ public class RejectedClaimReportServiceImpl implements RejectedClaimReportServic
                     headerRow = row;
 
                     ResponseEntity<CommonResponseDTO> headerValidation =
-                            getStringResponseEntity(expectedHeaders, headerRow, evaluator);
+                            getStringResponseEntity(expectedHeaders, headerRow);
                     if (headerValidation != null) return headerValidation;
 
                     continue;
@@ -129,32 +129,32 @@ public class RejectedClaimReportServiceImpl implements RejectedClaimReportServic
 
                 RejectedClaimEntity claim = new RejectedClaimEntity();
 
-                claim.setPolicy(getCellValue(row.getCell(1, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL), evaluator));
-                claim.setClaimNo(getCellValue(row.getCell(2, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL), evaluator));
-                claim.setSalesAgency(getCellValue(row.getCell(3, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL), evaluator));
-                claim.setCompanyAgency(getCellValue(row.getCell(4, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL), evaluator));
-                claim.setAgent(getCellValue(row.getCell(5, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL), evaluator));
-                claim.setClaimType(getCellValue(row.getCell(6, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL), evaluator));
+                claim.setPolicy(getCellValue(row.getCell(1, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL)));
+                claim.setClaimNo(getCellValue(row.getCell(2, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL)));
+                claim.setSalesAgency(getCellValue(row.getCell(3, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL)));
+                claim.setCompanyAgency(getCellValue(row.getCell(4, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL)));
+                claim.setAgent(getCellValue(row.getCell(5, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL)));
+                claim.setClaimType(getCellValue(row.getCell(6, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL)));
 
-                claim.setOccurredDate(parseDate(getCellValue(row.getCell(7, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL), evaluator)));
-                claim.setDeclaredDate(parseDate(getCellValue(row.getCell(8, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL), evaluator)));
+                claim.setOccurredDate(parseDate(getCellValue(row.getCell(7, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL))));
+                claim.setDeclaredDate(parseDate(getCellValue(row.getCell(8, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL))));
 
-                claim.setPolicyholderName(getCellValue(row.getCell(9, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL), evaluator));
+                claim.setPolicyholderName(getCellValue(row.getCell(9, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL)));
 
-                claim.setClaimedLifeAssured(getCellValue(row.getCell(10, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL), evaluator));
-                claim.setChildIdentification(getCellValue(row.getCell(11, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL), evaluator));
+                claim.setClaimedLifeAssured(getCellValue(row.getCell(10, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL)));
+                claim.setChildIdentification(getCellValue(row.getCell(11, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL)));
 
-                claim.setClaimantName(getCellValue(row.getCell(12, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL), evaluator));
-                claim.setRider(getCellValue(row.getCell(13, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL), evaluator));
+                claim.setClaimantName(getCellValue(row.getCell(12, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL)));
+                claim.setRider(getCellValue(row.getCell(13, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL)));
 
-                claim.setRejectedDate(parseDate(getCellValue(row.getCell(14, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL), evaluator)));
-                claim.setReason(getCellValue(row.getCell(15, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL), evaluator));
+                claim.setRejectedDate(parseDate(getCellValue(row.getCell(14, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL))));
+                claim.setReason(getCellValue(row.getCell(15, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL)));
 
-                claim.setClaimedAmount(parseDouble(getCellValue(row.getCell(16, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL), evaluator)));
-                claim.setExpertFee(parseDouble(getCellValue(row.getCell(17, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL), evaluator)));
-                claim.setPaidFee(parseDouble(getCellValue(row.getCell(18, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL), evaluator)));
+                claim.setClaimedAmount(parseDouble(getCellValue(row.getCell(16, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL))));
+                claim.setExpertFee(parseDouble(getCellValue(row.getCell(17, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL))));
+                claim.setPaidFee(parseDouble(getCellValue(row.getCell(18, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL))));
 
-                claim.setCurr(getCellValue(row.getCell(19, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL), evaluator));
+                claim.setCurr(getCellValue(row.getCell(19, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL)));
 
                 claim.setCurrentYear(currentYear);
                 claim.setCurrentMonth(currentMonth);
@@ -216,14 +216,13 @@ public class RejectedClaimReportServiceImpl implements RejectedClaimReportServic
      */
     private ResponseEntity<CommonResponseDTO> getStringResponseEntity(
             List<String> expectedHeaders,
-            Row headerRow,
-            FormulaEvaluator evaluator
+            Row headerRow
     ) {
         for (int i = 0; i < expectedHeaders.size(); i++) {
             String expected = expectedHeaders.get(i);
 
             Cell cell = headerRow.getCell(i+1, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL);
-            String actual = getCellValue(cell, evaluator);
+            String actual = getCellValue(cell);
             String actualSafe = actual == null ? "" : actual.trim();
 
             if (!expected.equalsIgnoreCase(actualSafe)) {
@@ -248,7 +247,7 @@ public class RejectedClaimReportServiceImpl implements RejectedClaimReportServic
      * Safely reads an Excel cell as String.
      * Handles STRING, NUMERIC (date/number), BOOLEAN, FORMULA.
      */
-    private String getCellValue(Cell cell, FormulaEvaluator evaluator) {
+    private String getCellValue(Cell cell) {
         if (cell == null) return null;
 
         CellType type = cell.getCellType();

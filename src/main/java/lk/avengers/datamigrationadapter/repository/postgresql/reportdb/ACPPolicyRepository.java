@@ -1,9 +1,7 @@
 package lk.avengers.datamigrationadapter.repository.postgresql.reportdb;
 
 import jakarta.transaction.Transactional;
-import lk.avengers.datamigrationadapter.dto.PolicyKey;
 import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.ACPPolicyEntity;
-import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.MainDataALHReportEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;

@@ -2,7 +2,6 @@ package lk.avengers.datamigrationadapter.entity.postgresql.reportdb;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Entity
 @Table(name = "benefit_code_mapper")
@@ -19,5 +18,4 @@ public class BenefitCodeMapperEntity {
     private String softlogicBenefitCode;
     @Column(name = "allianz_benefit_code", nullable = false, unique = true)
     private String allianzBenefitCode;
-    //TODo No Code in BenefitCodeMapperEntity
 }

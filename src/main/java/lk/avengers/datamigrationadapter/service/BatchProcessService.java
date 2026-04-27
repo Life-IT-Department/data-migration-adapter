@@ -4,8 +4,6 @@ import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.CashFlowRepor
 import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.MainDataALHReportEntity;
 import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.MainDataReportEntity;
 import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.PremiumDetailsEntity;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 

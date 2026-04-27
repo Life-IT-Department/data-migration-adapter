@@ -19,6 +19,7 @@ public class MigrationController {
     private final PolicyBeneficiariesMappingService policyBeneficiariesMappingService;
     private final PolicyBenefitMappingService policyBenefitMappingService;
     private final PremiumsMappingService premiumsPaidMappingService;
+    private final UnitLinkMapperService unitLinkMapperService;
 
     @GetMapping("/policy")
     public ResponseEntity<String> migrateMigrPolicyData() {
@@ -50,5 +51,11 @@ public class MigrationController {
     public ResponseEntity<CommonResponseDTO> migratePremiumsPaid(){
         log.info("MIGRATE PREMIUMS PAID METHOD ACCESSED");
         return premiumsPaidMappingService.mapPremiumsPaid();
+    }
+
+    @GetMapping("/unit-link")
+    public ResponseEntity<CommonResponseDTO> migrateUnitLink(){
+        log.info("MIGRATE UNIT LINK METHOD ACCESSED");
+        return unitLinkMapperService.processUnitLinkMapping();
     }
 }

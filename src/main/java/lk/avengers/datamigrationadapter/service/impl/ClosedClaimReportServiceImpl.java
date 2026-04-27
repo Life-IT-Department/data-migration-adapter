@@ -23,7 +23,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Objects;
 
 @Service
 @Slf4j
@@ -237,16 +236,6 @@ public class ClosedClaimReportServiceImpl implements ClosedClaimReportService {
     private Double getDouble(Row row, int col) {
         String val = getString(row, col);
         return val == null ? null : Double.parseDouble(val);
-    }
-
-    private Integer getInt(Row row, int col) {
-        Double d = getDouble(row, col);
-        return d == null ? null : d.intValue();
-    }
-
-    private Long getLong(Row row, int col) {
-        Double d = getDouble(row, col);
-        return d == null ? null : d.longValue();
     }
 
     private LocalDate getDate(Row row, int col) {

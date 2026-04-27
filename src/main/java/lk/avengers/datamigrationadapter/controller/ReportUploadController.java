@@ -36,6 +36,7 @@ public class ReportUploadController {
     private final DeclaredClaimReportService declaredClaimReportService;
     private final ClosedClaimReportService closedClaimReportService;
     private final PremiumDetailsReportsService premiumDetailsReportsService;
+    private final UnitLinkReportUploadService   unitLinkReportUploadService;
 
     @GetMapping("/cash-flow-report")
     public ResponseEntity<CommonResponseDTO> uploadCashFlow(@RequestParam int year) {
@@ -92,8 +93,14 @@ public class ReportUploadController {
     }
 
     @GetMapping("/premium-details-reports")
-    public ResponseEntity<CommonResponseDTO> uploadPremiumDetailsReportsExcels() {
-        log.info("uploadPremiumDetailsReportExcels API METHOD ACCESSED.");
+    public ResponseEntity<CommonResponseDTO> uploadPremiumDetailsReportsExcel() {
+        log.info("uploadPremiumDetailsReportExcel API METHOD ACCESSED.");
         return premiumDetailsReportsService.uploadPremiumDetailsReports();
+    }
+
+    @GetMapping("/unit-link")
+    public ResponseEntity<CommonResponseDTO> uploadUnitLinkReportsExcel() {
+        log.info("uploadUnitLinkReportsExcel API METHOD ACCESSED.");
+        return unitLinkReportUploadService.uploadUnitLinkReport();
     }
 }
