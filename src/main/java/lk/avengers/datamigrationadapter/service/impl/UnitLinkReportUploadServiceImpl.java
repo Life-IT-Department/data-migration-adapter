@@ -27,7 +27,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class UnitLinkReportUploadServiceImpl implements UnitLinkReportUploadService {
 
-    @Value("${policyFund.file}")
+    @Value("${unitLink.file}")
     private String filePath;
 
     private final UnitLinkRepository unitLinkRepository;
