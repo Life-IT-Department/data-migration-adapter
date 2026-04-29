@@ -66,6 +66,8 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
 
     private static final String SUWASAHANA = "ASP";
 
+   Map<String, MainDataReportEntity> mainData;
+
     @Transactional(transactionManager = "softlogicPlatformTransactionManager")
     @Override
     public CommonResponseDTO processBenefitCodeMapping() {
@@ -114,6 +116,7 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
                                 Function.identity(),
                                 (a, b) -> a
                         ));
+        mainData = mainDataMap;
 
         Map<String, MainDataALHReportEntity> alhMap =
                 mainDataALHReportRepository.findFiltered(productCodes, policyNos).stream()
@@ -706,6 +709,7 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
         }
 
         log.info("Saving updated benefit data into MSSQL");
+        updateBSAULPolicies(policyBenefitsEntityList);
         saveInBatches(policyBenefitsEntityList, policyBenefitsEntityRepository);
 
         log.info("Completed benefits saving. Setting up SAR");
@@ -865,5 +869,27 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
         }
         log.info("Completed batch save: totalRecords={}, repository={}",
                 totalSize, repository.getClass().getSimpleName());
+    }
+
+    private void updateBSAULPolicies(List<MigrPolicyBenefitsEntity> entities) {
+        for (MigrPolicyBenefitsEntity entity : entities) {
+            var id = entity.getId();
+            if (id == null) {
+                continue;
+            }
+
+            String policyNo = id.getPbPolicyNo();
+            String benefitCode = id.getPbBenefitCode();
+
+            if (policyNo != null &&
+                    (policyNo.contains("ULV") || policyNo.contains("ULI")) &&
+                    BASIC_LIFE_COVER.equalsIgnoreCase(benefitCode)) {
+
+                MainDataReportEntity mainDataEntity = mainData.get(policyNo);
+                if (mainDataEntity != null) {
+                    entity.setPbCoverage(mainDataEntity.getBasicSumAssured());
+                }
+            }
+        }
     }
 }

@@ -126,11 +126,12 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
                         ));
 
         Map<String, PremiumDetailsEntity> premiumMap =
-                premiumDetailsRepository.findFiltered(productCodes, policyNos).stream()
+                premiumDetailsRepository.findFiltered(productCodes, policyNos)
+                        .stream()
                         .collect(Collectors.toMap(
                                 e -> e.getProductCode() + "/" + e.getPolicyNo(),
                                 Function.identity(),
-                                (a, b) -> a
+                                (a, b) -> a.getId() > b.getId() ? a : b
                         ));
 
         log.info("Preloading completed");
