@@ -33,28 +33,33 @@ public class SharedFunction {
         String productCode;
         int policyNo;
 
-        // Case 1: Format with slash (ASP/1082429)
+        // Case 1: Format with slash(es)
         if (policyRef.contains("/")) {
 
             String[] parts = policyRef.split("/");
 
-            if (parts.length != 2) {
+            if (parts.length < 2) {
                 throw new IllegalArgumentException("Invalid policy reference format: " + policyRef);
             }
 
             productCode = parts[0].trim();
 
+            // Join all remaining parts and remove any spaces
+            StringBuilder numberBuilder = new StringBuilder();
+            for (int i = 1; i < parts.length; i++) {
+                numberBuilder.append(parts[i].trim());
+            }
+
             try {
-                policyNo = Integer.parseInt(parts[1].trim());
+                policyNo = Integer.parseInt(numberBuilder.toString());
             } catch (NumberFormatException e) {
-                throw new IllegalArgumentException("Invalid policy number: " + parts[1], e);
+                throw new IllegalArgumentException("Invalid policy number: " + numberBuilder, e);
             }
 
         }
         // Case 2: Format without slash (ULF527879)
         else {
 
-            // Expect: 3 letters + digits
             if (!policyRef.matches("[A-Z]{3}\\d+")) {
                 throw new IllegalArgumentException("Invalid policy reference format: " + policyRef);
             }

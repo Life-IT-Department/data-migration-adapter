@@ -164,7 +164,8 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
             } else if (alh != null) {
                 processALHFast(alh, policy, premiumDueDate, contact, policyBatch, extraBatch);
             } else if (acp != null) {
-                processACPFast(acp, policy, premiumDueDate, contact, policyBatch, extraBatch);
+                String policyNoWithCertNo = policy.concat("/").concat(acp.getCertificateNo());
+                processACPFast(acp, policyNoWithCertNo, premiumDueDate, contact, policyBatch, extraBatch);
             } else {
                 log.warn("Policy {} not found", policy);
             }

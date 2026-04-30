@@ -87,4 +87,7 @@ public class MigrAllClaimsEntity {
 
     @Column(name = "CL_PolicyYear")
     private Integer clPolicyYear;
+
+    @Column(name = "CL_Child_Id")
+    private String clChildId;
 }

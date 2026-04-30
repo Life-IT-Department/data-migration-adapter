@@ -217,6 +217,7 @@ public class ClaimsMappingServiceImpl implements ClaimsMappingService {
                         .clDateofPayment(paid.getTrnDate())
                         .clComments(paid.getClaimDescription())
                         .clPolicyYear(paid.getUnderwritingYear())
+                        .clChildId(paid.getChildIdentification())
                         .build());
             }
         }
@@ -241,6 +242,7 @@ public class ClaimsMappingServiceImpl implements ClaimsMappingService {
                         .clNameOftheHospital(out.getPlaceOfClaim())
                         .clComments(out.getClaimDescription())
                         .clPolicyYear(out.getUnderwritingYear())
+                        .clChildId(out.getChildIdentification())
                         .build())
                 .toList();
     }
@@ -264,7 +266,7 @@ public class ClaimsMappingServiceImpl implements ClaimsMappingService {
                             .clClaimType(rej.getClaimType())
                             .clDateofEvent(rej.getOccurredDate())
                             .clDateofIntimation(rej.getDeclaredDate())
-                            .clPatientAdmitted(rej.getClaimantName())
+                            .clPatientAdmitted(rej.getClaimedLifeAssured())
                             .clCauseofDeath(DEATH.equalsIgnoreCase(rej.getClaimType()) ? causeOfDeath : "")
                             .clNatureofIllnuss(causeOfDeath)
                             .clTotalClaimAmount(BigDecimal.valueOf(rej.getClaimedAmount()))
@@ -273,6 +275,7 @@ public class ClaimsMappingServiceImpl implements ClaimsMappingService {
                             .clNameOftheHospital(placeOfClaim)
                             .clComments(rej.getReason())
                             .clPolicyYear(getPolicyYear(policyNo, mainDataMap, alhMap, acpMap))
+                            .clChildId(rej.getChildIdentification())
                             .build();
                 }).toList();
     }
@@ -296,7 +299,7 @@ public class ClaimsMappingServiceImpl implements ClaimsMappingService {
                             .clClaimType(closed.getTypeOfClaim())
                             .clDateofEvent(closed.getOccurrenceDate())
                             .clDateofIntimation(closed.getDeclarationDate())
-                            .clPatientAdmitted(closed.getPolicyHolder())
+                            .clPatientAdmitted(closed.getClaimedLifeAssured())
                             .clCauseofDeath(DEATH.equalsIgnoreCase(closed.getTypeOfClaim()) ? causeOfDeath : "")
                             .clNatureofIllnuss(causeOfDeath)
                             .clTotalClaimAmount(BigDecimal.valueOf(closed.getClaimAmount()))
@@ -305,6 +308,7 @@ public class ClaimsMappingServiceImpl implements ClaimsMappingService {
                             .clNameOftheHospital(placeOfClaim)
                             .clComments(closed.getRemarks())
                             .clPolicyYear(getPolicyYear(policyNo, mainDataMap, alhMap, acpMap))
+                            .clChildId(closed.getChildIdentification())
                             .build();
                 }).toList();
     }
