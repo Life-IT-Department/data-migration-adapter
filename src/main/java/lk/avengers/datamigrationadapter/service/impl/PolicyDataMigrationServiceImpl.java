@@ -165,7 +165,7 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
                 processALHFast(alh, policy, premiumDueDate, contact, policyBatch, extraBatch);
             } else if (acp != null) {
                 String policyNoWithCertNo = policy.concat("/").concat(acp.getCertificateNo());
-                processACPFast(acp, policyNoWithCertNo, premiumDueDate, contact, policyBatch, extraBatch);
+                processACPFast(acp, policyNoWithCertNo, premiumDueDate, contact, policyBatch, fundBatch, extraBatch);
             } else {
                 log.warn("Policy {} not found", policy);
             }
@@ -248,12 +248,13 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
             LocalDate premiumDueDate,
             ContactDetailEntity contact,
             List<MigrPolicyData> policyBatch,
+            List<FundCurrentBalanceEntity> fundBatch,
             List<ExtraFields> extraBatch
     ) {
 
         processPolicyFast(
                 e, policyNo, premiumDueDate, contact,
-                policyBatch, new ArrayList<>(), extraBatch,
+                policyBatch, fundBatch, extraBatch,
 
                 (dto, entity, polNo, dueDate) -> {
                     dto.setPoPlanCode(getSoftLogicProductCodeMapping(polNo));
@@ -294,7 +295,12 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
                     extra.setBankName(contact.getSalesBranch());
                 },
 
-                null,
+                (fund, entity) -> {
+                    fund.setPolicyNo(policyNo);
+                    fund.setTotalBalance(entity.getInsuredValueToday());
+                    fund.setTopupBalance(entity.getInsuredTopupValueToday());
+                    fund.setPrmValueToday(entity.getInsuredValueToday());
+                },
 
                 ACPPolicyEntity::getStatus,
                 ACPPolicyEntity::getAae
