@@ -218,6 +218,7 @@ public class ClaimsMappingServiceImpl implements ClaimsMappingService {
                         .clComments(paid.getClaimDescription())
                         .clPolicyYear(paid.getUnderwritingYear())
                         .clChildId(paid.getChildIdentification())
+                        .clRelationShip(setRelationship(paid.getPolicyHolder(), paid.getClaimedLifeAssured(), paid.getChildIdentification()))
                         .build());
             }
         }
@@ -243,6 +244,7 @@ public class ClaimsMappingServiceImpl implements ClaimsMappingService {
                         .clComments(out.getClaimDescription())
                         .clPolicyYear(out.getUnderwritingYear())
                         .clChildId(out.getChildIdentification())
+                        .clRelationShip(setRelationship(out.getPolicyholderOrInsured(), out.getClaimedLifeAssured(), out.getChildIdentification()))
                         .build())
                 .toList();
     }
@@ -276,6 +278,7 @@ public class ClaimsMappingServiceImpl implements ClaimsMappingService {
                             .clComments(rej.getReason())
                             .clPolicyYear(getPolicyYear(policyNo, mainDataMap, alhMap, acpMap))
                             .clChildId(rej.getChildIdentification())
+                            .clRelationShip(setRelationship(rej.getPolicyholderName(), rej.getClaimedLifeAssured(), rej.getChildIdentification()))
                             .build();
                 }).toList();
     }
@@ -309,6 +312,7 @@ public class ClaimsMappingServiceImpl implements ClaimsMappingService {
                             .clComments(closed.getRemarks())
                             .clPolicyYear(getPolicyYear(policyNo, mainDataMap, alhMap, acpMap))
                             .clChildId(closed.getChildIdentification())
+                            .clRelationShip(setRelationship(closed.getPolicyHolder(), closed.getClaimedLifeAssured(), closed.getChildIdentification()))
                             .build();
                 }).toList();
     }
@@ -366,6 +370,72 @@ public class ClaimsMappingServiceImpl implements ClaimsMappingService {
 
     private PolicyNumberResponseDTO extractPolicyNumberHelper (String policyRef) {
         return sharedFunction.extractPolicyNumber(policyRef);
+    }
+
+    private String setRelationship(String policyHolder, String claimedLifeAssured, String childId) {
+
+        // 1. Child takes highest priority
+        if (childId != null && !childId.isBlank()) {
+            return "Child";
+        }
+
+        // 2. If either name is missing → assume Main
+        if (isBlank(policyHolder) || isBlank(claimedLifeAssured)) {
+            return "Main";
+        }
+
+        // 3. If either is a company → treat as Main
+        if (isCompany(policyHolder) || isCompany(claimedLifeAssured)) {
+            return "Main";
+        }
+
+        // 4. Compare normalized names
+        return areNamesEquivalent(policyHolder, claimedLifeAssured)
+                ? "Main"
+                : "Spouse";
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
+    }
+
+    private boolean isCompany(String input) {
+        String normalized = input.toLowerCase();
+        return normalized.contains("ltd") || normalized.contains("pvt");
+    }
+
+    private boolean areNamesEquivalent(String str1, String str2) {
+        Set<String> set1 = normalizeAndSplit(str1);
+        Set<String> set2 = normalizeAndSplit(str2);
+
+        if (set1.isEmpty() || set2.isEmpty()) return false;
+
+        // exact match
+        if (set1.equals(set2)) return true;
+
+        // subset match (handles missing middle names)
+        if (set1.containsAll(set2) || set2.containsAll(set1)) return true;
+
+        // 🔑 partial overlap (robust for real data)
+        Set<String> intersection = new HashSet<>(set1);
+        intersection.retainAll(set2);
+
+        double matchRatio = (double) intersection.size() / Math.max(set1.size(), set2.size());
+
+        return matchRatio >= 0.7; // threshold (tune if needed)
+    }
+
+    private Set<String> normalizeAndSplit(String input) {
+        return Arrays.stream(input
+                        .toLowerCase()
+                        // remove titles
+                        .replaceAll("\\b(mr|mrs|ms|miss|dr)\\.?\\b", "")
+                        // replace punctuation with space
+                        .replaceAll("[^a-z0-9]", " ")
+                        .trim()
+                        .split("\\s+"))
+                .filter(s -> !s.isEmpty())
+                .collect(Collectors.toSet());
     }
 
     private <T> void saveInBatches(List<T> list, JpaRepository<T, ?> repository) {

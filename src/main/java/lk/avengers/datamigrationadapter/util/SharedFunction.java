@@ -12,6 +12,8 @@ public class SharedFunction {
 
     private static final String IN_FORCE = "In Force";
     private static final String LAPSED = "Lapsed";
+    private static final String AMENDED = "Amended";
+    private static final String IN_FORCE_PAID_UP = "In Force / Paid Up";
 
     public boolean isEligiblePolicyStatus(String status) {
 
@@ -19,7 +21,10 @@ public class SharedFunction {
             return true;
         }
 
-        return (IN_FORCE.equalsIgnoreCase(status) || LAPSED.equalsIgnoreCase(status));
+        return (IN_FORCE.equalsIgnoreCase(status) ||
+                LAPSED.equalsIgnoreCase(status) ||
+                AMENDED.equalsIgnoreCase(status) ||
+                IN_FORCE_PAID_UP.equalsIgnoreCase(status));
     }
 
     public PolicyNumberResponseDTO extractPolicyNumber(String policyRef) {
