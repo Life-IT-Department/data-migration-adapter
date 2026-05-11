@@ -273,23 +273,21 @@ public class PremiumsMappingServiceImpl implements PremiumsMappingService {
                     continue;
                 }
 
-                PremiumDetailsEntity first = premiums.getFirst();
+                PremiumDetailsEntity last = premiums.stream()
+                        .filter(p -> p.getId() != null)
+                        .max(Comparator.comparing(PremiumDetailsEntity::getId))
+                        .orElse(null);
 
                 int paidCount = (int) premiums.stream()
                         .filter(p -> p.getPaymentDate() != null)
                         .count();
 
-                LocalDate beginDate = premiums.stream()
-                        .map(PremiumDetailsEntity::getPremiumDueDate)
-                        .filter(Objects::nonNull)
-                        .min(LocalDate::compareTo)
-                        .orElse(null);
-
                 PremiumExtraFields extra = PremiumExtraFields.builder()
                         .policyNo(key)
-                        .inceptionDate(first.getInceptionDate())
-                        .beginDate(beginDate)
+                        .inceptionDate(last.getInceptionDate())
+                        .premiumDueDate(last.getPremiumDueDate())
                         .paidCount(paidCount)
+                        .period(getPeriod(last.getFrequency()))
                         .build();
 
                 extraFieldsList.add(extra);

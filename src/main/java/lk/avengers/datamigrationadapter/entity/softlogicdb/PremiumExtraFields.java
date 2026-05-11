@@ -24,8 +24,11 @@ public class PremiumExtraFields {
     @Column(name = "InceptionDate")
     private LocalDate inceptionDate;
 
-    @Column(name = "BeginDate")
-    private LocalDate beginDate;
+    @Column(name = "PremiumDueDate")
+    private LocalDate premiumDueDate;
+
+    @Column(name = "Period")
+    private Integer period;
 
     @Column(name = "PaidCount")
     private Integer paidCount;
