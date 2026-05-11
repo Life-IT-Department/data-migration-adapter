@@ -5,4 +5,6 @@ import org.springframework.http.ResponseEntity;
 
 public interface PremiumsMappingService {
     ResponseEntity<CommonResponseDTO> mapPremiumsPaid();
+
+    ResponseEntity<CommonResponseDTO> mapPremiumsExtra();
 }

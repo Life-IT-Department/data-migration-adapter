@@ -7,6 +7,7 @@ import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.*;
 import lk.avengers.datamigrationadapter.entity.softlogicdb.ExtraFields;
 import lk.avengers.datamigrationadapter.entity.softlogicdb.FundCurrentBalanceEntity;
 import lk.avengers.datamigrationadapter.entity.softlogicdb.MigrPolicyData;
+import lk.avengers.datamigrationadapter.entity.softlogicdb.PremiumExtraFields;
 import lk.avengers.datamigrationadapter.mapper.ExtraFieldsMapper;
 import lk.avengers.datamigrationadapter.mapper.FundCurrentBalanceMapper;
 import lk.avengers.datamigrationadapter.mapper.PolicyMapper;
@@ -19,6 +20,7 @@ import lk.avengers.datamigrationadapter.util.MainExcelReader;
 import lk.avengers.datamigrationadapter.util.SharedFunction;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -725,7 +727,7 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
             case "SURRENDED", "SURRENDED / PAID UP" -> "SRND";
             case "SUSPENDED" -> "SPND";
             case "WAITING FOR CANCELLATION" -> "CNLD";
-            case "WAITING FOR PAID UP" -> "PDUP";
+            case "IN FORCE / PAID UP", "WAITING FOR PAID UP" -> "PDUP";
             case "IN FORCE" -> "INFC";
             case "LAPSED" -> {
                 LocalDate today = LocalDate.now();

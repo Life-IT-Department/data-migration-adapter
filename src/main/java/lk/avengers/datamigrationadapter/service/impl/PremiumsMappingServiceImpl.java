@@ -4,9 +4,11 @@ import lk.avengers.datamigrationadapter.dto.CommonResponseDTO;
 import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.*;
 import lk.avengers.datamigrationadapter.entity.softlogicdb.MigrPremiumsDue;
 import lk.avengers.datamigrationadapter.entity.softlogicdb.MigrPremiumsPaid;
+import lk.avengers.datamigrationadapter.entity.softlogicdb.PremiumExtraFields;
 import lk.avengers.datamigrationadapter.repository.postgresql.reportdb.*;
 import lk.avengers.datamigrationadapter.repository.softlogicdb.MigrPremiumsDueRepository;
 import lk.avengers.datamigrationadapter.repository.softlogicdb.MigrPremiumsPaidRepository;
+import lk.avengers.datamigrationadapter.repository.softlogicdb.PremiumsExtraRepository;
 import lk.avengers.datamigrationadapter.service.PremiumsMappingService;
 import lk.avengers.datamigrationadapter.util.MainExcelReader;
 import lk.avengers.datamigrationadapter.util.SharedFunction;
@@ -40,6 +42,7 @@ public class PremiumsMappingServiceImpl implements PremiumsMappingService {
     private final MainDataReportRepository mainDataReportRepository;
     private final MainDataALHReportRepository mainDataALHReportRepository;
     private final ACPPolicyRepository acpPolicyRepository;
+    private final PremiumsExtraRepository premiumsExtraRepository;
 
     private final MainExcelReader mainExcelReader;
     private final SharedFunction sharedFunction;
@@ -167,6 +170,18 @@ public class PremiumsMappingServiceImpl implements PremiumsMappingService {
                                                 cashFlow.getDescription().contains(DOWN_PAYMENT) ? DEPO : "")
                                         .paymentMode(getPaymentMode(cashFlow.getPaymentMode()))
                                         .build());
+                            } else {
+                                batchPaid.add(MigrPremiumsPaid.builder()
+                                        .policyNo(policy)
+                                        .receiptId(0)
+                                        .chequeNo("NULL")
+                                        .bank("NULL")
+                                        .paymentDate(paidDate)
+                                        .paidAmount(paidAmount)
+                                        .receiptStatus(VLD)
+                                        .paymentType(PREM)
+                                        .paymentMode("CASH")
+                                        .build());
                             }
 
                             // 🔹 Due
@@ -208,6 +223,83 @@ public class PremiumsMappingServiceImpl implements PremiumsMappingService {
                     .status(HttpStatus.OK.toString())
                     .build());
 
+        } catch (Exception e) {
+            log.error("ERROR DURING MIGRATION", e);
+            return ResponseEntity.internalServerError().body(CommonResponseDTO.builder()
+                    .message(e.getMessage())
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR.toString())
+                    .build());
+        }
+    }
+
+    @Override
+    public ResponseEntity<CommonResponseDTO> mapPremiumsExtra() {
+
+        log.info("Reading policy number list");
+        // 🔹 Read policies
+        List<String> policyList = mainExcelReader.readPolicyNumbers();
+
+        log.info("Extracting product codes & number list");
+        // 🔹 Extract product codes & numbers
+        List<PolicyNoDto> extractedPolicies = policyList.stream()
+                .map(this::getProductCodeAndPolicyNo)
+                .toList();
+
+        Set<String> productCodes = extractedPolicies.stream()
+                .map(PolicyNoDto::productCode)
+                .collect(Collectors.toSet());
+
+        Set<Integer> policyNos = extractedPolicies.stream()
+                .map(PolicyNoDto::policyNo)
+                .collect(Collectors.toSet());
+
+        log.info("Loading premiums map");
+        // 🔹 Load supporting data
+        Map<String, List<PremiumDetailsEntity>> premiumMap =
+                premiumDetailsRepository.findFiltered(productCodes, policyNos)
+                        .stream()
+                        .collect(Collectors.groupingBy(e -> e.getProductCode() + "/" + e.getPolicyNo()));
+
+        log.info("Processing premium list");
+        List<PremiumExtraFields> extraFieldsList = new ArrayList<>();
+        try{
+            for (PolicyNoDto policyNoDto : extractedPolicies) {
+                String key = policyNoDto.productCode() + "/" + policyNoDto.policyNo();
+
+                List<PremiumDetailsEntity> premiums =
+                        premiumMap.getOrDefault(key, Collections.emptyList());
+
+                if (premiums.isEmpty()) {
+                    continue;
+                }
+
+                PremiumDetailsEntity first = premiums.getFirst();
+
+                int paidCount = (int) premiums.stream()
+                        .filter(p -> p.getPaymentDate() != null)
+                        .count();
+
+                LocalDate beginDate = premiums.stream()
+                        .map(PremiumDetailsEntity::getPremiumDueDate)
+                        .filter(Objects::nonNull)
+                        .min(LocalDate::compareTo)
+                        .orElse(null);
+
+                PremiumExtraFields extra = PremiumExtraFields.builder()
+                        .policyNo(key)
+                        .inceptionDate(first.getInceptionDate())
+                        .beginDate(beginDate)
+                        .paidCount(paidCount)
+                        .build();
+
+                extraFieldsList.add(extra);
+            }
+            saveInBatches(extraFieldsList, premiumsExtraRepository);
+
+            return ResponseEntity.ok(CommonResponseDTO.builder()
+                    .message("Premiums extra fields processed successfully")
+                    .status(HttpStatus.OK.toString())
+                    .build());
         } catch (Exception e) {
             log.error("ERROR DURING MIGRATION", e);
             return ResponseEntity.internalServerError().body(CommonResponseDTO.builder()
@@ -296,6 +388,29 @@ public class PremiumsMappingServiceImpl implements PremiumsMappingService {
     private <T> void saveAndFlush(List<T> list, JpaRepository<T, ?> repo) {
         repo.saveAll(list);
         repo.flush();
+    }
+
+    private <T> void saveInBatches(List<T> list, JpaRepository<T, ?> repository) {
+        int batchSize = 1000;
+        int totalSize = list.size();
+        int totalBatches = (int) Math.ceil((double) totalSize / batchSize);
+
+        log.info("Starting batch save: totalRecords={}, batchSize={}, totalBatches={}, repository={}",
+                totalSize, batchSize, totalBatches, repository.getClass().getSimpleName());
+
+        for (int i = 0; i < list.size(); i += 1000) {
+            int batchNumber = (i / batchSize) + 1;
+            int end = Math.min(i + 1000, list.size());
+
+            log.info("Saving batch {}/{} (records {} - {})",
+                    batchNumber, totalBatches, i + 1, end);
+
+            List<T> batch = list.subList(i, end);
+            repository.saveAll(batch);
+            repository.flush();
+        }
+        log.info("Completed batch save: totalRecords={}, repository={}",
+                totalSize, repository.getClass().getSimpleName());
     }
 }
 

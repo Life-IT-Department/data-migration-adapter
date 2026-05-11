@@ -58,4 +58,10 @@ public class MigrationController {
         log.info("MIGRATE UNIT LINK METHOD ACCESSED");
         return unitLinkMapperService.processUnitLinkMapping();
     }
+
+    @GetMapping("/premium-extra")
+    public ResponseEntity<CommonResponseDTO> migratePremiumsExtra(){
+        log.info("MIGRATE PREMIUMS EXTRA METHOD ACCESSED");
+        return premiumsPaidMappingService.mapPremiumsExtra();
+    }
 }
