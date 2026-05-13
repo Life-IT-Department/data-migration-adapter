@@ -488,7 +488,11 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
         dto.setLaPolicyNo(policyNo);
         dto.setLaTitle(contact.getTitle());
         dto.setLaFirstName(contact.getFirstName());
-        dto.setLaLastName(contact.getLastName());
+        dto.setLaLastName(
+                contact.getLastName() == null || contact.getLastName().trim().isEmpty()
+                        ? contact.getFirstName()
+                        : contact.getLastName()
+        );
         dto.setLaAddress(contact.getAddress());
         dto.setLaNic(contact.getNicNumber());
         dto.setLaSex(getSexChar(contact.getGender()));

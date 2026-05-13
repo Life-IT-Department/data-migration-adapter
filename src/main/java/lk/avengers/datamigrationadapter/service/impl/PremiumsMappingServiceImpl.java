@@ -384,6 +384,7 @@ public class PremiumsMappingServiceImpl implements PremiumsMappingService {
     }
 
     private <T> void saveAndFlush(List<T> list, JpaRepository<T, ?> repo) {
+        log.info("Saving premiums of the batch with size: {}", list.size());
         repo.saveAll(list);
         repo.flush();
     }
