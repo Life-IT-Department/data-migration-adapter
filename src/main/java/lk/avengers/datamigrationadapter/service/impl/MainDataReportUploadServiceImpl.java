@@ -503,6 +503,174 @@ public class MainDataReportUploadServiceImpl implements MainDataReportUploadServ
                 .lastPremiumDueDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
                 .premiumEscalationBenefitPercentage(commonFunction.getDoubleValue(row.getCell(col++)))
                 .refundValue(commonFunction.getBigDecimalValue(row.getCell(col++)))
+
+                // new DQ fields
+                // Additional Fields
+                .initialPremiumPaymentTerm(commonFunction.getIntegerValue(row.getCell(col++)))
+                .initialDefermentTerm(commonFunction.getIntegerValue(row.getCell(col++)))
+                .initialRetirementBenefitPayoutTerm(commonFunction.getIntegerValue(row.getCell(col++)))
+                .retirementPayoutMode(commonFunction.getStringValue(row.getCell(col++)))
+
+                // DTH
+                .dth_InclusionDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+                .dth_ExpiryDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+
+                // ACCD
+                .accd_InclusionDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+                .accd_ExpiryDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+
+                // ACCP
+                .accp_InclusionDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+                .accp_ExpiryDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+
+                // ACCT
+                .acct_InclusionDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+                .acct_ExpiryDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+
+                // CILL
+                .cill_InclusionDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+                .cill_ExpiryDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+
+                // CILX
+                .cilx_InclusionDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+                .cilx_ExpiryDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+
+                // FIB
+                .fib_InclusionDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+                .fib_ExpiryDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+
+                // FIBT
+                .fibt_InclusionDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+                .fibt_ExpiryDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+
+                // FSEB
+                .fseb_InclusionDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+                .fseb_ExpiryDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+
+                // HB
+                .hb_InclusionDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+                .hb_ExpiryDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+
+                // LEB
+                .leb_InclusionDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+                .leb_ExpiryDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+
+                // PTD
+                .ptd_InclusionDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+                .ptd_ExpiryDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+
+                // TILL
+                .till_InclusionDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+                .till_ExpiryDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+
+                // TR
+                .tr_InclusionDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+                .tr_ExpiryDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+
+                // WOPA
+                .wopa_InclusionDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+                .wopa_ExpiryDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+
+                // WOPC
+                .wopc_InclusionDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+                .wopc_ExpiryDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+
+                // WOPD
+                .wopd_InclusionDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+                .wopd_ExpiryDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+
+                // FSEBA
+                .fseba_InclusionDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+                .fseba_ExpiryDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+
+                // HBA
+                .hba_InclusionDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+                .hba_ExpiryDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+
+                // HBAC
+                .hbac_InclusionDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+                .hbac_ExpiryDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+
+                // Spouse/Child Coverage
+                .spouseChildFseb_Coverage(commonFunction.getStringValue(row.getCell(col++)))
+
+                // Spouse Death
+                .spouseDth_InclusionDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+                .spouseDth_ExpiryDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+
+                // Spouse/Child ACCD
+                .spouseChildAccd_InclusionDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+                .spouseChildAccd_ExpiryDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+
+                // Spouse/Child ACCP
+                .spouseChildAccp_InclusionDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+                .spouseChildAccp_ExpiryDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+
+                // Spouse/Child ACCT
+                .spouseChildAcct_InclusionDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+                .spouseChildAcct_ExpiryDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+
+                // Spouse/Child CILL
+                .spouseChildCill_InclusionDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+                .spouseChildCill_ExpiryDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+
+                // Spouse/Child CILX
+                .spouseChildCilx_InclusionDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+                .spouseChildCilx_ExpiryDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+
+                // Spouse/Child LEB
+                .spouseChildLeb_InclusionDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+                .spouseChildLeb_ExpiryDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+
+                // Spouse/Child PTD
+                .spouseChildPtd_InclusionDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+                .spouseChildPtd_ExpiryDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+
+                // Spouse/Child TILL
+                .spouseChildTill_InclusionDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+                .spouseChildTill_ExpiryDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+
+                // Spouse/Child HB
+                .spouseChildHb_InclusionDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+                .spouseChildHb_ExpiryDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+
+                // Spouse/Child PPD
+                .spouseChildPpd_InclusionDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+                .spouseChildPpd_ExpiryDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+
+                // Spouse HBA
+                .spouseHba_InclusionDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+                .spouseHba_ExpiryDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+
+                // CHILD1
+                .child1Gender(commonFunction.getStringValue(row.getCell(col++)))
+                .child1Expiry(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+                .child1Fseb_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+
+                // CHILD2
+                .child2Gender(commonFunction.getStringValue(row.getCell(col++)))
+                .child2Expiry(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+                .child2Fseb_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+
+                // CHILD3
+                .child3Gender(commonFunction.getStringValue(row.getCell(col++)))
+                .child3Expiry(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+                .child3Fseb_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+
+                // CHILD4
+                .child4Gender(commonFunction.getStringValue(row.getCell(col++)))
+                .child4Expiry(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+                .child4Fseb_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+
+                // CHILD5
+                .child5Gender(commonFunction.getStringValue(row.getCell(col++)))
+                .child5Expiry(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(col++))))
+                .child5Fseb_(commonFunction.getBigDecimalValue(row.getCell(col++)))
+
+                // Spouse ID Card
+                .spouseIdCardNumber(commonFunction.getStringValue(row.getCell(col++)))
+
+
                 // createdAt - handled by @CreatedDate
                 .build();
         list.add(entity);
@@ -733,6 +901,32 @@ public class MainDataReportUploadServiceImpl implements MainDataReportUploadServ
         entity.setLastPaymentDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(c++))));
         entity.setLastPremiumDueDate(commonFunction.getDateFromInteger(getStringDateValue(row.getCell(c++))));
         entity.setRefundValue(commonFunction.getBigDecimalValue(row.getCell(c++)));
+
+        // New DQ fields
+        // Child Genders
+        entity.setChild1Gender(commonFunction.getStringValue(row.getCell(c++)));
+        entity.setChild2Gender(commonFunction.getStringValue(row.getCell(c++)));
+        entity.setChild3Gender(commonFunction.getStringValue(row.getCell(c++)));
+        entity.setChild4Gender(commonFunction.getStringValue(row.getCell(c++)));
+        entity.setChild5Gender(commonFunction.getStringValue(row.getCell(c++)));
+        entity.setChild6Gender(commonFunction.getStringValue(row.getCell(c++)));
+        entity.setChild7Gender(commonFunction.getStringValue(row.getCell(c++)));
+        entity.setChild8Gender(commonFunction.getStringValue(row.getCell(c++)));
+        entity.setChild9Gender(commonFunction.getStringValue(row.getCell(c++)));
+        entity.setChild10Gender(commonFunction.getStringValue(row.getCell(c++)));
+        entity.setChild11Gender(commonFunction.getStringValue(row.getCell(c++)));
+        entity.setChild12Gender(commonFunction.getStringValue(row.getCell(c++)));
+        entity.setChild13Gender(commonFunction.getStringValue(row.getCell(c++)));
+        entity.setChild14Gender(commonFunction.getStringValue(row.getCell(c++)));
+        entity.setChild15Gender(commonFunction.getStringValue(row.getCell(c++)));
+        entity.setChild16Gender(commonFunction.getStringValue(row.getCell(c++)));
+        entity.setChild17Gender(commonFunction.getStringValue(row.getCell(c++)));
+        entity.setChild18Gender(commonFunction.getStringValue(row.getCell(c++)));
+        entity.setChild19Gender(commonFunction.getStringValue(row.getCell(c++)));
+        entity.setChild20Gender(commonFunction.getStringValue(row.getCell(c++)));
+
+        // Spouse ID Card Number
+        entity.setSpouseIdCardNumber(commonFunction.getStringValue(row.getCell(c++)));
         list.add(entity);
     }
 

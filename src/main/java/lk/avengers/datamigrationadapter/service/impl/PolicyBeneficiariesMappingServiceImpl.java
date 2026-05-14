@@ -165,6 +165,8 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
             policyBeneficiariesEntity.setBeSex(getSex(mainDataALHReportEntity.getSpouseGender()));
             policyBeneficiariesEntity.setBeDob(mainDataALHReportEntity.getSpouseDob());
             policyBeneficiariesEntity.setBeType(SPOUSE_TYPE);
+            policyBeneficiariesEntity.setBeNic(mainDataALHReportEntity.getSpouseIdCardNumber());
+
             java.math.BigDecimal spouseHbSa = mainDataALHReportEntity.getSpouseHbSa();
             policyBeneficiariesEntity.setBeIsHb(spouseHbSa != null && spouseHbSa.compareTo(java.math.BigDecimal.ZERO) != 0);
 
@@ -189,6 +191,9 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
             policyBeneficiariesEntity.setBeSex(getSex(mainDataReportEntity.getSpouseChildGender()));
             policyBeneficiariesEntity.setBeDob(mainDataReportEntity.getSpouseChildDob());
             policyBeneficiariesEntity.setBeType(SPOUSE_TYPE);
+            policyBeneficiariesEntity.setBeNic(mainDataReportEntity.getSpouseIdCardNumber());
+            policyBeneficiariesEntity.setBeInclusionDate(mainDataReportEntity.getSpouseDth_InclusionDate());
+
             java.math.BigDecimal spouseHbSa = mainDataReportEntity.getSpouseChildHb_Sa();
             policyBeneficiariesEntity.setBeIsHb(spouseHbSa != null && spouseHbSa.compareTo(java.math.BigDecimal.ZERO) != 0);
 
@@ -212,6 +217,7 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
                 .name(mainDataReportEntity.getChild1Name())
                 .dob(mainDataReportEntity.getChild1Dob())
                 .age(mainDataReportEntity.getChild1Age())
+                .gender(mainDataReportEntity.getChild1Gender())
                 .childHbc(String.valueOf(mainDataReportEntity.getChild1Hbc_()))
 
                 .childCode(1)
@@ -225,6 +231,7 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
                 .name(mainDataReportEntity.getChild2Name())
                 .dob(mainDataReportEntity.getChild2Dob())
                 .age(mainDataReportEntity.getChild2Age())
+                .gender(mainDataReportEntity.getChild2Gender())
                 .childHbc(String.valueOf(mainDataReportEntity.getChild2Hbc_()))
 
                 .childCode(2)
@@ -238,6 +245,7 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
                 .name(mainDataReportEntity.getChild3Name())
                 .dob(mainDataReportEntity.getChild3Dob())
                 .age(mainDataReportEntity.getChild3Age())
+                .gender(mainDataReportEntity.getChild3Gender())
                 .childHbc(String.valueOf(mainDataReportEntity.getChild3Hbc_()))
 
                 .childCode(3)
@@ -251,6 +259,7 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
                 .name(mainDataReportEntity.getChild4Name())
                 .dob(mainDataReportEntity.getChild4Dob())
                 .age(mainDataReportEntity.getChild4Age())
+                .gender(mainDataReportEntity.getChild4Gender())
                 .childHbc(String.valueOf(mainDataReportEntity.getChild4Hbc_()))
 
                 .childCode(4)
@@ -264,6 +273,7 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
                 .name(mainDataReportEntity.getChild5Name())
                 .dob(mainDataReportEntity.getChild5Dob())
                 .age(mainDataReportEntity.getChild5Age())
+                .gender(mainDataReportEntity.getChild5Gender())
                 .childHbc(String.valueOf(mainDataReportEntity.getChild5Hbc_()))
 
                 .childCode(5)
@@ -287,6 +297,7 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
                 .name(mainDataALHReportEntity.getChild1Name())
                 .dob(mainDataALHReportEntity.getChild1Dob())
                 .age(mainDataALHReportEntity.getChild1Age())
+                .gender(mainDataALHReportEntity.getChild1Gender())
                 .childHbc(String.valueOf(mainDataALHReportEntity.getChild1Hbc_()))
 
                 .childCode(1)
@@ -300,6 +311,7 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
                 .name(mainDataALHReportEntity.getChild2Name())
                 .dob(mainDataALHReportEntity.getChild2Dob())
                 .age(mainDataALHReportEntity.getChild2Age())
+                .gender(mainDataALHReportEntity.getChild2Gender())
                 .childHbc(String.valueOf(mainDataALHReportEntity.getChild2Hbc_()))
 
                 .childCode(2)
@@ -313,6 +325,7 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
                 .name(mainDataALHReportEntity.getChild3Name())
                 .dob(mainDataALHReportEntity.getChild3Dob())
                 .age(mainDataALHReportEntity.getChild3Age())
+                .gender(mainDataALHReportEntity.getChild3Gender())
                 .childHbc(String.valueOf(mainDataALHReportEntity.getChild3Hbc_().intValue()))
 
                 .childCode(3)
@@ -326,6 +339,7 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
                 .name(mainDataALHReportEntity.getChild4Name())
                 .dob(mainDataALHReportEntity.getChild4Dob())
                 .age(mainDataALHReportEntity.getChild4Age())
+                .gender(mainDataALHReportEntity.getChild4Gender())
                 .childHbc(String.valueOf(mainDataALHReportEntity.getChild4Hbc_().intValue()))
 
                 .childCode(4)
@@ -339,96 +353,112 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
                 .name(mainDataALHReportEntity.getChild5Name())
                 .dob(mainDataALHReportEntity.getChild5Dob())
                 .age(mainDataALHReportEntity.getChild5Age())
+                .gender(mainDataALHReportEntity.getChild5Gender())
                 .childHbc(String.valueOf(mainDataALHReportEntity.getChild5Hbc_().intValue()))
                 .build());
         childDtoList.add(ChildDto.builder()
                 .name(mainDataALHReportEntity.getChild6Name())
                 .dob(mainDataALHReportEntity.getChild6Dob())
                 .age(mainDataALHReportEntity.getChild6Age())
+                .gender(mainDataALHReportEntity.getChild6Gender())
                 .childHbc(String.valueOf(mainDataALHReportEntity.getChild6Hbc().intValue()))
                 .build());
         childDtoList.add(ChildDto.builder()
                 .name(mainDataALHReportEntity.getChild7Name())
                 .dob(mainDataALHReportEntity.getChild7Dob())
                 .age(mainDataALHReportEntity.getChild7Age())
+                .gender(mainDataALHReportEntity.getChild7Gender())
                 .childHbc(String.valueOf(mainDataALHReportEntity.getChild7Hbc().intValue()))
                 .build());
         childDtoList.add(ChildDto.builder()
                 .name(mainDataALHReportEntity.getChild8Name())
                 .dob(mainDataALHReportEntity.getChild8Dob())
                 .age(mainDataALHReportEntity.getChild8Age())
+                .gender(mainDataALHReportEntity.getChild8Gender())
                 .childHbc(String.valueOf(mainDataALHReportEntity.getChild8Hbc().intValue()))
                 .build());
         childDtoList.add(ChildDto.builder()
                 .name(mainDataALHReportEntity.getChild9Name())
                 .dob(mainDataALHReportEntity.getChild9Dob())
                 .age(mainDataALHReportEntity.getChild9Age())
+                .gender(mainDataALHReportEntity.getChild9Gender())
                 .childHbc(String.valueOf(mainDataALHReportEntity.getChild9Hbc().intValue()))
                 .build());
         childDtoList.add(ChildDto.builder()
                 .name(mainDataALHReportEntity.getChild10Name())
                 .dob(mainDataALHReportEntity.getChild10Dob())
                 .age(mainDataALHReportEntity.getChild10Age())
+                .gender(mainDataALHReportEntity.getChild10Gender())
                 .childHbc(String.valueOf(mainDataALHReportEntity.getChild10Hbc().intValue()))
                 .build());
         childDtoList.add(ChildDto.builder()
                 .name(mainDataALHReportEntity.getChild11Name())
                 .dob(mainDataALHReportEntity.getChild11Dob())
                 .age(mainDataALHReportEntity.getChild11Age())
+                .gender(mainDataALHReportEntity.getChild11Gender())
                 .childHbc(String.valueOf(mainDataALHReportEntity.getChild11Hbc().intValue()))
                 .build());
         childDtoList.add(ChildDto.builder()
                 .name(mainDataALHReportEntity.getChild12Name())
                 .dob(mainDataALHReportEntity.getChild12Dob())
                 .age(mainDataALHReportEntity.getChild12Age())
+                .gender(mainDataALHReportEntity.getChild12Gender())
                 .childHbc(String.valueOf(mainDataALHReportEntity.getChild12Hbc().intValue()))
                 .build());
         childDtoList.add(ChildDto.builder()
                 .name(mainDataALHReportEntity.getChild13Name())
                 .dob(mainDataALHReportEntity.getChild13Dob())
                 .age(mainDataALHReportEntity.getChild13Age())
+                .gender(mainDataALHReportEntity.getChild13Gender())
                 .childHbc(String.valueOf(mainDataALHReportEntity.getChild13Hbc().intValue()))
                 .build());
         childDtoList.add(ChildDto.builder()
                 .name(mainDataALHReportEntity.getChild14Name())
                 .dob(mainDataALHReportEntity.getChild14Dob())
                 .age(mainDataALHReportEntity.getChild14Age())
+                .gender(mainDataALHReportEntity.getChild14Gender())
                 .childHbc(String.valueOf(mainDataALHReportEntity.getChild14Hbc().intValue()))
                 .build());
         childDtoList.add(ChildDto.builder()
                 .name(mainDataALHReportEntity.getChild15Name())
                 .dob(mainDataALHReportEntity.getChild15Dob())
                 .age(mainDataALHReportEntity.getChild15Age())
+                .gender(mainDataALHReportEntity.getChild15Gender())
                 .childHbc(String.valueOf(mainDataALHReportEntity.getChild15Hbc().intValue()))
                 .build());
         childDtoList.add(ChildDto.builder()
                 .name(mainDataALHReportEntity.getChild16Name())
                 .dob(mainDataALHReportEntity.getChild16Dob())
                 .age(mainDataALHReportEntity.getChild16Age())
+                .gender(mainDataALHReportEntity.getChild16Gender())
                 .childHbc(String.valueOf(mainDataALHReportEntity.getChild16Hbc().intValue()))
                 .build());
         childDtoList.add(ChildDto.builder()
                 .name(mainDataALHReportEntity.getChild17Name())
                 .dob(mainDataALHReportEntity.getChild17Dob())
                 .age(mainDataALHReportEntity.getChild17Age())
+                .gender(mainDataALHReportEntity.getChild17Gender())
                 .childHbc(String.valueOf(mainDataALHReportEntity.getChild17Hbc().intValue()))
                 .build());
         childDtoList.add(ChildDto.builder()
                 .name(mainDataALHReportEntity.getChild18Name())
                 .dob(mainDataALHReportEntity.getChild18Dob())
                 .age(mainDataALHReportEntity.getChild18Age())
+                .gender(mainDataALHReportEntity.getChild18Gender())
                 .childHbc(String.valueOf(mainDataALHReportEntity.getChild18Hbc().intValue()))
                 .build());
         childDtoList.add(ChildDto.builder()
                 .name(mainDataALHReportEntity.getChild19Name())
                 .dob(mainDataALHReportEntity.getChild19Dob())
                 .age(mainDataALHReportEntity.getChild19Age())
+                .gender(mainDataALHReportEntity.getChild19Gender())
                 .childHbc(String.valueOf(mainDataALHReportEntity.getChild19Hbc().intValue()))
                 .build());
         childDtoList.add(ChildDto.builder()
                 .name(mainDataALHReportEntity.getChild20Name())
                 .dob(mainDataALHReportEntity.getChild20Dob())
                 .age(mainDataALHReportEntity.getChild20Age())
+                .gender(mainDataALHReportEntity.getChild20Gender())
                 .childHbc(String.valueOf(mainDataALHReportEntity.getChild20Hbc().intValue()))
                 .build());
 
@@ -436,7 +466,7 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
         return beneficiariesEntityList;
     }
 
-    private static void setDataToPolicyBeneficiariesList(List<ChildDto> childDtoList, String policyNumber, List<PolicyBeneficiariesEntity> beneficiariesEntityList) {
+    private void setDataToPolicyBeneficiariesList(List<ChildDto> childDtoList, String policyNumber, List<PolicyBeneficiariesEntity> beneficiariesEntityList) {
         childDtoList.forEach(childDto -> {
             if (childDto.getName() != null && !childDto.getName().isEmpty() && !childDto.getName().isBlank()) {
                 PolicyBeneficiariesEntity policyBeneficiariesEntity = new PolicyBeneficiariesEntity();
@@ -446,6 +476,7 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
                 policyBeneficiariesEntity.setBeDob(childDto.getDob());
                 policyBeneficiariesEntity.setBeType(CHILD_TYPE);
                 policyBeneficiariesEntity.setBeIsHb(Double.parseDouble(childDto.getChildHbc()) != 0.0);
+                policyBeneficiariesEntity.setBeSex(getSex(childDto.getGender()));
 
                 policyBeneficiariesEntity.setChildCode(childDto.getChildCode());
                 policyBeneficiariesEntity.setHbcSa(childDto.getHbcSa());
@@ -461,15 +492,14 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
 
     private Character getSex(String gender) {
         if (gender != null && !gender.isBlank()) {
-            if (gender.equalsIgnoreCase("MALE")) {
+            if (gender.equalsIgnoreCase("MALE") || gender.equalsIgnoreCase("M")) {
                 return 'M';
-            } else if (gender.equalsIgnoreCase("FEMALE")) {
+            } else if (gender.equalsIgnoreCase("FEMALE") || gender.equalsIgnoreCase("F")) {
                 return 'F';
             } else {
                 return null;
             }
         } else {
-            // Default value
             return 'M';
         }
     }

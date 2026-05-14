@@ -64,16 +64,37 @@ public class CommonFunctionImpl implements CommonFunction {
     // -------------------------------------------------------------------------
     @Override
     public Integer getIntegerValue(Cell cell) {
-        if (cell == null || cell.getCellType() == CellType.BLANK) return null;
+        if (cell == null || cell.getCellType() == CellType.BLANK) {
+            return 0;
+        }
+
         try {
             return switch (cell.getCellType()) {
+
                 case NUMERIC -> (int) cell.getNumericCellValue();
-                case STRING -> Integer.parseInt(cell.getStringCellValue().trim());
-                default -> null;
+
+                case STRING -> {
+                    String value = cell.getStringCellValue();
+
+                    if (value == null || value.trim().isEmpty()) {
+                        yield 0;
+                    }
+
+                    String trimmed = value.trim();
+
+                    if ("SP".equalsIgnoreCase(trimmed)) {
+                        yield 1;
+                    }
+                    yield 0;
+                }
+
+                default -> 0;
             };
-        } catch (NumberFormatException e) {
-            log.error("Error parsing integer value from cell value : {} cell address: {}", cell.getStringCellValue(), cell.getAddress());
-            return null;
+
+        } catch (Exception e) {
+            log.error("Error parsing integer value from cell. Address: {}, Value: {}",
+                    cell.getAddress(), cell, e);
+            return 0;
         }
     }
 
@@ -124,16 +145,31 @@ public class CommonFunctionImpl implements CommonFunction {
 
     @Override
     public java.math.BigDecimal getBigDecimalValue(Cell cell) {
-        if (cell == null || cell.getCellType() == CellType.BLANK) return null;
+        if (cell == null || cell.getCellType() == CellType.BLANK) {
+            return java.math.BigDecimal.ZERO;
+        }
+
         try {
             return switch (cell.getCellType()) {
-                case NUMERIC -> java.math.BigDecimal.valueOf(cell.getNumericCellValue());
-                case STRING -> new java.math.BigDecimal(cell.getStringCellValue().trim());
-                default -> null;
+
+                case NUMERIC ->
+                        java.math.BigDecimal.valueOf(cell.getNumericCellValue());
+
+                case STRING -> {
+                    String value = cell.getStringCellValue();
+                    if (value == null || value.trim().isEmpty()) {
+                        yield java.math.BigDecimal.ZERO;
+                    }
+                    yield new java.math.BigDecimal(value.trim());
+                }
+
+                default -> java.math.BigDecimal.ZERO;
             };
-        } catch (NumberFormatException e) {
-            log.error("Error parsing BigDecimal value from cell: {} cell address: {}", cell.toString(), cell.getAddress());
-            return null;
+
+        } catch (NumberFormatException | IllegalStateException e) {
+            log.error("Error parsing BigDecimal from cell. Address: {}, Value: {}",
+                    cell.getAddress(), cell, e);
+            return java.math.BigDecimal.ZERO;
         }
     }
 

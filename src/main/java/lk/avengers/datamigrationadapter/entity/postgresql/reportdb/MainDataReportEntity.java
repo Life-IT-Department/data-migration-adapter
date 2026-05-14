@@ -347,6 +347,305 @@ public class MainDataReportEntity extends BaseMainData {
     private String premiumPaymentTerm;
     @Column(name = "premium_escalation_benefit_percentage")
     private Double premiumEscalationBenefitPercentage;
+
+    // New fields from DQ
+    // Initial Terms
+    @Column(name = "initial_premium_payment_term")
+    private Integer initialPremiumPaymentTerm;
+
+    @Column(name = "initial_deferment_term")
+    private Integer initialDefermentTerm;
+
+    @Column(name = "initial_retirement_benefit_payout_term")
+    private Integer initialRetirementBenefitPayoutTerm;
+
+    @Column(name = "retirement_payout_mode")
+    private String retirementPayoutMode;
+
+    // DTH
+    @Column(name = "dth_inclusion_date")
+    private LocalDate dth_InclusionDate;
+
+    @Column(name = "dth_expiry_date")
+    private LocalDate dth_ExpiryDate;
+
+    // ACCD
+    @Column(name = "accd_inclusion_date")
+    private LocalDate accd_InclusionDate;
+
+    @Column(name = "accd_expiry_date")
+    private LocalDate accd_ExpiryDate;
+
+    // ACCP
+    @Column(name = "accp_inclusion_date")
+    private LocalDate accp_InclusionDate;
+
+    @Column(name = "accp_expiry_date")
+    private LocalDate accp_ExpiryDate;
+
+    // ACCT
+    @Column(name = "acct_inclusion_date")
+    private LocalDate acct_InclusionDate;
+
+    @Column(name = "acct_expiry_date")
+    private LocalDate acct_ExpiryDate;
+
+    // CILL
+    @Column(name = "cill_inclusion_date")
+    private LocalDate cill_InclusionDate;
+
+    @Column(name = "cill_expiry_date")
+    private LocalDate cill_ExpiryDate;
+
+    // CILX
+    @Column(name = "cilx_inclusion_date")
+    private LocalDate cilx_InclusionDate;
+
+    @Column(name = "cilx_expiry_date")
+    private LocalDate cilx_ExpiryDate;
+
+    // FIB
+    @Column(name = "fib_inclusion_date")
+    private LocalDate fib_InclusionDate;
+
+    @Column(name = "fib_expiry_date")
+    private LocalDate fib_ExpiryDate;
+
+    // FIBT
+    @Column(name = "fibt_inclusion_date")
+    private LocalDate fibt_InclusionDate;
+
+    @Column(name = "fibt_expiry_date")
+    private LocalDate fibt_ExpiryDate;
+
+    // FSEB
+    @Column(name = "fseb_inclusion_date")
+    private LocalDate fseb_InclusionDate;
+
+    @Column(name = "fseb_expiry_date")
+    private LocalDate fseb_ExpiryDate;
+
+    // HB
+    @Column(name = "hb_inclusion_date")
+    private LocalDate hb_InclusionDate;
+
+    @Column(name = "hb_expiry_date")
+    private LocalDate hb_ExpiryDate;
+
+    // LEB
+    @Column(name = "leb_inclusion_date")
+    private LocalDate leb_InclusionDate;
+
+    @Column(name = "leb_expiry_date")
+    private LocalDate leb_ExpiryDate;
+
+    // PTD
+    @Column(name = "ptd_inclusion_date")
+    private LocalDate ptd_InclusionDate;
+
+    @Column(name = "ptd_expiry_date")
+    private LocalDate ptd_ExpiryDate;
+
+    // TILL
+    @Column(name = "till_inclusion_date")
+    private LocalDate till_InclusionDate;
+
+    @Column(name = "till_expiry_date")
+    private LocalDate till_ExpiryDate;
+
+    // TR
+    @Column(name = "tr_inclusion_date")
+    private LocalDate tr_InclusionDate;
+
+    @Column(name = "tr_expiry_date")
+    private LocalDate tr_ExpiryDate;
+
+    // WOPA
+    @Column(name = "wopa_inclusion_date")
+    private LocalDate wopa_InclusionDate;
+
+    @Column(name = "wopa_expiry_date")
+    private LocalDate wopa_ExpiryDate;
+
+    // WOPC
+    @Column(name = "wopc_inclusion_date")
+    private LocalDate wopc_InclusionDate;
+
+    @Column(name = "wopc_expiry_date")
+    private LocalDate wopc_ExpiryDate;
+
+    // WOPD
+    @Column(name = "wopd_inclusion_date")
+    private LocalDate wopd_InclusionDate;
+
+    @Column(name = "wopd_expiry_date")
+    private LocalDate wopd_ExpiryDate;
+
+    // FSEBA
+    @Column(name = "fseba_inclusion_date")
+    private LocalDate fseba_InclusionDate;
+
+    @Column(name = "fseba_expiry_date")
+    private LocalDate fseba_ExpiryDate;
+
+    // HBA
+    @Column(name = "hba_inclusion_date")
+    private LocalDate hba_InclusionDate;
+
+    @Column(name = "hba_expiry_date")
+    private LocalDate hba_ExpiryDate;
+
+    // HBAC
+    @Column(name = "hbac_inclusion_date")
+    private LocalDate hbac_InclusionDate;
+
+    @Column(name = "hbac_expiry_date")
+    private LocalDate hbac_ExpiryDate;
+
+    // Spouse/Child Coverage
+    @Column(name = "spouse_child_fseb_coverage")
+    private String spouseChildFseb_Coverage;
+
+    // Spouse Death
+    @Column(name = "spouse_death_inclusion_date")
+    private LocalDate spouseDth_InclusionDate;
+
+    @Column(name = "spouse_death_expiry_date")
+    private LocalDate spouseDth_ExpiryDate;
+
+    // Spouse/Child ACCD
+    @Column(name = "spouse_child_accd_inclusion_date")
+    private LocalDate spouseChildAccd_InclusionDate;
+
+    @Column(name = "spouse_child_accd_expiry_date")
+    private LocalDate spouseChildAccd_ExpiryDate;
+
+    // Spouse/Child ACCP
+    @Column(name = "spouse_child_accp_inclusion_date")
+    private LocalDate spouseChildAccp_InclusionDate;
+
+    @Column(name = "spouse_child_accp_expiry_date")
+    private LocalDate spouseChildAccp_ExpiryDate;
+
+    // Spouse/Child ACCT
+    @Column(name = "spouse_child_acct_inclusion_date")
+    private LocalDate spouseChildAcct_InclusionDate;
+
+    @Column(name = "spouse_child_acct_expiry_date")
+    private LocalDate spouseChildAcct_ExpiryDate;
+
+    // Spouse/Child CILL
+    @Column(name = "spouse_child_cill_inclusion_date")
+    private LocalDate spouseChildCill_InclusionDate;
+
+    @Column(name = "spouse_child_cill_expiry_date")
+    private LocalDate spouseChildCill_ExpiryDate;
+
+    // Spouse/Child CILX
+    @Column(name = "spouse_child_cilx_inclusion_date")
+    private LocalDate spouseChildCilx_InclusionDate;
+
+    @Column(name = "spouse_child_cilx_expiry_date")
+    private LocalDate spouseChildCilx_ExpiryDate;
+
+    // Spouse/Child LEB
+    @Column(name = "spouse_child_leb_inclusion_date")
+    private LocalDate spouseChildLeb_InclusionDate;
+
+    @Column(name = "spouse_child_leb_expiry_date")
+    private LocalDate spouseChildLeb_ExpiryDate;
+
+    // Spouse/Child PTD
+    @Column(name = "spouse_child_ptd_inclusion_date")
+    private LocalDate spouseChildPtd_InclusionDate;
+
+    @Column(name = "spouse_child_ptd_expiry_date")
+    private LocalDate spouseChildPtd_ExpiryDate;
+
+    // Spouse/Child TILL
+    @Column(name = "spouse_child_till_inclusion_date")
+    private LocalDate spouseChildTill_InclusionDate;
+
+    @Column(name = "spouse_child_till_expiry_date")
+    private LocalDate spouseChildTill_ExpiryDate;
+
+    // Spouse/Child HB
+    @Column(name = "spouse_child_hb_inclusion_date")
+    private LocalDate spouseChildHb_InclusionDate;
+
+    @Column(name = "spouse_child_hb_expiry_date")
+    private LocalDate spouseChildHb_ExpiryDate;
+
+    // Spouse/Child PPD
+    @Column(name = "spouse_child_ppd_inclusion_date")
+    private LocalDate spouseChildPpd_InclusionDate;
+
+    @Column(name = "spouse_child_ppd_expiry_date")
+    private LocalDate spouseChildPpd_ExpiryDate;
+
+    // Spouse HBA
+    @Column(name = "spouse_hba_inclusion_date")
+    private LocalDate spouseHba_InclusionDate;
+
+    @Column(name = "spouse_hba_expiry_date")
+    private LocalDate spouseHba_ExpiryDate;
+
+    // CHILD1
+    @Column(name = "child1_gender")
+    private String child1Gender;
+
+    @Column(name = "child1_expiry")
+    private LocalDate child1Expiry;
+
+    @Column(name = "child1_fseb")
+    private BigDecimal child1Fseb_;
+
+    // CHILD2
+    @Column(name = "child2_gender")
+    private String child2Gender;
+
+    @Column(name = "child2_expiry")
+    private LocalDate child2Expiry;
+
+    @Column(name = "child2_fseb")
+    private BigDecimal child2Fseb_;
+
+    // CHILD3
+    @Column(name = "child3_gender")
+    private String child3Gender;
+
+    @Column(name = "child3_expiry")
+    private LocalDate child3Expiry;
+
+    @Column(name = "child3_fseb")
+    private BigDecimal child3Fseb_;
+
+    // CHILD4
+    @Column(name = "child4_gender")
+    private String child4Gender;
+
+    @Column(name = "child4_expiry")
+    private LocalDate child4Expiry;
+
+    @Column(name = "child4_fseb")
+    private BigDecimal child4Fseb_;
+
+    // CHILD5
+    @Column(name = "child5_gender")
+    private String child5Gender;
+
+    @Column(name = "child5_expiry")
+    private LocalDate child5Expiry;
+
+    @Column(name = "child5_fseb")
+    private BigDecimal child5Fseb_;
+
+    // Spouse ID Card
+    @Column(name = "spouse_id_card_number")
+    private String spouseIdCardNumber;
+
+
+    
     // -- audit --
     @CreatedDate
     @Column(name = "sys_date")

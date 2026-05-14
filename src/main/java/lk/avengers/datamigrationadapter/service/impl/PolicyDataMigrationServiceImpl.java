@@ -281,7 +281,7 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
                     dto.setPoAdminFee(BigDecimal.ZERO);
                     dto.setPoIllusMatuValue(BigDecimal.ZERO);
 
-                    mapSpouse(dto, null, null, null, null, 0);
+                    mapSpouse(dto, null, null, null, null, 0, null);
                 },
 
                 (extra, entity, polNo) -> {
@@ -329,11 +329,11 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
                     dto.setPoPlanVersion(entity.getPlanNo());
                     dto.setPoTerm(entity.getTerm());
                     dto.setPoDateOfProposal(entity.getInception());
-                    dto.setPoPaymentTerm(setPaymentTerm(entity.getPremiumPaymentTerm()));
+                    dto.setPoPaymentTerm(setPaymentTerm(String.valueOf(entity.getInitialPremiumPaymentTerm())));
                     dto.setPoBsa(entity.getBasicSumAssured());
                     dto.setPoSumAtRisk(entity.getDth_Sar());
                     dto.setPoBasicPremium(getModalPremium(entity.getModalPremium()));
-                    dto.setPoPremiumType(getPremiumType(entity.getPremiumPaymentTerm()));
+                    dto.setPoPremiumType(getPremiumType(String.valueOf(entity.getInitialPremiumPaymentTerm())));
                     dto.setPoAdvCode(getAgentCodeMapping(entity.getAgentCode()));
                     dto.setPoBeginDate(entity.getInception());
                     dto.setPoPolicyYear(getPolicyYear(entity.getInception()));
@@ -352,7 +352,8 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
                             entity.getSpouseChildTitle(),
                             entity.getSpouseChildGender(),
                             entity.getSpouseChildDob(),
-                            entity.getSpouseChildAge());
+                            entity.getSpouseChildAge(),
+                            entity.getSpouseIdCardNumber());
                 },
 
                 (extra, entity, polNo) -> {
@@ -437,7 +438,8 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
                             entity.getSpouseTitle(),
                             entity.getSpouseGender(),
                             entity.getSpouseDob(),
-                            entity.getSpouseAge());
+                            entity.getSpouseAge(),
+                            entity.getSpouseIdCardNumber());
 
                     // ===== ALH-specific LA fields =====
                     dto.setLaHbc(entity.getHb_Sa());
@@ -512,13 +514,14 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
         dto.setLaHeight(0);
     }
 
-    private void mapSpouse(MigrPolicyDataDTO dto, String name, String title, String gender, LocalDate dob, int age) {
+    private void mapSpouse(MigrPolicyDataDTO dto, String name, String title, String gender, LocalDate dob, int age, String nic) {
         if (name != null && !name.trim().isEmpty()) {
             dto.setSpTitle(title);
             dto.setSpFirstName(name);
             dto.setSpSex(getSexChar(gender));
             dto.setSpDob(dob);
             dto.setSpAnb(age);
+            dto.setSpNic(nic);
         } else {
             dto.setSpSex("");
             dto.setSpAnb(0);

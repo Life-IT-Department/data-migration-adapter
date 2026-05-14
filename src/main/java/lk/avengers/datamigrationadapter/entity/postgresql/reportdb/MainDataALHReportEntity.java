@@ -300,6 +300,93 @@ public class MainDataALHReportEntity extends BaseMainData{
     private BigDecimal child20InpSar;
     @Column(name = "child20_bonus")
     private BigDecimal child20Bonus;
+
+    // New DQ Fields
+    // --- CHILD 1 GENDER ---
+    @Column(name = "child1_gender")
+    private String child1Gender;
+
+    // --- CHILD 2 GENDER ---
+    @Column(name = "child2_gender")
+    private String child2Gender;
+
+    // --- CHILD 3 GENDER ---
+    @Column(name = "child3_gender")
+    private String child3Gender;
+
+    // --- CHILD 4 GENDER ---
+    @Column(name = "child4_gender")
+    private String child4Gender;
+
+    // --- CHILD 5 GENDER ---
+    @Column(name = "child5_gender")
+    private String child5Gender;
+
+    // --- CHILD 6 GENDER ---
+    @Column(name = "child6_gender")
+    private String child6Gender;
+
+    // --- CHILD 7 GENDER ---
+    @Column(name = "child7_gender")
+    private String child7Gender;
+
+    // --- CHILD 8 GENDER ---
+    @Column(name = "child8_gender")
+    private String child8Gender;
+
+    // --- CHILD 9 GENDER ---
+    @Column(name = "child9_gender")
+    private String child9Gender;
+
+    // --- CHILD 10 GENDER ---
+    @Column(name = "child10_gender")
+    private String child10Gender;
+
+    // --- CHILD 11 GENDER ---
+    @Column(name = "child11_gender")
+    private String child11Gender;
+
+    // --- CHILD 12 GENDER ---
+    @Column(name = "child12_gender")
+    private String child12Gender;
+
+    // --- CHILD 13 GENDER ---
+    @Column(name = "child13_gender")
+    private String child13Gender;
+
+    // --- CHILD 14 GENDER ---
+    @Column(name = "child14_gender")
+    private String child14Gender;
+
+    // --- CHILD 15 GENDER ---
+    @Column(name = "child15_gender")
+    private String child15Gender;
+
+    // --- CHILD 16 GENDER ---
+    @Column(name = "child16_gender")
+    private String child16Gender;
+
+    // --- CHILD 17 GENDER ---
+    @Column(name = "child17_gender")
+    private String child17Gender;
+
+    // --- CHILD 18 GENDER ---
+    @Column(name = "child18_gender")
+    private String child18Gender;
+
+    // --- CHILD 19 GENDER ---
+    @Column(name = "child19_gender")
+    private String child19Gender;
+
+    // --- CHILD 20 GENDER ---
+    @Column(name = "child20_gender")
+    private String child20Gender;
+
+    // --- SPOUSE ID CARD NUMBER ---
+    @Column(name = "spouse_id_card_number")
+    private String spouseIdCardNumber;
+
+
     // -- audit --
     @CreatedDate
     @Column(name = "sys_date")

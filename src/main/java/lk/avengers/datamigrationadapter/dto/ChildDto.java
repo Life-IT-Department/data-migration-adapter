@@ -15,6 +15,7 @@ public class ChildDto {
     private Integer age;
     private String childHbc;
     private BigDecimal childInpSar;
+    private String gender;
 
     // Remove when running actual list
     private Integer childCode;

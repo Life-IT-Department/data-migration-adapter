@@ -31,6 +31,8 @@ import org.springframework.util.ReflectionUtils;
 import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
@@ -230,6 +232,25 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
 
                 policyBenefitsEntityList.add(policyBenefitsEntity);
             }
+
+            if (mainDataReportEntity.getChild1Fseb_().equals(BigDecimal.ZERO)) {
+                MigrPolicyBenefitsEntity policyBenefitsEntity = new MigrPolicyBenefitsEntity();
+                String softlogicBenefitCode = benefitCodeMapperEntityList
+                        .stream()
+                        .filter(benefitCodeMapperEntity -> benefitCodeMapperEntity.getAllianzBenefitCode().equalsIgnoreCase("Child-FSEB"))
+                        .findFirst().orElseThrow(() -> new RuntimeException("No Child-FSEB benefit code found in benefit code mapper table for policy no: " + policyNo))
+                        .getSoftlogicBenefitCode();
+
+                policyBenefitsEntity.setId(new MigrPolicyBenefitsID(policyNo, softlogicBenefitCode));
+                policyBenefitsEntity.setPbCoverage(mainDataReportEntity.getChild1Fseb_());
+                policyBenefitsEntity.setPbTerm(mainDataReportEntity.getTerm());
+                policyBenefitsEntity.setPbExtraPremium(BigDecimal.ZERO);
+                policyBenefitsEntity.setPbPremPortion(BigDecimal.ZERO);
+                policyBenefitsEntity.setPbOccuExtra(BigDecimal.ZERO);
+                policyBenefitsEntity.setPbExtraMortalityRate(BigDecimal.ZERO);
+
+                policyBenefitsEntityList.add(policyBenefitsEntity);
+            }
         }
     }
 
@@ -254,6 +275,8 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
                 BigDecimal perMilRate = toBigDecimal(getSpecificFieldValue(mainDataReportEntity, value.getCoverPerMilRate()));
                 BigDecimal occupationExtraRate = toBigDecimal(getSpecificFieldValue(mainDataReportEntity, value.getCoverOccupationExtraRate()));
                 BigDecimal subStdRate = toBigDecimal(getSpecificFieldValue(mainDataReportEntity, value.getCoverSubRate()));
+                LocalDate inclusionDate = toLocalDate(getSpecificFieldValue(mainDataReportEntity, value.getCoverInclusionDate()));
+                LocalDate expiryDate = toLocalDate(getSpecificFieldValue(mainDataReportEntity, value.getCoverExpiryDate()));
 
                 benefitsEntity.setId(new MigrPolicyBenefitsID(policyNo, key));
                 benefitsEntity.setPbCoverage((BigDecimal) benefitSumAssuredFieldValue);
@@ -262,6 +285,9 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
                 benefitsEntity.setPbTerm(mainDataReportEntity.getTerm());
                 benefitsEntity.setPbExtraPremium(perMilRate);
                 benefitsEntity.setPbPremPortion(BigDecimal.ZERO);
+
+                benefitsEntity.setPbInclusionDate(inclusionDate);
+                benefitsEntity.setPbExpiredDate(expiryDate);
 
                 policyBenefitsEntityList.add(benefitsEntity);
             }
@@ -556,13 +582,17 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
                         .coverName(policyHolderFilterList.stream().filter(name -> name.toLowerCase().contains("_sa")).findFirst().orElse(null))
                         .coverPerMilRate(policyHolderFilterList.stream().filter(name -> name.toLowerCase().contains("mil")).findFirst().orElse(null))
                         .coverOccupationExtraRate(policyHolderFilterList.stream().filter(name -> name.toLowerCase().contains("occ")).findFirst().orElse(null))
+                        .coverInclusionDate(policyHolderFilterList.stream().filter(name -> name.toLowerCase().contains("inclusion")).findFirst().orElse(null))
+                        .coverExpiryDate(policyHolderFilterList.stream().filter(name -> name.toLowerCase().contains("expiry")).findFirst().orElse(null))
                         .coverSubRate(
                                 policyHolderFilterList.stream()
                                         .filter(name -> {
                                             String lower = name.toLowerCase();
                                             return !lower.contains("_sa")
                                                     && !lower.contains("mil")
-                                                    && !lower.contains("occ");
+                                                    && !lower.contains("occ")
+                                                    && !lower.contains("inclusion")
+                                                    && !lower.contains("expiry");
                                         })
                                         .findFirst()
                                         .orElse(null)
@@ -576,13 +606,17 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
                         .coverName(spouseFilterList.stream().filter(name -> name.toLowerCase().contains("_sa")).findFirst().orElse(null))
                         .coverPerMilRate(spouseFilterList.stream().filter(name -> name.toLowerCase().contains("mil")).findFirst().orElse(null))
                         .coverOccupationExtraRate(spouseFilterList.stream().filter(name -> name.toLowerCase().contains("occ")).findFirst().orElse(null))
+                        .coverInclusionDate(spouseFilterList.stream().filter(name -> name.toLowerCase().contains("inclusion")).findFirst().orElse(null))
+                        .coverExpiryDate(spouseFilterList.stream().filter(name -> name.toLowerCase().contains("expiry")).findFirst().orElse(null))
                         .coverSubRate(
                                 spouseFilterList.stream()
                                         .filter(name -> {
                                             String lower = name.toLowerCase();
                                             return !lower.contains("_sa")
                                                     && !lower.contains("mil")
-                                                    && !lower.contains("occ");
+                                                    && !lower.contains("occ")
+                                                    && !lower.contains("inclusion")
+                                                    && !lower.contains("expiry");
                                         })
                                         .findFirst()
                                         .orElse(null)
@@ -661,6 +695,43 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
         } catch (NumberFormatException e) {
             return BigDecimal.ZERO;
         }
+    }
+
+    public LocalDate toLocalDate(Object value) {
+
+        if (value == null) {
+            return null;
+        }
+
+        if (value instanceof LocalDate localDate) {
+            return localDate;
+        }
+
+        if (value instanceof java.sql.Date sqlDate) {
+            return sqlDate.toLocalDate();
+        }
+
+        if (value instanceof java.util.Date utilDate) {
+            return utilDate.toInstant()
+                    .atZone(ZoneId.systemDefault())
+                    .toLocalDate();
+        }
+
+        if (value instanceof String str) {
+
+            str = str.trim();
+
+            if (str.isEmpty()) {
+                return null;
+            }
+
+            // ISO format: yyyy-MM-dd
+            return LocalDate.parse(str);
+        }
+
+        throw new IllegalArgumentException(
+                "Unsupported type for LocalDate conversion: " + value.getClass()
+        );
     }
 
     private void setInPatientSA(List<String> policyNoList, List<MigrPolicyBenefitsEntity> policyBenefitsEntityList) {
