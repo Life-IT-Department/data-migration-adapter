@@ -153,6 +153,12 @@ public class ClaimsMappingServiceImpl implements ClaimsMappingService {
                     mainDataMap, alhMap, acpMap));
         }
 
+        claimEntityList.forEach(claimEntity -> claimEntity.
+                setClClaimNo(claimEntity.
+                        getClClaimNo().
+                        concat("/")
+                        .concat(claimEntity.getClClaimStatus())));
+
         try {
             log.info("Truncating previous claims data...");
             migrAllClaimsEntityRepository.truncate();
