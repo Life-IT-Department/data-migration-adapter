@@ -346,6 +346,9 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
                     dto.setPoPremium(entity.getModalPremium());
                     dto.setPoAdminFee(BigDecimal.ZERO);
                     dto.setPoIllusMatuValue(BigDecimal.ZERO);
+                    dto.setPoInitialDefermentTerm(entity.getInitialDefermentTerm());
+                    dto.setPoInitialRetirementBenefitPayoutTerm(entity.getInitialRetirementBenefitPayoutTerm());
+                    dto.setPoInitialRetirementPayoutMode((int) Double.parseDouble(entity.getRetirementPayoutMode()));
 
                     mapSpouse(dto,
                             entity.getSpouseChildFullName(),
@@ -725,7 +728,7 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
         }
 
         return switch (status.trim().toUpperCase()) {
-            case "AMENDED" -> "AMND";
+            case "AMENDED", "IN FORCE" -> "INFC";
             case "BORN DEAD" -> "BRND";
             case "CANCELLED", "CANCELLED / PAID UP" -> "CNLD";
             case "DECEASED", "DECEASED / PAID UP" -> "PRMD";
@@ -735,13 +738,7 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
             case "SUSPENDED" -> "SPND";
             case "WAITING FOR CANCELLATION" -> "CNLD";
             case "IN FORCE / PAID UP", "WAITING FOR PAID UP" -> "PDUP";
-            case "IN FORCE" -> "INFC";
-            case "LAPSED" -> {
-                LocalDate today = LocalDate.now();
-                yield lastPremiumDueDate.isBefore(today.minusMonths(7))
-                        ? "ALAP"
-                        : "TLAP";
-            }
+            case "LAPSED" -> "LPSD";
             default -> "NONE";
         };
     }

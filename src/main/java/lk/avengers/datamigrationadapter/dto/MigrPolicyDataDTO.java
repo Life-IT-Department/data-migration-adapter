@@ -88,6 +88,10 @@ public class MigrPolicyDataDTO {
     private BigDecimal laInpc;
     private BigDecimal laBonus;
 
+    private Integer poInitialDefermentTerm;
+    private Integer poInitialRetirementBenefitPayoutTerm;
+    private Integer poInitialRetirementPayoutMode;
+
     public <E> E mapData(Class<E> receiverClass) {
         E receiver = BeanUtils.instantiateClass(receiverClass);
         BeanUtils.copyProperties(this, receiver);

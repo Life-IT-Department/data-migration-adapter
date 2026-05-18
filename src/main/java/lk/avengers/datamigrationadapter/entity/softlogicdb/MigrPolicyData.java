@@ -188,12 +188,12 @@ public class MigrPolicyData {
     @Column(name = "SP_Occupation", length = 30)
     private String spOccupation;
 
-    @Column(name = "LA_HB", precision = 18, scale = 2)
-    private BigDecimal laHbc;
+    @Column(name = "PO_InitialDefermentTerm")
+    private Integer poInitialDefermentTerm;
 
-    @Column(name = "LA_INP", precision = 18, scale = 2)
-    private BigDecimal laInpc;
+    @Column(name = "PO_InitialRetirementBenefitPayoutTerm")
+    private Integer poInitialRetirementBenefitPayoutTerm;
 
-    @Column(name = "LA_Bonus", precision = 18, scale = 2)
-    private BigDecimal laBonus;
+    @Column(name = "PO_InitialRetirementPayoutMode")
+    private Integer poInitialRetirementPayoutMode;
 }
