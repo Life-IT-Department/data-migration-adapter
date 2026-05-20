@@ -130,10 +130,12 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
         Map<String, PremiumDetailsEntity> premiumMap =
                 premiumDetailsRepository.findFiltered(productCodes, policyNos)
                         .stream()
+                        .sorted(Comparator.comparing(PremiumDetailsEntity::getPremiumDueDate).reversed())
                         .collect(Collectors.toMap(
                                 e -> e.getProductCode() + "/" + e.getPolicyNo(),
                                 Function.identity(),
-                                (a, b) -> a.getId() > b.getId() ? a : b
+                                (a, b) -> a.getPremiumDueDate().isAfter(b.getPremiumDueDate()) ? a : b,
+                                LinkedHashMap::new
                         ));
 
         log.info("Preloading completed");

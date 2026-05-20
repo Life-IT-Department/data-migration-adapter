@@ -274,8 +274,8 @@ public class PremiumsMappingServiceImpl implements PremiumsMappingService {
                 }
 
                 PremiumDetailsEntity last = premiums.stream()
-                        .filter(p -> p.getId() != null)
-                        .max(Comparator.comparing(PremiumDetailsEntity::getId))
+                        .filter(p -> p.getPremiumDueDate() != null)
+                        .max(Comparator.comparing(PremiumDetailsEntity::getPremiumDueDate))
                         .orElse(null);
 
                 int paidCount = (int) premiums.stream()
