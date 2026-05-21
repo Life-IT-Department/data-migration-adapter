@@ -50,8 +50,8 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
     private final MigrPolicyRepository policyRepository;
     private final OccupationCodeMappingRepository occupationCodeMappingRepository;
     private final FundCurrentBalanceEntityRepository fundCurrentBalanceEntityRepository;
-    private final PremiumDetailsRepository premiumDetailsRepository;
     private final ExtraFieldsRepository extraFieldsRepository;
+    private final PolicyListRepository policyListRepository;
 
     private final MainExcelReader mainExcelReader;
     private final SharedFunction sharedFunction;
@@ -127,16 +127,13 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
                                 (a, b) -> a
                         ));
 
-        Map<String, PremiumDetailsEntity> premiumMap =
-                premiumDetailsRepository.findFiltered(productCodes, policyNos)
-                        .stream()
-                        .sorted(Comparator.comparing(PremiumDetailsEntity::getPremiumDueDate).reversed())
-                        .collect(Collectors.toMap(
-                                e -> e.getProductCode() + "/" + e.getPolicyNo(),
-                                Function.identity(),
-                                (a, b) -> a.getPremiumDueDate().isAfter(b.getPremiumDueDate()) ? a : b,
-                                LinkedHashMap::new
-                        ));
+        Map<String, PolicyListEntity> policyMap =
+                policyListRepository.findFiltered(policyList).stream()
+                                .collect(Collectors.toMap(
+                                        PolicyListEntity::getContract,
+                                    Function.identity(),
+                                        (a,b) -> a
+                                ));
 
         log.info("Preloading completed");
 
@@ -159,9 +156,9 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
             MainDataALHReportEntity alh = alhMap.get(key);
             ACPPolicyEntity acp = acpMap.get(key);
             ContactDetailEntity contact = contactMap.get(key);
-            PremiumDetailsEntity premium = premiumMap.get(key);
+            PolicyListEntity polList = policyMap.get(key);
 
-            LocalDate premiumDueDate = premium != null ? premium.getPremiumDueDate() : null;
+            LocalDate premiumDueDate = polList != null ? polList.getPaidUpTo() : null;
 
             if (mainData != null) {
                 processMainDataFast(mainData, policy, premiumDueDate, contact, policyBatch, fundBatch, extraBatch);
@@ -730,7 +727,8 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
         }
 
         return switch (status.trim().toUpperCase()) {
-            case "AMENDED", "IN FORCE" -> "INFC";
+            case "AMENDED" -> "AMND";
+            case "IN FORCE" -> "INFC";
             case "BORN DEAD" -> "BRND";
             case "CANCELLED", "CANCELLED / PAID UP" -> "CNLD";
             case "DECEASED", "DECEASED / PAID UP" -> "PRMD";

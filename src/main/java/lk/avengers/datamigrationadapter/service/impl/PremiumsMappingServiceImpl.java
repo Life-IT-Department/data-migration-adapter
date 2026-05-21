@@ -43,6 +43,7 @@ public class PremiumsMappingServiceImpl implements PremiumsMappingService {
     private final MainDataALHReportRepository mainDataALHReportRepository;
     private final ACPPolicyRepository acpPolicyRepository;
     private final PremiumsExtraRepository premiumsExtraRepository;
+    private final PolicyListRepository policyListRepository;
 
     private final MainExcelReader mainExcelReader;
     private final SharedFunction sharedFunction;
@@ -119,7 +120,6 @@ public class PremiumsMappingServiceImpl implements PremiumsMappingService {
                     acpPolicyRepository.findFiltered(productCodes, policyNos)
                             .stream()
                             .collect(Collectors.toMap(e -> e.getProductCode() + "/" + e.getPolicyNo(), Function.identity(), (a, b) -> a));
-
             // 🔥 Process in query batches (CRITICAL FIX)
             for (List<String> policyBatch : partition(allPolicies, queryBatchSize)) {
 
@@ -260,6 +260,14 @@ public class PremiumsMappingServiceImpl implements PremiumsMappingService {
                         .stream()
                         .collect(Collectors.groupingBy(e -> e.getProductCode() + "/" + e.getPolicyNo()));
 
+        Map<String, PolicyListEntity> policyMap =
+                policyListRepository.findFiltered(policyList).stream()
+                        .collect(Collectors.toMap(
+                                PolicyListEntity::getContract,
+                                Function.identity(),
+                                (a,b) -> a
+                        ));
+
         log.info("Processing premium list");
         List<PremiumExtraFields> extraFieldsList = new ArrayList<>();
         try{
@@ -282,10 +290,12 @@ public class PremiumsMappingServiceImpl implements PremiumsMappingService {
                         .filter(p -> p.getPaymentDate() != null)
                         .count();
 
+                PolicyListEntity polEntity = policyMap.get(key);
+
                 PremiumExtraFields extra = PremiumExtraFields.builder()
                         .policyNo(key)
                         .inceptionDate(last.getInceptionDate())
-                        .premiumDueDate(last.getPremiumDueDate())
+                        .premiumDueDate(polEntity.getPaidUpTo())
                         .paidCount(paidCount)
                         .period(getPeriod(last.getFrequency()))
                         .build();
