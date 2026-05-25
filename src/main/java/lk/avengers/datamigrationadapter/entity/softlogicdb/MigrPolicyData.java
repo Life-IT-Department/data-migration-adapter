@@ -196,4 +196,19 @@ public class MigrPolicyData {
 
     @Column(name = "PO_InitialRetirementPayoutMode")
     private Integer poInitialRetirementPayoutMode;
+
+    @Column(name = "LR_Tag")
+    private Integer lrTag;
+
+    @Column(name = "LA_Bonus")
+    private BigDecimal laBonus;
+
+    @Column(name = "LA_Pin")
+    private Integer laPin;
+
+    @Column(name = "PO_Currency", length = 5)
+    private String poCurrency;
+
+    @Column(name = "PO_Cession", precision = 5, scale = 2)
+    private BigDecimal poCession;
 }

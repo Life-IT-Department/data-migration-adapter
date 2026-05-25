@@ -176,6 +176,8 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
             policyBeneficiariesEntity.setBonus(mainDataALHReportEntity.getSpouseBonus());
             policyBeneficiariesEntity.setBasicSumAssured(mainDataALHReportEntity.getBasicSumAssured());
 
+            policyBeneficiariesEntity.setBePin(mainDataALHReportEntity.getSpousePin());
+
             return policyBeneficiariesEntity;
         }
         return null;
@@ -202,6 +204,8 @@ public class PolicyBeneficiariesMappingServiceImpl implements PolicyBeneficiarie
             policyBeneficiariesEntity.setHbcSa(BigDecimal.ZERO);
             policyBeneficiariesEntity.setBonus(BigDecimal.ZERO);
             policyBeneficiariesEntity.setBasicSumAssured(mainDataReportEntity.getBasicSumAssured());
+
+            policyBeneficiariesEntity.setBePin(mainDataReportEntity.getSpouseChildPin());
 
             return policyBeneficiariesEntity;
         }

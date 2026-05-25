@@ -16,6 +16,7 @@ import lk.avengers.datamigrationadapter.service.ExcelDataExtractorEnhancedServic
 import lk.avengers.datamigrationadapter.util.MemoryMonitor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.poi.ss.usermodel.DataFormatter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -194,7 +195,7 @@ public class DataIngestorServiceImpl implements DataIngestorService {
         // Filter valid headers
         List<String> validHeaders = extractedData.getHeaders().stream()
                 .filter(header -> header != null && !header.trim().isEmpty())
-                .collect(Collectors.toList());
+                .toList();
 
         log.info("UUID: {} - Found {} valid headers out of {} total columns",
                 uuid, validHeaders.size(), extractedData.getHeaders().size());
@@ -503,8 +504,19 @@ public class DataIngestorServiceImpl implements DataIngestorService {
     // ==================== Value Extraction Methods ====================
 
     private String getString(Map<String, Object> data, String key) {
+
         Object value = data.get(key);
-        return value != null ? value.toString().trim() : null;
+
+        if (value == null) {
+            return null;
+        }
+
+        if (value instanceof Double d) {
+            return java.math.BigDecimal.valueOf(d)
+                    .toPlainString();
+        }
+
+        return value.toString().trim();
     }
 
     private Integer getInteger(Map<String, Object> data, String key) {

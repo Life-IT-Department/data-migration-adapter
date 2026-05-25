@@ -50,6 +50,9 @@ public class PolicyBeneficiariesEntity {
     @Column(name = "BE_IsHB")
     private Boolean beIsHb;
 
+    @Column(name = "BE_Pin")
+    private Integer bePin;
+
     // Remove when running actual list
 
     @Column(name = "Child_Code")

@@ -7,7 +7,6 @@ import lk.avengers.datamigrationadapter.entity.postgresql.reportdb.*;
 import lk.avengers.datamigrationadapter.entity.softlogicdb.ExtraFields;
 import lk.avengers.datamigrationadapter.entity.softlogicdb.FundCurrentBalanceEntity;
 import lk.avengers.datamigrationadapter.entity.softlogicdb.MigrPolicyData;
-import lk.avengers.datamigrationadapter.entity.softlogicdb.PremiumExtraFields;
 import lk.avengers.datamigrationadapter.mapper.ExtraFieldsMapper;
 import lk.avengers.datamigrationadapter.mapper.FundCurrentBalanceMapper;
 import lk.avengers.datamigrationadapter.mapper.PolicyMapper;
@@ -20,7 +19,6 @@ import lk.avengers.datamigrationadapter.util.MainExcelReader;
 import lk.avengers.datamigrationadapter.util.SharedFunction;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -266,7 +264,7 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
                     dto.setPoBsa(entity.getBasicSumAssured());
                     dto.setPoSumAtRisk(entity.getDthSar());
                     dto.setPoBasicPremium(getModalPremium(entity.getInsuredModalPremium()));
-                    dto.setPoPremiumType(getPremiumType(entity.getPremiumPaymentTerm()));
+                    dto.setPoPremiumType(getPremiumType(polNo, entity.getPremiumPaymentTerm()));
                     dto.setPoAdvCode(getAgentCodeMapping(entity.getAgentCode()));
                     dto.setPoBeginDate(entity.getInception());
                     dto.setPoPolicyYear(getPolicyYear(entity.getInception()));
@@ -279,6 +277,9 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
                     dto.setPoPremium(entity.getInsuredModalPremium());
                     dto.setPoAdminFee(BigDecimal.ZERO);
                     dto.setPoIllusMatuValue(BigDecimal.ZERO);
+                    dto.setPoCession(entity.getRiPercentage());
+                    dto.setPoCurrency(entity.getCy());
+                    dto.setLaPin(Integer.valueOf(entity.getPin()));
 
                     mapSpouse(dto, null, null, null, null, 0, null);
                 },
@@ -332,7 +333,7 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
                     dto.setPoBsa(entity.getBasicSumAssured());
                     dto.setPoSumAtRisk(entity.getDth_Sar());
                     dto.setPoBasicPremium(getModalPremium(entity.getModalPremium()));
-                    dto.setPoPremiumType(getPremiumType(String.valueOf(entity.getInitialPremiumPaymentTerm())));
+                    dto.setPoPremiumType(getPremiumType(polNo, String.valueOf(entity.getInitialPremiumPaymentTerm())));
                     dto.setPoAdvCode(getAgentCodeMapping(entity.getAgentCode()));
                     dto.setPoBeginDate(entity.getInception());
                     dto.setPoPolicyYear(getPolicyYear(entity.getInception()));
@@ -348,6 +349,8 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
                     dto.setPoInitialDefermentTerm(entity.getInitialDefermentTerm());
                     dto.setPoInitialRetirementBenefitPayoutTerm(entity.getInitialRetirementBenefitPayoutTerm());
                     dto.setPoInitialRetirementPayoutMode((int) Double.parseDouble(entity.getRetirementPayoutMode()));
+                    dto.setPoCession(BigDecimal.valueOf(entity.getRiPercentage()));
+                    dto.setPoCurrency(entity.getCy());
 
                     mapSpouse(dto,
                             entity.getSpouseChildFullName(),
@@ -356,6 +359,8 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
                             entity.getSpouseChildDob(),
                             entity.getSpouseChildAge(),
                             entity.getSpouseIdCardNumber());
+
+                    dto.setLaPin(entity.getPin());
                 },
 
                 (extra, entity, polNo) -> {
@@ -433,6 +438,8 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
                     dto.setPoPremium(entity.getModalPremium());
                     dto.setPoAdminFee(BigDecimal.ZERO);
                     dto.setPoIllusMatuValue(BigDecimal.ZERO);
+                    dto.setPoCession(BigDecimal.valueOf(entity.getRiPercentage()));
+                    dto.setPoCurrency(entity.getCy());
 
                     // ===== Spouse =====
                     mapSpouse(dto,
@@ -447,6 +454,7 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
                     dto.setLaHbc(entity.getHb_Sa());
                     dto.setLaInpc(entity.getInpSar());
                     dto.setLaBonus(entity.getMlBonus());
+                    dto.setLaPin(entity.getPin());
                 },
 
                 // ===== Extra Fields Mapper =====
@@ -514,6 +522,8 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
         dto.setLaIsPolicyAssign(false);
         dto.setLaWeight(0);
         dto.setLaHeight(0);
+        dto.setLaBonus(dto.getLaBonus());
+        dto.setLaPin(dto.getLaPin());
     }
 
     private void mapSpouse(MigrPolicyDataDTO dto, String name, String title, String gender, LocalDate dob, int age, String nic) {
@@ -605,13 +615,19 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
         };
     }
 
-    private String getPremiumType(String premiumPaymentTerm) {
+    private String getPremiumType(String policyNo, String premiumPaymentTerm) {
+
+        PolicyNumberResponseDTO policyNumber = sharedFunction.extractPolicyNumber(policyNo);
+        String productCode = policyNumber.getProductCode();
+
+        boolean singlePremiumProduct = productCode.contains("ULB") || productCode.contains("ULC") || productCode.contains("UPS");
+
         if (premiumPaymentTerm == null || premiumPaymentTerm.isBlank()) {
             return "None";
         }
 
         // SP → Single
-        if (premiumPaymentTerm.equalsIgnoreCase("SP")) {
+        if (premiumPaymentTerm.equalsIgnoreCase("SP") || singlePremiumProduct) {
             return "Single";
         }
 

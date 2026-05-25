@@ -4,5 +4,5 @@ import lk.avengers.datamigrationadapter.dto.CommonResponseDTO;
 import org.springframework.http.ResponseEntity;
 
 public interface ContactDetailReportService {
-    ResponseEntity<CommonResponseDTO> processExcel();
+    ResponseEntity<CommonResponseDTO> uploadContactDetailReport();
 }
