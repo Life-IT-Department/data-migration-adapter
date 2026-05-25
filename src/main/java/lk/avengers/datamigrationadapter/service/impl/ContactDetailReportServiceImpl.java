@@ -118,7 +118,7 @@ public class ContactDetailReportServiceImpl implements ContactDetailReportServic
         ContactDetailEntity e = new ContactDetailEntity();
 
         e.setProduct(getString(row, 1));
-        e.setPolicyNo(getString(row, 2));
+        e.setPolicyNo(String.valueOf(getInteger(row, 2)));
         e.setPin(getInteger(row, 3));
         e.setTitle(getString(row, 4));
         e.setFirstName(getString(row, 5));
@@ -134,7 +134,6 @@ public class ContactDetailReportServiceImpl implements ContactDetailReportServic
         e.setOtherTelephoneNumber(getString(row, 15));
         e.setEmailAddress(getString(row, 16));
         e.setPolicyStatus(getString(row, 17));
-        e.setProduct(getString(row, 18));
         e.setNbrOfCustomers(getInteger(row, 19));
         e.setNationality(getString(row, 20));
         e.setAgentCode(getString(row, 21));
@@ -189,19 +188,99 @@ public class ContactDetailReportServiceImpl implements ContactDetailReportServic
 
     private Integer getInteger(Row row, int index) {
         try {
-            String value = getString(row, index);
-            return (value == null || value.isBlank()) ? null : Integer.valueOf(value);
+            Cell cell = row.getCell(index, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL);
+            if (cell == null) return null;
+
+            return switch (cell.getCellType()) {
+
+                case STRING -> {
+                    String value = cell.getStringCellValue().trim();
+                    if (value.isBlank()) yield null;
+
+                    yield parseIntegerSafe(value);
+                }
+
+                case NUMERIC -> {
+                    double num = cell.getNumericCellValue();
+
+                    // reject decimals if not whole number
+                    if (num % 1 != 0) {
+                        throw new NumberFormatException("Non-integer numeric value: " + num);
+                    }
+
+                    yield (int) num;
+                }
+
+                case FORMULA -> {
+                    String value = DATA_FORMATTER.formatCellValue(cell).trim();
+                    if (value.isBlank()) yield null;
+
+                    yield parseIntegerSafe(value);
+                }
+
+                default -> null;
+            };
+
         } catch (Exception e) {
             return null;
         }
     }
 
+    private Integer parseIntegerSafe(String value) {
+        try {
+            if (value == null || value.isBlank()) return null;
+
+            BigDecimal bd = new BigDecimal(value.trim());
+
+            return bd.stripTrailingZeros().intValueExact();
+
+        } catch (Exception e) {
+            try {
+                return Integer.valueOf(value.trim());
+            } catch (Exception ex) {
+                return null;
+            }
+        }
+    }
+
     private BigDecimal getBigDecimal(Row row, int index) {
         try {
-            String value = getString(row, index);
-            return (value == null || value.isBlank()) ? null : new BigDecimal(value);
+            Cell cell = row.getCell(index, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL);
+            if (cell == null) return null;
+
+            return switch (cell.getCellType()) {
+
+                case NUMERIC -> BigDecimal.valueOf(cell.getNumericCellValue());
+
+                case STRING -> {
+                    String value = cell.getStringCellValue().trim();
+                    if (value.isBlank()) yield null;
+
+                    yield parseBigDecimalSafe(value);
+                }
+
+                case FORMULA -> {
+                    String value = DATA_FORMATTER.formatCellValue(cell).trim();
+                    if (value.isBlank()) yield null;
+
+                    yield parseBigDecimalSafe(value);
+                }
+
+                default -> null;
+            };
+
         } catch (Exception e) {
             return null;
+        }
+    }
+
+    private BigDecimal parseBigDecimalSafe(String value) {
+        try {
+            return new BigDecimal(value.trim());
+        } catch (Exception e) {
+            // handles cases like "1,234.56"
+            String cleaned = value.replace(",", "").trim();
+            return new BigDecimal(cleaned);
         }
     }
 
