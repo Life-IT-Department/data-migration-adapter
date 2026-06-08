@@ -291,11 +291,12 @@ public class PremiumsMappingServiceImpl implements PremiumsMappingService {
                         .count();
 
                 PolicyListEntity polEntity = policyMap.get(key);
+                LocalDate paidUpTo = polEntity == null ? null : polEntity.getPaidUpTo();
 
                 PremiumExtraFields extra = PremiumExtraFields.builder()
                         .policyNo(key)
                         .inceptionDate(last.getInceptionDate())
-                        .premiumDueDate(polEntity.getPaidUpTo())
+                        .premiumDueDate(paidUpTo)
                         .paidCount(paidCount)
                         .period(getPeriod(last.getFrequency()))
                         .build();

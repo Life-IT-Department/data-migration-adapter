@@ -511,7 +511,7 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
         dto.setLaDob(contact.getDateOfBirth());
         dto.setLaPhone1(getTenDigitMobile(contact.getMobile()));
         dto.setLaPhone2(getOtherTelephoneNumber(contact.getOtherTelephoneNumber()));
-        dto.setLaNationality(contact.getNationality().toUpperCase());
+        dto.setLaNationality(contact.getNationality() == null ? "" : contact.getNationality().toUpperCase());
         dto.setLaEmail(getValidatedEmail(contact.getEmailAddress()));
         dto.setLaAgeAdmitted(false);
         dto.setLaAddressCity(extractAddressCity(contact.getCity()));
@@ -552,7 +552,7 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
         lastName = lastName.trim();
 
         if (lastName.isEmpty()) {
-            return "";
+            return firstName;
         }
 
         StringBuilder initials = new StringBuilder();
@@ -627,7 +627,7 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
         }
 
         // SP → Single
-        if (premiumPaymentTerm.equalsIgnoreCase("SP") || singlePremiumProduct) {
+        if (premiumPaymentTerm.equalsIgnoreCase("1") || premiumPaymentTerm.equalsIgnoreCase("SP") || singlePremiumProduct) {
             return "Single";
         }
 
