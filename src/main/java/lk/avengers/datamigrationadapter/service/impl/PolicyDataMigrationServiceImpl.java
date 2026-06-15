@@ -421,7 +421,7 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
                     dto.setPoPlanVersion(entity.getPlanNo());
                     dto.setPoTerm(entity.getTerm());
                     dto.setPoDateOfProposal(entity.getInception());
-                    dto.setPoPaymentTerm(entity.getPremiumPaymentTerm());
+                    dto.setPoPaymentTerm(entity.getTerm()); // on request from Kaumalee
                     dto.setPoBsa(entity.getBasicSumAssured());
                     dto.setPoSumAtRisk(entity.getDth_Sar());
                     dto.setPoBasicPremium(getModalPremium(entity.getModalPremium()));
