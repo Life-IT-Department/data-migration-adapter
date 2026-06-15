@@ -25,6 +25,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.Period;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.function.Function;
 import java.util.regex.Matcher;
@@ -271,7 +272,7 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
                     dto.setPoDateUnderwritten(entity.getInception());
                     dto.setPoPremiumDueDate(dueDate != null ? dueDate : entity.getNextPremium());
                     dto.setPoMode(getFrequencyString(Integer.parseInt(entity.getFrequency())));
-                    dto.setPoPolicyStatusCode(getPolicyStatusCode(entity.getStatus(), entity.getLastPremiumDueDate()));
+                    dto.setPoPolicyStatusCode(getPolicyStatusCode(entity.getStatus(), entity.getExpiry()));
                     dto.setPoExpirationDate(entity.getExpiry());
                     dto.setPoBranchCode(getBranchCodeMapping(Integer.parseInt(entity.getSalesBranchCode())));
                     dto.setPoPremium(entity.getInsuredModalPremium());
@@ -338,9 +339,9 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
                     dto.setPoBeginDate(entity.getInception());
                     dto.setPoPolicyYear(getPolicyYear(entity.getInception()));
                     dto.setPoDateUnderwritten(entity.getInception());
-                    dto.setPoPremiumDueDate(dueDate != null ? dueDate : entity.getNextPremium());
+                    dto.setPoPremiumDueDate(contact.getNextPremiumDueDate() == null ? entity.getInception().plusYears(1) : dueDate);
                     dto.setPoMode(getFrequencyString(entity.getFrequency()));
-                    dto.setPoPolicyStatusCode(getPolicyStatusCode(entity.getStatus(), entity.getLastPremiumDueDate()));
+                    dto.setPoPolicyStatusCode(getPolicyStatusCode(entity.getStatus(), entity.getExpiry()));
                     dto.setPoExpirationDate(entity.getExpiry());
                     dto.setPoBranchCode(getBranchCodeMapping(entity.getSalesBranchCode()));
                     dto.setPoPremium(entity.getModalPremium());
@@ -432,7 +433,7 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
                     dto.setPoDateUnderwritten(entity.getInception());
                     dto.setPoPremiumDueDate(dueDate != null ? dueDate : entity.getNextPremium());
                     dto.setPoMode(getFrequencyString(entity.getFrequency()));
-                    dto.setPoPolicyStatusCode(getPolicyStatusCode(entity.getStatus(), entity.getLastPremiumDueDate()));
+                    dto.setPoPolicyStatusCode(getPolicyStatusCode(entity.getStatus(),entity.getExpiry()));
                     dto.setPoExpirationDate(entity.getExpiry());
                     dto.setPoBranchCode(getBranchCodeMapping(entity.getSalesBranchCode()));
                     dto.setPoPremium(entity.getModalPremium());
@@ -737,12 +738,20 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
                 .orElse(DEFAULT_BRANCH_CODE);
     }
 
-    private String getPolicyStatusCode(String status, LocalDate lastPremiumDueDate) {
-        if (status == null || lastPremiumDueDate == null) {
-            return "NONE";
+    private String getPolicyStatusCode(String status, LocalDate expiryDate) {
+        String statusToCheck = status.trim().toUpperCase();
+        LocalDate currentDate = LocalDate.now(ZoneId.of("Asia/Colombo"));
+
+        boolean statusActive = statusToCheck.equals("IN FORCE") ||
+                               statusToCheck.equals("AMENDED") ||
+                               statusToCheck.equals("IN FORCE / PAID UP") ||
+                               statusToCheck.equals("LAPSED");
+
+        if(statusActive && currentDate.isAfter(expiryDate)){
+            return "LPSD/M";
         }
 
-        return switch (status.trim().toUpperCase()) {
+        return switch (statusToCheck) {
             case "AMENDED" -> "AMND";
             case "IN FORCE" -> "INFC";
             case "BORN DEAD" -> "BRND";

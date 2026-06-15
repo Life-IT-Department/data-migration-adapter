@@ -44,6 +44,7 @@ public class PremiumsMappingServiceImpl implements PremiumsMappingService {
     private final ACPPolicyRepository acpPolicyRepository;
     private final PremiumsExtraRepository premiumsExtraRepository;
     private final PolicyListRepository policyListRepository;
+    private final ContactDetailRepository contactDetailRepository;
 
     private final MainExcelReader mainExcelReader;
     private final SharedFunction sharedFunction;
@@ -56,6 +57,11 @@ public class PremiumsMappingServiceImpl implements PremiumsMappingService {
     private static final String VLD = "VLD";
     private static final String CNL = "CNL";
     private static final String NO = "NO";
+
+
+    Map<String, List<PremiumDetailsEntity>> premiumMap;
+    Map<String, MainDataReportEntity> mainDataMap;
+    Map<String, MainDataALHReportEntity> alhMap;
 
     @Override
     @Transactional(readOnly = true, transactionManager = "reportPlatformTransactionManager")
@@ -101,17 +107,17 @@ public class PremiumsMappingServiceImpl implements PremiumsMappingService {
                     .collect(Collectors.toSet());
 
             // 🔹 Load supporting data
-            Map<String, List<PremiumDetailsEntity>> premiumMap =
+            premiumMap =
                     premiumDetailsRepository.findFiltered(productCodes, policyNos)
                             .stream()
                             .collect(Collectors.groupingBy(e -> e.getProductCode() + "/" + e.getPolicyNo()));
 
-            Map<String, MainDataReportEntity> mainDataMap =
+            mainDataMap =
                     mainDataReportRepository.findFiltered(productCodes, policyNos)
                             .stream()
                             .collect(Collectors.toMap(e -> e.getProductCode() + "/" + e.getPolicyNo(), Function.identity(), (a, b) -> a));
 
-            Map<String, MainDataALHReportEntity> alhMap =
+            alhMap =
                     mainDataALHReportRepository.findFiltered(productCodes, policyNos)
                             .stream()
                             .collect(Collectors.toMap(e -> e.getProductCode() + "/" + e.getPolicyNo(), Function.identity(), (a, b) -> a));
@@ -170,20 +176,7 @@ public class PremiumsMappingServiceImpl implements PremiumsMappingService {
                                                 cashFlow.getDescription().contains(DOWN_PAYMENT) ? DEPO : "")
                                         .paymentMode(getPaymentMode(cashFlow.getPaymentMode()))
                                         .build());
-                            } else {
-                                batchPaid.add(MigrPremiumsPaid.builder()
-                                        .policyNo(policy)
-                                        .receiptId(0)
-                                        .chequeNo("NULL")
-                                        .bank("NULL")
-                                        .paymentDate(paidDate)
-                                        .paidAmount(paidAmount)
-                                        .receiptStatus(VLD)
-                                        .paymentType(PREM)
-                                        .paymentMode("CASH")
-                                        .build());
                             }
-
                             // 🔹 Due
                             batchDue.add(MigrPremiumsDue.builder()
                                     .policyNo(policy)
@@ -254,8 +247,8 @@ public class PremiumsMappingServiceImpl implements PremiumsMappingService {
                 .collect(Collectors.toSet());
 
         log.info("Loading premiums map");
-        // 🔹 Load supporting data
-        Map<String, List<PremiumDetailsEntity>> premiumMap =
+
+        premiumMap =
                 premiumDetailsRepository.findFiltered(productCodes, policyNos)
                         .stream()
                         .collect(Collectors.groupingBy(e -> e.getProductCode() + "/" + e.getPolicyNo()));
@@ -266,6 +259,14 @@ public class PremiumsMappingServiceImpl implements PremiumsMappingService {
                                 PolicyListEntity::getContract,
                                 Function.identity(),
                                 (a,b) -> a
+                        ));
+
+        Map<String, ContactDetailEntity> contactMap =
+                contactDetailRepository.findFiltered(productCodes, policyNos).stream()
+                        .collect(Collectors.toMap(
+                                e -> e.getProduct() + "/" + e.getPolicyNo(),
+                                Function.identity(),
+                                (a, b) -> a
                         ));
 
         log.info("Processing premium list");
@@ -290,15 +291,23 @@ public class PremiumsMappingServiceImpl implements PremiumsMappingService {
                         .filter(p -> p.getPaymentDate() != null)
                         .count();
 
+                ContactDetailEntity contact = contactMap.get(key);
                 PolicyListEntity polEntity = policyMap.get(key);
                 LocalDate paidUpTo = polEntity == null ? null : polEntity.getPaidUpTo();
 
                 PremiumExtraFields extra = PremiumExtraFields.builder()
                         .policyNo(key)
                         .inceptionDate(last.getInceptionDate())
-                        .premiumDueDate(paidUpTo)
+                        .premiumDueDate(contact.getNextPremiumDueDate() == null ? last.getInceptionDate().plusYears(1) : paidUpTo)
                         .paidCount(paidCount)
                         .period(getPeriod(last.getFrequency()))
+                        .outstandingTotal(contact.getOutstanding())
+                        .premiumsPaidTotal(contact.getTotalPremiumsPaid())
+                        .modalPremium(contact.getModalPremiumWithoutHandlingFee())
+                        .frequency(contact.getFrequency())
+                        .term(contact.getTerm())
+                        .policyStatus(contact.getPolicyStatus())
+                        .lapsedDate(contact.getLapsedDate())
                         .build();
 
                 extraFieldsList.add(extra);
