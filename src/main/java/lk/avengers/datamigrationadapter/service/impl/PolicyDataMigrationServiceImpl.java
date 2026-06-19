@@ -264,7 +264,7 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
                     dto.setPoPaymentTerm(setPaymentTerm(entity.getPremiumPaymentTerm()));
                     dto.setPoBsa(entity.getBasicSumAssured());
                     dto.setPoSumAtRisk(entity.getDthSar());
-                    dto.setPoBasicPremium(getModalPremium(entity.getInsuredModalPremium()));
+                    dto.setPoBasicPremium(getModalPremium(entity.getInsuredModalPremium(), contact));
                     dto.setPoPremiumType(getPremiumType(polNo, entity.getPremiumPaymentTerm()));
                     dto.setPoAdvCode(getAgentCodeMapping(entity.getAgentCode()));
                     dto.setPoBeginDate(entity.getInception());
@@ -333,7 +333,7 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
                     dto.setPoPaymentTerm(setPaymentTerm(String.valueOf(entity.getInitialPremiumPaymentTerm())));
                     dto.setPoBsa(entity.getBasicSumAssured());
                     dto.setPoSumAtRisk(entity.getDth_Sar());
-                    dto.setPoBasicPremium(getModalPremium(entity.getModalPremium()));
+                    dto.setPoBasicPremium(getModalPremium(entity.getModalPremium(), contact));
                     dto.setPoPremiumType(getPremiumType(polNo, String.valueOf(entity.getInitialPremiumPaymentTerm())));
                     dto.setPoAdvCode(getAgentCodeMapping(entity.getAgentCode()));
                     dto.setPoBeginDate(entity.getInception());
@@ -344,7 +344,7 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
                     dto.setPoPolicyStatusCode(getPolicyStatusCode(entity.getStatus(), entity.getExpiry()));
                     dto.setPoExpirationDate(entity.getExpiry());
                     dto.setPoBranchCode(getBranchCodeMapping(entity.getSalesBranchCode()));
-                    dto.setPoPremium(entity.getModalPremium());
+                    dto.setPoPremium(entity.getModalPremium().equals(BigDecimal.ZERO) ? contact.getModalPremiumWithoutHandlingFee() : entity.getModalPremium());
                     dto.setPoAdminFee(BigDecimal.ZERO);
                     dto.setPoIllusMatuValue(BigDecimal.ZERO);
                     dto.setPoInitialDefermentTerm(entity.getInitialDefermentTerm());
@@ -425,7 +425,7 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
                     dto.setPoPaymentTerm(entity.getTerm()); // on request from Kaumalee
                     dto.setPoBsa(entity.getBasicSumAssured());
                     dto.setPoSumAtRisk(entity.getDth_Sar());
-                    dto.setPoBasicPremium(getModalPremium(entity.getModalPremium()));
+                    dto.setPoBasicPremium(getModalPremium(entity.getModalPremium(), contact));
                     dto.setPoPremiumType("Regular");
                     dto.setPoAdvCode(getAgentCodeMapping(entity.getAgentCode()));
                     dto.setPoBeginDate(entity.getInception());
@@ -436,7 +436,7 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
                     dto.setPoPolicyStatusCode(getPolicyStatusCode(entity.getStatus(),entity.getExpiry()));
                     dto.setPoExpirationDate(entity.getExpiry());
                     dto.setPoBranchCode(getBranchCodeMapping(entity.getSalesBranchCode()));
-                    dto.setPoPremium(entity.getModalPremium());
+                    dto.setPoPremium(entity.getModalPremium().equals(BigDecimal.ZERO) ? contact.getModalPremiumWithoutHandlingFee() : entity.getModalPremium());
                     dto.setPoAdminFee(BigDecimal.ZERO);
                     dto.setPoIllusMatuValue(BigDecimal.ZERO);
                     dto.setPoCession(BigDecimal.valueOf(entity.getRiPercentage()));
@@ -748,7 +748,7 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
                                statusToCheck.equals("LAPSED");
 
         if(statusActive && currentDate.isAfter(expiryDate)){
-            return "LPSD/M";
+            return "EXPM";
         }
 
         return switch (statusToCheck) {
@@ -871,7 +871,10 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
         return addressCity;
     }
 
-    private BigDecimal getModalPremium(BigDecimal insuredModalPremium){
+    private BigDecimal getModalPremium(BigDecimal insuredModalPremium, ContactDetailEntity contact){
+        if(insuredModalPremium.equals(BigDecimal.ZERO)){
+            insuredModalPremium = contact.getModalPremiumWithoutHandlingFee();
+        }
         return insuredModalPremium.setScale(0, RoundingMode.DOWN);
     }
 
