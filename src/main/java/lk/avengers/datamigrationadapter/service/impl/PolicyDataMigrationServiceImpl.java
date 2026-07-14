@@ -339,7 +339,8 @@ public class PolicyDataMigrationServiceImpl implements PolicyDataMigrationServic
                     dto.setPoBeginDate(entity.getInception());
                     dto.setPoPolicyYear(getPolicyYear(entity.getInception()));
                     dto.setPoDateUnderwritten(entity.getInception());
-                    dto.setPoPremiumDueDate(contact.getNextPremiumDueDate() == null ? entity.getInception().plusYears(1) : dueDate);
+//                    dto.setPoPremiumDueDate(contact.getNextPremiumDueDate() == null ? entity.getInception().plusYears(1) : dueDate);
+                    dto.setPoPremiumDueDate(dto.getPoPremiumType().equals("Single") ? entity.getInception().plusYears(1) : dueDate);
                     dto.setPoMode(getFrequencyString(entity.getFrequency()));
                     dto.setPoPolicyStatusCode(getPolicyStatusCode(entity.getStatus(), entity.getExpiry()));
                     dto.setPoExpirationDate(entity.getExpiry());

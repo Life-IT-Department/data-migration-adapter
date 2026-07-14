@@ -301,32 +301,6 @@ public class PremiumsMappingServiceImpl implements PremiumsMappingService {
         };
     }
 
-    private String getPaymentMode(String paymentMode){
-        return switch (paymentMode) {
-            case "CASH" -> "Cash";
-            case "CHECK" -> "Cheque";
-            case "CLEARING" -> "Clearing";
-            case "IN ACCOUNT" -> "Direct Deposit";
-            case "TRANSFER" -> "Transfer";
-            default -> "";
-        };
-    }
-
-    public static <T> List<List<T>> partition(List<T> list, int size) {
-        if (list == null || list.isEmpty()) {
-            return Collections.emptyList();
-        }
-
-        int numBatches = (int) Math.ceil((double) list.size() / size);
-        List<List<T>> partitions = new ArrayList<>(numBatches);
-
-        for (int i = 0; i < list.size(); i += size) {
-            partitions.add(list.subList(i, Math.min(i + size, list.size())));
-        }
-
-        return partitions;
-    }
-
     private <T> void saveAndFlush(List<T> list, JpaRepository<T, ?> repo) {
         log.info("Saving premiums of the batch with size: {}", list.size());
         repo.saveAll(list);
