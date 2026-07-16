@@ -362,7 +362,8 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
                     BigDecimal.valueOf(alhData.getSubDth_()),
                     alhData.getSubRateMilDth_(),
                     alhData.getTerm(),
-                    policyBenefitsEntityList);
+                    policyBenefitsEntityList,
+                    BigDecimal.ZERO);
         }
 
         // HB
@@ -373,7 +374,8 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
                     alhData.getSubHb_(),
                     alhData.getSubRateMilHb_(),
                     alhData.getTerm(),
-                    policyBenefitsEntityList);
+                    policyBenefitsEntityList,
+                    BigDecimal.ZERO);
         }
 
         // INP
@@ -384,7 +386,8 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
                     alhData.getSubInp(),
                     BigDecimal.valueOf(alhData.getInpOccLoadingPercentage()),
                     alhData.getTerm(),
-                    policyBenefitsEntityList);
+                    policyBenefitsEntityList,
+                    alhData.getMlBonus());
         }
 
         // Spouse
@@ -411,11 +414,12 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
                                BigDecimal extraMortality,
                                BigDecimal extraPremium,
                                int term,
-                               List<MigrPolicyBenefitsEntity> policyBenefitsEntityList) {
+                               List<MigrPolicyBenefitsEntity> policyBenefitsEntityList,
+                               BigDecimal noClaimBonus) {
 
         MigrPolicyBenefitsEntity benefitsEntity = getPolicyBenefitForALHData(policyNo, benefitCodeMapperEntityList, alhData, allianzCode);
         if (benefitsEntity != null) {
-            benefitsEntity.setPbCoverage(coverage);
+            benefitsEntity.setPbCoverage(coverage.subtract(noClaimBonus));
             benefitsEntity.setPbOccuExtra(occuExtra);
             benefitsEntity.setPbExtraMortalityRate(extraMortality);
             benefitsEntity.setPbExtraPremium(extraPremium);
@@ -458,7 +462,7 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
                             MigrPolicyBenefitsEntity policyBenefitsEntity = new MigrPolicyBenefitsEntity();
 
                             policyBenefitsEntity.setId(new MigrPolicyBenefitsID(policyNo, benefitCodeMapperEntity.getSoftlogicBenefitCode()));
-                            policyBenefitsEntity.setPbCoverage(childDto.getChildInpSar());
+                            policyBenefitsEntity.setPbCoverage(childDto.getChildInpSar().subtract(mainDataALHReportEntity.getChild1Bonus()));
                             policyBenefitsEntity.setPbTerm(mainDataALHReportEntity.getTerm());
                             policyBenefitsEntity.setPbExtraPremium(BigDecimal.ZERO);
                             policyBenefitsEntity.setPbPremPortion(BigDecimal.ZERO);
@@ -505,7 +509,7 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
             if (policyBenefitsEntity != null) {
                 policyBenefitsEntity.setPbOccuExtra(BigDecimal.valueOf(mainDataALHReportEntity.getSpouseInpOccLoadingPercentage()));
                 policyBenefitsEntity.setPbExtraMortalityRate(mainDataALHReportEntity.getSpouseSubRateMilInp());
-                policyBenefitsEntity.setPbCoverage(mainDataALHReportEntity.getSpouseInpSar());
+                policyBenefitsEntity.setPbCoverage(mainDataALHReportEntity.getSpouseInpSar().subtract(mainDataALHReportEntity.getSpouseBonus()));
                 policyBenefitsEntity.setPbPremPortion(BigDecimal.ZERO);
                 policyBenefitsEntityList.add(policyBenefitsEntity);
             } else {
