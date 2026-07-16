@@ -662,30 +662,34 @@ public class PolicyBenefitMappingServiceImpl implements PolicyBenefitMappingServ
     }
 
     private BigDecimal toBigDecimal(Object value) {
-        if (value == null) {
-            return BigDecimal.ZERO; // Or return null if you prefer
-        }
-
-        if (value instanceof BigDecimal) {
-            return (BigDecimal) value;
-        }
-
-        if (value instanceof String) {
-            String str = ((String) value).trim();
-            if (str.isEmpty()) return BigDecimal.ZERO;
-            // Remove commas if present (e.g. "1,234.56")
-            return new BigDecimal(str.replace(",", ""));
-        }
-
-        if (value instanceof BigInteger) {
-            return new BigDecimal((BigInteger) value);
-        }
-
-        if (value instanceof Number) {
-            // Important: Use .toString() for Doubles to avoid precision errors!
-            // new BigDecimal(0.1) -> 0.10000000000000000555...
-            // new BigDecimal("0.1") -> 0.1
-            return new BigDecimal(value.toString());
+        switch (value) {
+            case null -> {
+                return BigDecimal.ZERO; // Or return null if you prefer
+            }
+            case BigDecimal bigDecimal -> {
+                return bigDecimal;
+            }
+            case String s -> {
+                String str = s.trim();
+                if (str.isEmpty()) return BigDecimal.ZERO;
+                // Remove commas if present (e.g. "1,234.56")
+                return new BigDecimal(str.replace(",", ""));
+                // Remove commas if present (e.g. "1,234.56")
+            }
+            case BigInteger bigInteger -> {
+                return new BigDecimal(bigInteger);
+            }
+            case Number number -> {
+                // Important: Use .toString() for Doubles to avoid precision errors!
+                // new BigDecimal(0.1) -> 0.10000000000000000555...
+                // new BigDecimal("0.1") -> 0.1
+                return new BigDecimal(value.toString());
+                // Important: Use .toString() for Doubles to avoid precision errors!
+                // new BigDecimal(0.1) -> 0.10000000000000000555...
+                // new BigDecimal("0.1") -> 0.1
+            }
+            default -> {
+            }
         }
 
         throw new IllegalArgumentException("Cannot convert type " + value.getClass() + " to BigDecimal");
